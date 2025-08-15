@@ -4,13 +4,26 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Поиск по прайс-листу</title>
+
+  <!-- Жёсткая CSP: только свой домен + используемые CDN -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+                 style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+                 img-src 'self' data:;
+                 font-src 'self' https://r2cdn.perplexity.ai;
+                 object-src 'none';
+                 base-uri 'none';
+                 frame-ancestors 'none';
+                 connect-src 'self';
+                 upgrade-insecure-requests">
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="style.css"/>
   <link rel="icon" type="image/png" href="icon.png"/>
 </head>
 <body>
   <div class="container py-4">
-
     <!-- Секция поиска (покажется после загрузки данных) -->
     <div class="card mb-4" id="searchSection" style="display:none;">
       <div class="card__body">
@@ -56,7 +69,6 @@
           <small>Попробуйте изменить условия поиска или проверьте правописание</small>
         </div>
 
-        <!-- Контейнер под кнопку "Показать ещё" — создаётся из JS, но оставим якорь -->
         <div id="resultsShowMore" style="display:flex; justify-content:center; padding:12px;"></div>
       </div>
     </div>
@@ -76,7 +88,6 @@
         </div>
       </div>
     </div>
-
   </div>
 
   <!-- Скрипты -->
@@ -85,5 +96,4 @@
   <script src="app.js"></script>
 </body>
 </html>
-
 

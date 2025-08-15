@@ -6,7 +6,14 @@ class PriceListSearchApp {
     this._page = 1;
     this._pageSize = 200;
 
-    // Транслитерация (как в твоём исходнике)
+    // Анти-DoS / безопасность
+    this.MAX_TOKENS = 6;            // максимум слов в запросе
+    this.MAX_TOKEN_LEN = 64;        // максимум длина одного слова
+    this.MAX_REGEX_TOTAL = 2000;    // суммарная длина паттернов подсветки
+    this.MAX_XLSX_BYTES = 15 * 1024 * 1024; // мягкий предел размера XLSX (~15 МБ)
+    this.MAX_ROWS = 200000;         // предел строк в XLSX
+
+    // Транслитерация (как в исходнике)
     this.translitMap = {
       'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
       'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
@@ -39,7 +46,7 @@ class PriceListSearchApp {
     this.loadDefaultFile();
   }
 
-  // --- Утилиты ---
+  // ---------- Утилиты ----------
   normalizeForFuzzySearch(text) {
     if (!text) return '';
     const lower = String(text).toLowerCase();
@@ -56,6 +63,15 @@ class PriceListSearchApp {
 
   escapeRegExp(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  escapeHTML(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   debounce(fn, ms = 200) {
@@ -82,26 +98,24 @@ class PriceListSearchApp {
     return out;
   }
 
-  highlightHomoglyphs(text, tokenPatterns) {
-    if (!text || !tokenPatterns.length) return text;
-    let out = String(text);
+  highlightHomoglyphs(escapedText, tokenPatterns) {
+    if (!escapedText || !tokenPatterns.length) return escapedText;
+    let out = String(escapedText);
     for (const pat of tokenPatterns) {
       try {
         const re = new RegExp(`(${pat})`, 'gi');
         out = out.replace(re, '<span class="highlight">$1</span>');
-      } catch {}
+      } catch { /* пропускаем некорректный паттерн */ }
     }
     return out;
   }
 
-  // --- Ошибки ---
   showError(message) {
     const modal = new bootstrap.Modal(document.getElementById('errorModal'));
     document.getElementById('errorMessage').textContent = message;
     modal.show();
   }
 
-  // --- DOM ---
   showSearchSection() {
     document.getElementById('searchSection').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'block';
@@ -116,12 +130,22 @@ class PriceListSearchApp {
     }
   }
 
-  // --- Загрузка данных ---
+  // ---------- Загрузка данных ----------
   async loadDefaultFile() {
     try {
       const resp = await fetch('base.xlsx', { cache: 'no-store' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+
+      // если сервер отдаёт размер — проверим
+      const clen = resp.headers.get('content-length');
+      if (clen && +clen > this.MAX_XLSX_BYTES) {
+        throw new Error(`Файл слишком большой (${Math.round(+clen/1024/1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES/1024/1024)} МБ.`);
+      }
+
       const buf = await resp.arrayBuffer();
+      if (buf.byteLength > this.MAX_XLSX_BYTES) {
+        throw new Error(`Файл слишком большой (${Math.round(buf.byteLength/1024/1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES/1024/1024)} МБ.`);
+      }
 
       const wb = XLSX.read(buf, { type: 'array' });
       const sheetName = wb.SheetNames[0];
@@ -129,12 +153,18 @@ class PriceListSearchApp {
       const jsonData = XLSX.utils.sheet_to_json(ws);
 
       if (!jsonData.length) throw new Error('Файл пустой или не содержит данных');
+      if (jsonData.length > this.MAX_ROWS) {
+        throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
+      }
 
       const required = ['Наименование', 'Артикул', 'Цена'];
       const firstRow = jsonData[0] || {};
       const missing = required.filter(c => !(c in firstRow));
-      if (missing.length) throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+      if (missing.length) {
+        throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+      }
 
+      // Прединдексация: канон для поиска + предформат цены (БЕЗ символа рубля)
       this.data = jsonData.map(row => ({
         ...row,
         __name: this.normalizeForFuzzySearch(row['Наименование'] || ''),
@@ -156,7 +186,7 @@ class PriceListSearchApp {
     }
   }
 
-  // --- Поиск ---
+  // ---------- Поиск ----------
   createSearchVariants(query) {
     const q = String(query).toLowerCase().trim();
     const t = this.transliterate(q);
@@ -172,7 +202,13 @@ class PriceListSearchApp {
       return;
     }
 
-    const parts = query.split(/\s+/).map(p => this.normalizeForFuzzySearch(p)).filter(Boolean);
+    const parts = query
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, this.MAX_TOKENS)
+      .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
+      .filter(Boolean);
+
     this.filteredData = this.data.filter(item =>
       parts.every(part => item.__name.includes(part) || item.__article.includes(part))
     );
@@ -181,7 +217,7 @@ class PriceListSearchApp {
     this.displayResults();
   }
 
-  // --- Отрисовка ---
+  // ---------- Отрисовка ----------
   displayResults() {
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
@@ -198,19 +234,40 @@ class PriceListSearchApp {
     }
 
     noResults.style.display = 'none';
-    const highlightTokens = rawQuery.split(/\s+/).filter(Boolean).map(tok => this.buildHomoglyphRegexToken(tok));
+
+    let highlightTokens = rawQuery
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, this.MAX_TOKENS)
+      .map(tok => this.buildHomoglyphRegexToken(tok.slice(0, this.MAX_TOKEN_LEN)));
+
+    const totalPatternLen = highlightTokens.join('').length;
+    if (totalPatternLen > this.MAX_REGEX_TOTAL) {
+      // если пользователь вставил «кирпич» — отключаем подсветку
+      highlightTokens = [];
+    }
 
     const end = Math.min(this._page * this._pageSize, total);
     const slice = this.filteredData.slice(0, end);
 
     const tooMany = total > 5000;
-    resultsBody.innerHTML = slice.map(item => `
-      <tr>
-        <td>${tooMany ? (item['Наименование'] || '') : this.highlightHomoglyphs(item['Наименование'] || '', highlightTokens)}</td>
-        <td>${tooMany ? (item['Артикул'] || '') : this.highlightHomoglyphs(item['Артикул'] || '', highlightTokens)}</td>
-        <td class="text-price">${item.__price}</td>
-      </tr>
-    `).join('');
+    resultsBody.innerHTML = slice.map(item => {
+      const nameSafe = this.escapeHTML(item['Наименование'] || '');
+      const artSafe  = this.escapeHTML(item['Артикул'] || '');
+      const nameHtml = (tooMany || highlightTokens.length === 0)
+        ? nameSafe
+        : this.highlightHomoglyphs(nameSafe, highlightTokens);
+      const artHtml  = (tooMany || highlightTokens.length === 0)
+        ? artSafe
+        : this.highlightHomoglyphs(artSafe, highlightTokens);
+      return `
+        <tr>
+          <td>${nameHtml}</td>
+          <td>${artHtml}</td>
+          <td class="text-price">${item.__price}</td>
+        </tr>
+      `;
+    }).join('');
 
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
@@ -227,11 +284,12 @@ class PriceListSearchApp {
     };
   }
 
+  // формат цены БЕЗ символа рубля — только число с 2 знаками
   _formatPriceCached(price) {
     if (price === null || price === undefined || price === '') return '—';
     const num = parseFloat(price);
     if (Number.isNaN(num)) return String(price);
-    return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2 }).format(num);
+    return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }
 
