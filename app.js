@@ -1,4 +1,4 @@
-// Приложение для поиска по Excel прайс-листу (без выбора файла, автозагрузка base.xlsx)
+// Приложение для поиска по Excel прайс-листу (автозагрузка base.xlsx)
 class PriceListSearchApp {
   constructor() {
     this.data = [];
@@ -6,26 +6,48 @@ class PriceListSearchApp {
     this._page = 1;
     this._pageSize = 200;
 
+    // Транслитерация (как в твоём исходнике)
     this.translitMap = {
-      // Рус -> Лат
-      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
-      'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
-      'п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts',
-      'ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
-      // Лат -> Рус (грубая замена для поиска)
-      'a':'а','b':'б','v':'в','g':'г','d':'д','e':'е','f':'ф','h':'х',
-      'i':'и','j':'й','k':'к','l':'л','m':'м','n':'н','o':'о','p':'п',
-      'r':'р','s':'с','t':'т','u':'у','w':'в','x':'кс','y':'ы','z':'з'
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
+      'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
+      'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
+      'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'f': 'ф', 'h': 'х',
+      'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п',
+      'r': 'р', 's': 'с', 't': 'т', 'u': 'у', 'w': 'в', 'x': 'кс', 'y': 'ы', 'z': 'з'
     };
 
+    // Омографы (лат/кирилл одинаково выглядят)
+    this.homoglyphCanon = new Map([
+      ['a','a'],['b','b'],['c','c'],['e','e'],['h','h'],['k','k'],
+      ['m','m'],['o','o'],['p','p'],['t','t'],['x','x'],['y','y'],
+      ['а','a'],['в','b'],['с','c'],['е','e'],['н','h'],['к','k'],
+      ['м','m'],['о','o'],['р','p'],['т','t'],['х','x'],['у','y'],
+      ['A','a'],['B','b'],['C','c'],['E','e'],['H','h'],['K','k'],
+      ['M','m'],['O','o'],['P','p'],['T','t'],['X','x'],['Y','y'],
+      ['А','a'],['В','b'],['С','c'],['Е','e'],['Н','h'],['К','k'],
+      ['М','m'],['О','o'],['Р','p'],['Т','t'],['Х','x'],['У','y'],
+    ]);
+
+    this.homoglyphClass = new Map([
+      ['a', '[aа]'], ['b', '[bв]'], ['c', '[cс]'], ['e', '[eе]'],
+      ['h', '[hн]'], ['k', '[kк]'], ['m', '[mм]'], ['o', '[oо]'],
+      ['p', '[pр]'], ['t', '[tт]'], ['x', '[xх]'], ['y', '[yу]'],
+    ]);
+
     this.initializeEventListeners();
-    this.loadDefaultFile(); // автозагрузка base.xlsx
+    this.loadDefaultFile();
   }
 
-  // ---- Utils ----
+  // --- Утилиты ---
   normalizeForFuzzySearch(text) {
     if (!text) return '';
-    return String(text).toLowerCase().replace(/[^а-яёa-z0-9]/g, '');
+    const lower = String(text).toLowerCase();
+    let canon = '';
+    for (const ch of lower) {
+      canon += this.homoglyphCanon.has(ch) ? this.homoglyphCanon.get(ch) : ch;
+    }
+    return canon.replace(/[^a-z0-9а-яё]/g, '');
   }
 
   transliterate(text) {
@@ -44,38 +66,57 @@ class PriceListSearchApp {
     };
   }
 
-  // ---- Bootstrap modal error ----
+  buildHomoglyphRegexToken(token) {
+    let out = '';
+    for (const raw of String(token)) {
+      const lower = raw.toLowerCase();
+      const canon = this.homoglyphCanon.get(raw) || this.homoglyphCanon.get(lower) || lower;
+      if (this.homoglyphClass.has(canon)) {
+        out += this.homoglyphClass.get(canon);
+      } else if (/[a-z0-9а-яё]/i.test(raw)) {
+        out += this.escapeRegExp(raw);
+      } else {
+        out += this.escapeRegExp(raw);
+      }
+    }
+    return out;
+  }
+
+  highlightHomoglyphs(text, tokenPatterns) {
+    if (!text || !tokenPatterns.length) return text;
+    let out = String(text);
+    for (const pat of tokenPatterns) {
+      try {
+        const re = new RegExp(`(${pat})`, 'gi');
+        out = out.replace(re, '<span class="highlight">$1</span>');
+      } catch {}
+    }
+    return out;
+  }
+
+  // --- Ошибки ---
   showError(message) {
     const modal = new bootstrap.Modal(document.getElementById('errorModal'));
     document.getElementById('errorMessage').textContent = message;
     modal.show();
   }
 
-  // ---- DOM helpers ----
+  // --- DOM ---
   showSearchSection() {
-    const el = document.getElementById('searchSection');
-    if (el) {
-      el.style.display = 'block';
-      el.classList.add('fade-in');
-    }
-    const res = document.getElementById('resultsSection');
-    if (res) res.style.display = 'block';
+    document.getElementById('searchSection').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'block';
   }
 
-  // ---- Init listeners ----
   initializeEventListeners() {
     const input = document.getElementById('searchInput');
     const debounced = this.debounce(() => this.performSearch(), 200);
     if (input) {
       input.addEventListener('input', debounced);
-      // Enter = отменяем отправку форм где-либо
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') e.preventDefault();
-      });
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
     }
   }
 
-  // ---- Data load ----
+  // --- Загрузка данных ---
   async loadDefaultFile() {
     try {
       const resp = await fetch('base.xlsx', { cache: 'no-store' });
@@ -89,46 +130,33 @@ class PriceListSearchApp {
 
       if (!jsonData.length) throw new Error('Файл пустой или не содержит данных');
 
-      // Проверим необходимые колонки
       const required = ['Наименование', 'Артикул', 'Цена'];
       const firstRow = jsonData[0] || {};
       const missing = required.filter(c => !(c in firstRow));
-      if (missing.length) {
-        throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
-      }
+      if (missing.length) throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
 
-      // Прединдексация для быстрого поиска + предформат цены
-      this.data = jsonData.map(row => {
-        const __name = this.normalizeForFuzzySearch(row['Наименование'] || '');
-        const __article = this.normalizeForFuzzySearch(row['Артикул'] || '');
-        const __price = this._formatPriceCached(row['Цена']);
-        return { ...row, __name, __article, __price };
-      });
+      this.data = jsonData.map(row => ({
+        ...row,
+        __name: this.normalizeForFuzzySearch(row['Наименование'] || ''),
+        __article: this.normalizeForFuzzySearch(row['Артикул'] || ''),
+        __price: this._formatPriceCached(row['Цена']),
+      }));
 
-      // Показать краткую информацию о наборе
       const info = document.getElementById('datasetInfo');
       if (info) {
         info.style.display = 'block';
         info.textContent = `Загружено записей: ${this.data.length}`;
       }
 
-      // Показать поисковый интерфейс
       this.showSearchSection();
 
     } catch (e) {
       console.error('Загрузка base.xlsx не удалась:', e);
-      // Сообщение пользователю
-      let hint = 'Не удалось автоматически загрузить base.xlsx. ';
-      if (location.hostname.endsWith('github.io')) {
-        hint += 'Проверь, что файл лежит рядом с index.html в корне ветки main и Pages указаны на /root.';
-      } else if (location.protocol === 'file:') {
-        hint += 'Страница открыта как file:// — fetch может быть заблокирован. Открой через http(s).';
-      }
-      this.showError(`${hint}\nТехническая причина: ${e.message}`);
+      this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
     }
   }
 
-  // ---- Search ----
+  // --- Поиск ---
   createSearchVariants(query) {
     const q = String(query).toLowerCase().trim();
     const t = this.transliterate(q);
@@ -136,9 +164,7 @@ class PriceListSearchApp {
   }
 
   performSearch() {
-    const input = document.getElementById('searchInput');
-    const query = (input?.value || '').trim();
-
+    const query = (document.getElementById('searchInput')?.value || '').trim();
     if (!query) {
       this.filteredData = [];
       this._page = 1;
@@ -147,106 +173,68 @@ class PriceListSearchApp {
     }
 
     const parts = query.split(/\s+/).map(p => this.normalizeForFuzzySearch(p)).filter(Boolean);
-
-    // Быстрый фильтр по прединдексированным полям
     this.filteredData = this.data.filter(item =>
       parts.every(part => item.__name.includes(part) || item.__article.includes(part))
     );
 
-    this._page = 1; // новый поиск — с первой страницы
+    this._page = 1;
     this.displayResults();
   }
 
-  // ---- Rendering ----
+  // --- Отрисовка ---
   displayResults() {
-    const resultsSection = document.getElementById('resultsSection');
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
     const noResults = document.getElementById('noResults');
-    const query = (document.getElementById('searchInput')?.value || '').trim();
-
-    if (resultsSection) {
-      resultsSection.style.display = 'block';
-      resultsSection.classList.add('fade-in');
-    }
+    const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
 
     const total = this.filteredData.length;
     if (total === 0) {
-      if (resultsBody) resultsBody.innerHTML = '';
-      if (noResults) noResults.style.display = 'block';
-      if (resultsCount) resultsCount.textContent = 'Найдено: 0 результатов';
+      resultsBody.innerHTML = '';
+      noResults.style.display = 'block';
+      resultsCount.textContent = 'Найдено: 0 результатов';
       this._renderShowMore(false);
       return;
     }
 
-    if (noResults) noResults.style.display = 'none';
-    const searchVariants = query ? this.createSearchVariants(query) : [];
+    noResults.style.display = 'none';
+    const highlightTokens = rawQuery.split(/\s+/).filter(Boolean).map(tok => this.buildHomoglyphRegexToken(tok));
 
     const end = Math.min(this._page * this._pageSize, total);
     const slice = this.filteredData.slice(0, end);
 
-    if (resultsBody) {
-      // если результатов очень много — отключим подсветку для ускорения
-      const tooMany = total > 5000;
-      resultsBody.innerHTML = slice.map(item => `
-        <tr>
-          <td>${tooMany ? (item['Наименование'] || '') : this.highlightMatches(item['Наименование'] || '', searchVariants)}</td>
-          <td>${tooMany ? (item['Артикул'] || '') : this.highlightMatches(item['Артикул'] || '', searchVariants)}</td>
-          <td class="text-price">${item.__price}</td>
-        </tr>
-      `).join('');
-    }
+    const tooMany = total > 5000;
+    resultsBody.innerHTML = slice.map(item => `
+      <tr>
+        <td>${tooMany ? (item['Наименование'] || '') : this.highlightHomoglyphs(item['Наименование'] || '', highlightTokens)}</td>
+        <td>${tooMany ? (item['Артикул'] || '') : this.highlightHomoglyphs(item['Артикул'] || '', highlightTokens)}</td>
+        <td class="text-price">${item.__price}</td>
+      </tr>
+    `).join('');
 
-    if (resultsCount) {
-      resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
-    }
-
+    resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
   }
 
   _renderShowMore(show) {
     const footer = document.getElementById('resultsShowMore');
     if (!footer) return;
-
-    if (!show) {
-      footer.innerHTML = '';
-      return;
-    }
-
+    if (!show) { footer.innerHTML = ''; return; }
     footer.innerHTML = `<button class="btn btn--primary" id="showMoreBtn">Показать ещё ${this._pageSize}</button>`;
-    const btn = document.getElementById('showMoreBtn');
-    if (btn) {
-      btn.onclick = () => {
-        this._page += 1;
-        // Дадим браузеру такт между рендерами
-        setTimeout(() => this.displayResults(), 0);
-      };
-    }
+    document.getElementById('showMoreBtn').onclick = () => {
+      this._page += 1;
+      setTimeout(() => this.displayResults(), 0);
+    };
   }
 
-  // ---- Formatting ----
   _formatPriceCached(price) {
     if (price === null || price === undefined || price === '') return '—';
     const num = parseFloat(price);
     if (Number.isNaN(num)) return String(price);
     return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 2 }).format(num);
   }
-
-  highlightMatches(text, searchVariants) {
-    if (!text || !searchVariants.length) return text;
-    let result = String(text);
-    const norm = String(text).toLowerCase();
-    searchVariants.forEach(variant => {
-      const re = new RegExp(`(${this.escapeRegExp(variant)})`, 'gi');
-      if (norm.includes(variant.toLowerCase())) {
-        result = result.replace(re, '<span class="highlight">$1</span>');
-      }
-    });
-    return result;
-  }
 }
 
-// Init
 document.addEventListener('DOMContentLoaded', () => {
   new PriceListSearchApp();
 });
