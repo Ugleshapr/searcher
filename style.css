@@ -1030,3 +1030,31 @@ select.form-control {
     opacity: 1;
   }
 }
+/* === Compact header & full-width search input overrides === */
+.search-input-container {
+  max-width: none !important;  /* убираем ограничение 600px */
+  width: 100%;
+}
+
+.search-controls {
+  padding: 0;                  /* меньше воздуха */
+  border: 0;                   /* проще визуально */
+  background: transparent;     /* без цветной подложки */
+}
+
+#searchSection .card__body,
+#resultsSection .card__body {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+#resultsSection .table-responsive {
+  margin-top: 8px;
+}
+
+/* Чуть компактнее отступы в таблице */
+.table td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
