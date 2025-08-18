@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Поиск по прайс-листу</title>
 
+  <!-- CSP как в проде -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'self';
                  script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
@@ -18,28 +19,42 @@
                  upgrade-insecure-requests">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="style.css"/>
-  <link rel="icon" href="favicon.ico?v=2" sizes="any">
-  <link rel="icon" type="image/png" href="icon-32.png?v=2" sizes="32x32">
-  <link rel="shortcut icon" href="favicon.ico?v=2">
+  <!-- Версионирование для обхода кэша на стейдже -->
+  <link rel="stylesheet" href="style.css?v=prod-20250818"/>
+
+  <!-- Иконки (если положишь в /staging) -->
+  <link rel="icon" href="favicon.ico?v=stg-1" sizes="any">
+  <link rel="icon" type="image/png" href="icon-32.png?v=stg-1" sizes="32x32">
+  <link rel="shortcut icon" href="favicon.ico?v=stg-1">
 </head>
 <body>
+  <!-- Небольшой бейдж, чтобы не перепутать среду -->
+  
+
   <div class="container py-4">
 
     <!-- Секция поиска -->
     <div class="card mb-3" id="searchSection" style="display:none;">
       <div class="card__body">
-        <!-- Компактный заголовок: слева title, справа счетчик загруженных -->
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h3 class="mb-0">Поиск по прайс-листу</h3>
           <span id="datasetInfo" class="text-secondary" style="display:none;"></span>
         </div>
 
-        <!-- Растянутая строка поиска (на всю ширину подложки) -->
+        <!-- Растянутое поле поиска -->
         <div class="search-controls">
           <div class="form-group mb-0">
             <div class="search-input-container">
-              <input type="text" id="searchInput" class="form-control" placeholder="Введите запрос для поиска..."/>
+             <input
+  type="text"
+  id="searchInput"
+  class="form-control"
+  placeholder="Введите запрос для поиска..."
+  autocomplete="off"
+  autocapitalize="off"
+  autocorrect="off"
+  spellcheck="false"
+/>
             </div>
           </div>
         </div>
@@ -49,7 +64,6 @@
     <!-- Результаты поиска -->
     <div class="card" id="resultsSection" style="display:none;">
       <div class="card__body">
-        <!-- Компактный заголовок результатов: слева title, справа "Показаны:" -->
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h3 class="mb-0">Результаты поиска</h3>
           <span id="resultsCount" class="text-secondary">Показаны: 0</span>
@@ -68,10 +82,11 @@
           </table>
         </div>
 
-        <div class="no-results text-center py-4" id="noResults" style="display:none;">
-          <p class="text-muted">По вашему запросу ничего не найдено</p>
-          <small>Попробуйте изменить условия поиска или проверьте правописание</small>
-        </div>
+        <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
+<div class="state-banner text-center py-4" id="stateBanner" style="display:none;">
+  <p class="mb-1" id="stateBannerTitle"></p>
+  <small id="stateBannerHint"></small>
+</div>
 
         <div id="resultsShowMore" style="display:flex; justify-content:center; padding:12px;"></div>
       </div>
@@ -98,8 +113,7 @@
   <!-- Скрипты -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=prod-20250818"></script>
 </body>
 </html>
-
 

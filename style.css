@@ -1057,4 +1057,11 @@ select.form-control {
   padding-top: 8px;
   padding-bottom: 8px;
 }
+td.copyable { cursor: copy; }
 
+/* Зеленая версия старого баннера (пустой запрос) — те же размеры/типографика, другие цвета */
+.no-results.no-results--empty {
+  background: #d1e7dd;          /* мягкий зелёный фон */
+  color: #0f5132;               /* зелёный текст */
+  border-color: #badbcc;        /* зелёная граница (как красная, только оттенок success) */
+}

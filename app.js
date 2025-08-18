@@ -1,4 +1,4 @@
-// Приложение для поиска по Excel прайс-листу (автозагрузка base.xlsx)
+// Приложение для поиска по Excel прайс-листу (STAGING, автозагрузка ./base.xlsx)
 class PriceListSearchApp {
   constructor() {
     this.data = [];
@@ -7,24 +7,24 @@ class PriceListSearchApp {
     this._pageSize = 200;
 
     // Анти-DoS / безопасность
-    this.MAX_TOKENS = 6;            // максимум слов в запросе
-    this.MAX_TOKEN_LEN = 64;        // максимум длина одного слова
-    this.MAX_REGEX_TOTAL = 2000;    // суммарная длина паттернов подсветки
-    this.MAX_XLSX_BYTES = 15 * 1024 * 1024; // мягкий предел размера XLSX (~15 МБ)
-    this.MAX_ROWS = 200000;         // предел строк в XLSX
+    this.MAX_TOKENS = 6;
+    this.MAX_TOKEN_LEN = 64;
+    this.MAX_REGEX_TOTAL = 2000;
+    this.MAX_XLSX_BYTES = 15 * 1024 * 1024;
+    this.MAX_ROWS = 200000;
 
-    // Транслитерация (как в исходнике)
+    // Транслитерация
     this.translitMap = {
-      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo', 'ж': 'zh',
-      'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o',
-      'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'kh', 'ц': 'ts',
-      'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-      'a': 'а', 'b': 'б', 'v': 'в', 'g': 'г', 'd': 'д', 'e': 'е', 'f': 'ф', 'h': 'х',
-      'i': 'и', 'j': 'й', 'k': 'к', 'l': 'л', 'm': 'м', 'n': 'н', 'o': 'о', 'p': 'п',
-      'r': 'р', 's': 'с', 't': 'т', 'u': 'у', 'w': 'в', 'x': 'кс', 'y': 'ы', 'z': 'з'
+      'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
+      'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
+      'п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'kh','ц':'ts',
+      'ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya',
+      'a':'а','b':'б','v':'в','g':'г','d':'д','e':'е','f':'ф','h':'х',
+      'i':'и','j':'й','k':'к','l':'л','m':'м','n':'н','o':'о','p':'п',
+      'r':'р','s':'с','t':'т','u':'у','w':'в','x':'кс','y':'ы','z':'з'
     };
 
-    // Омографы (лат/кирилл одинаково выглядят)
+    // Омографы (лат/кирилл)
     this.homoglyphCanon = new Map([
       ['a','a'],['b','b'],['c','c'],['e','e'],['h','h'],['k','k'],
       ['m','m'],['o','o'],['p','p'],['t','t'],['x','x'],['y','y'],
@@ -35,14 +35,19 @@ class PriceListSearchApp {
       ['А','a'],['В','b'],['С','c'],['Е','e'],['Н','h'],['К','k'],
       ['М','m'],['О','o'],['Р','p'],['Т','t'],['Х','x'],['У','y'],
     ]);
-
     this.homoglyphClass = new Map([
-      ['a', '[aа]'], ['b', '[bв]'], ['c', '[cс]'], ['e', '[eе]'],
-      ['h', '[hн]'], ['k', '[kк]'], ['m', '[mм]'], ['o', '[oо]'],
-      ['p', '[pр]'], ['t', '[tт]'], ['x', '[xх]'], ['y', '[yу]'],
+      ['a','[aа]'],['b','[bв]'],['c','[cс]'],['e','[eе]'],
+      ['h','[hн]'],['k','[kк]'],['m','[mм]'],['o','[oо]'],
+      ['p','[pр]'],['t','[tт]'],['x','[xх]'],['y','[yу]'],
     ]);
 
     this.initializeEventListeners();
+    // Отключаем подсказки по истории окончательно: делаем уникальное имя поля
+const si = document.getElementById('searchInput');
+if (si) {
+  si.setAttribute('autocomplete', 'off');               // дублируем на всякий
+  si.setAttribute('name', `q_${Date.now().toString(36)}`); // уникальное имя каждый раз
+}
     this.loadDefaultFile();
   }
 
@@ -61,39 +66,21 @@ class PriceListSearchApp {
     return String(text).toLowerCase().split('').map(c => this.translitMap[c] || c).join('');
   }
 
-  escapeRegExp(s) {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
-
+  escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   escapeHTML(s) {
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
-
-  debounce(fn, ms = 200) {
-    let t;
-    return (...args) => {
-      clearTimeout(t);
-      t = setTimeout(() => fn.apply(this, args), ms);
-    };
-  }
+  debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),ms); }; }
 
   buildHomoglyphRegexToken(token) {
     let out = '';
     for (const raw of String(token)) {
       const lower = raw.toLowerCase();
       const canon = this.homoglyphCanon.get(raw) || this.homoglyphCanon.get(lower) || lower;
-      if (this.homoglyphClass.has(canon)) {
-        out += this.homoglyphClass.get(canon);
-      } else if (/[a-z0-9а-яё]/i.test(raw)) {
-        out += this.escapeRegExp(raw);
-      } else {
-        out += this.escapeRegExp(raw);
-      }
+      if (this.homoglyphClass.has(canon)) out += this.homoglyphClass.get(canon);
+      else if (/[a-z0-9а-яё]/i.test(raw)) out += this.escapeRegExp(raw);
+      else out += this.escapeRegExp(raw);
     }
     return out;
   }
@@ -102,10 +89,8 @@ class PriceListSearchApp {
     if (!escapedText || !tokenPatterns.length) return escapedText;
     let out = String(escapedText);
     for (const pat of tokenPatterns) {
-      try {
-        const re = new RegExp(`(${pat})`, 'gi');
-        out = out.replace(re, '<span class="highlight">$1</span>');
-      } catch { /* пропускаем некорректный паттерн */ }
+      try { out = out.replace(new RegExp(`(${pat})`,'gi'), '<span class="highlight">$1</span>'); }
+      catch {}
     }
     return out;
   }
@@ -128,15 +113,43 @@ class PriceListSearchApp {
       input.addEventListener('input', debounced);
       input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
     }
+    // Копирование "Наименование\tАртикул" по ЛКМ на первой колонке
+const tbody = document.getElementById('resultsBody');
+if (tbody) {
+  tbody.addEventListener('click', async (e) => {
+    const cell = e.target.closest('td.copyable');
+    if (!cell) return; // клик не по первой колонке
+
+    // Берём текст без HTML (textContent убирает <span class="highlight">)
+    const name = cell.textContent.trim();
+
+    // Вторая ячейка той же строки — это "Артикул"
+    const row = cell.parentElement;
+    const articleCell = row ? row.children[1] : null;
+    const article = articleCell ? articleCell.textContent.trim() : '';
+
+    const tsv = `${name}\t${article}`;
+    try {
+      await navigator.clipboard.writeText(tsv);
+      // маленькая визуальная подсказка через title (необязательно)
+      const prev = cell.getAttribute('title') || '';
+      cell.setAttribute('title', 'Скопировано');
+      setTimeout(() => cell.setAttribute('title', prev), 800);
+    } catch (err) {
+      console.warn('Clipboard error:', err);
+    }
+  });
+}
   }
 
   // ---------- Загрузка данных ----------
   async loadDefaultFile() {
     try {
-      const resp = await fetch('base.xlsx', { cache: 'no-store' });
+      // Кэш-бастер, чтобы на стейдже всегда подтягивалась свежая база
+      const url = 'base.xlsx?v=prod-20250818';
+      const resp = await fetch(url, { cache: 'no-store' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
 
-      // если сервер отдаёт размер — проверим
       const clen = resp.headers.get('content-length');
       if (clen && +clen > this.MAX_XLSX_BYTES) {
         throw new Error(`Файл слишком большой (${Math.round(+clen/1024/1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES/1024/1024)} МБ.`);
@@ -153,18 +166,14 @@ class PriceListSearchApp {
       const jsonData = XLSX.utils.sheet_to_json(ws);
 
       if (!jsonData.length) throw new Error('Файл пустой или не содержит данных');
-      if (jsonData.length > this.MAX_ROWS) {
-        throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
-      }
+      if (jsonData.length > this.MAX_ROWS) throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
 
       const required = ['Наименование', 'Артикул', 'Цена'];
       const firstRow = jsonData[0] || {};
       const missing = required.filter(c => !(c in firstRow));
-      if (missing.length) {
-        throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
-      }
+      if (missing.length) throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
 
-      // Прединдексация: канон для поиска + предформат цены (БЕЗ символа рубля)
+      // Прединдексация + формат цены (без ₽)
       this.data = jsonData.map(row => ({
         ...row,
         __name: this.normalizeForFuzzySearch(row['Наименование'] || ''),
@@ -179,7 +188,19 @@ class PriceListSearchApp {
       }
 
       this.showSearchSection();
+// Очистить строку поиска ТОЛЬКО при "reload" (F5/Ctrl+R/кнопка обновить),
+// но НЕ при возврате "назад" (bfcache сохраняется).
+const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+const isReload = nav ? (nav.type === 'reload')
+                     : (performance.navigation && performance.navigation.type === 1); // старый API для старых браузеров
 
+if (isReload) {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = '';
+  this.filteredData = [];
+  this._page = 1;
+  this.displayResults();
+}
     } catch (e) {
       console.error('Загрузка base.xlsx не удалась:', e);
       this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
@@ -221,19 +242,44 @@ class PriceListSearchApp {
   displayResults() {
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
-    const noResults = document.getElementById('noResults');
+    const banner  = document.getElementById('stateBanner');
+    const titleEl = document.getElementById('stateBannerTitle');
+    const hintEl  = document.getElementById('stateBannerHint');
+
     const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
 
     const total = this.filteredData.length;
-    if (total === 0) {
-      resultsBody.innerHTML = '';
-      noResults.style.display = 'block';
-      resultsCount.textContent = 'Найдено: 0 результатов';
-      this._renderShowMore(false);
-      return;
-    }
 
-    noResults.style.display = 'none';
+
+if (total === 0) {
+  // очищаем таблицу
+  resultsBody.innerHTML = '';
+
+  // что введено в поле поиска?
+  const isEmptyQuery = rawQuery.length === 0;
+
+  if (banner && titleEl && hintEl) {
+    if (isEmptyQuery) {
+      // Пустое поле: зелёный баннер
+      banner.className = 'no-results no-results--empty text-center py-4';
+      titleEl.textContent = 'Введите текст для поиска';
+      hintEl.textContent = '';
+    } else {
+      // Запрос есть, но ничего не нашли: красный баннер
+      banner.className = 'no-results text-center py-4';
+      titleEl.textContent = 'По вашему запросу ничего не найдено';
+      hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
+    }
+    banner.style.display = 'block';
+  }
+
+  resultsCount.textContent = 'Найдено: 0 результатов';
+  this._renderShowMore(false);
+  return;
+} else {
+  // есть результаты — скрываем баннер
+  if (banner) banner.style.display = 'none';
+}
 
     let highlightTokens = rawQuery
       .split(/\s+/)
@@ -243,8 +289,7 @@ class PriceListSearchApp {
 
     const totalPatternLen = highlightTokens.join('').length;
     if (totalPatternLen > this.MAX_REGEX_TOTAL) {
-      // если пользователь вставил «кирпич» — отключаем подсветку
-      highlightTokens = [];
+      highlightTokens = []; // защита от «регексп-кирпича»
     }
 
     const end = Math.min(this._page * this._pageSize, total);
@@ -255,14 +300,12 @@ class PriceListSearchApp {
       const nameSafe = this.escapeHTML(item['Наименование'] || '');
       const artSafe  = this.escapeHTML(item['Артикул'] || '');
       const nameHtml = (tooMany || highlightTokens.length === 0)
-        ? nameSafe
-        : this.highlightHomoglyphs(nameSafe, highlightTokens);
+        ? nameSafe : this.highlightHomoglyphs(nameSafe, highlightTokens);
       const artHtml  = (tooMany || highlightTokens.length === 0)
-        ? artSafe
-        : this.highlightHomoglyphs(artSafe, highlightTokens);
+        ? artSafe  : this.highlightHomoglyphs(artSafe, highlightTokens);
       return `
         <tr>
-          <td>${nameHtml}</td>
+          <td class="copyable">${nameHtml}</td>
           <td>${artHtml}</td>
           <td class="text-price">${item.__price}</td>
         </tr>
@@ -284,7 +327,7 @@ class PriceListSearchApp {
     };
   }
 
-  // формат цены БЕЗ символа рубля — только число с 2 знаками
+  // формат цены БЕЗ символа рубля — число с 2 знаками
   _formatPriceCached(price) {
     if (price === null || price === undefined || price === '') return '—';
     const num = parseFloat(price);
@@ -296,6 +339,3 @@ class PriceListSearchApp {
 document.addEventListener('DOMContentLoaded', () => {
   new PriceListSearchApp();
 });
-
-
-
