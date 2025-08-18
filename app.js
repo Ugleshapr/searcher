@@ -145,9 +145,8 @@ if (tbody) {
   // ---------- Загрузка данных ----------
   async loadDefaultFile() {
     try {
-      // Кэш-бастер, чтобы на стейдже всегда подтягивалась свежая база
-      const url = 'base.xlsx?v=prod-20250818';
-      const resp = await fetch(url, { cache: 'no-store' });
+      // Проверка версии с сервером без постоянно перекачки
+      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
 
       const clen = resp.headers.get('content-length');
