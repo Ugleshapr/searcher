@@ -42,6 +42,12 @@ class PriceListSearchApp {
     ]);
 
     this.initializeEventListeners();
+    // Отключаем подсказки по истории окончательно: делаем уникальное имя поля
+const si = document.getElementById('searchInput');
+if (si) {
+  si.setAttribute('autocomplete', 'off');               // дублируем на всякий
+  si.setAttribute('name', `q_${Date.now().toString(36)}`); // уникальное имя каждый раз
+}
     this.loadDefaultFile();
   }
 
