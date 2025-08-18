@@ -1,1 +1,111 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Поиск по прайс-листу — STAGING</title>
+
+  <!-- CSP как в проде -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+                 style-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+                 img-src 'self' data:;
+                 font-src 'self' https://r2cdn.perplexity.ai;
+                 object-src 'none';
+                 base-uri 'none';
+                 frame-ancestors 'none';
+                 connect-src 'self';
+                 upgrade-insecure-requests">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <!-- Версионирование для обхода кэша на стейдже -->
+  <link rel="stylesheet" href="style.css?v=stg-1"/>
+
+  <!-- Иконки (если положишь в /staging) -->
+  <link rel="icon" href="favicon.ico?v=stg-1" sizes="any">
+  <link rel="icon" type="image/png" href="icon-32.png?v=stg-1" sizes="32x32">
+  <link rel="shortcut icon" href="favicon.ico?v=stg-1">
+</head>
+<body>
+  <!-- Небольшой бейдж, чтобы не перепутать среду -->
+  <div style="position:fixed;top:8px;right:8px;padding:4px 8px;border-radius:6px;background:#ffc107;color:#222;font-weight:600;z-index:9999;box-shadow:0 1px 2px rgba(0,0,0,.1)">
+    STAGING
+  </div>
+
+  <div class="container py-4">
+
+    <!-- Секция поиска -->
+    <div class="card mb-3" id="searchSection" style="display:none;">
+      <div class="card__body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h3 class="mb-0">Поиск по прайс-листу</h3>
+          <span id="datasetInfo" class="text-secondary" style="display:none;"></span>
+        </div>
+
+        <!-- Растянутое поле поиска -->
+        <div class="search-controls">
+          <div class="form-group mb-0">
+            <div class="search-input-container">
+              <input type="text" id="searchInput" class="form-control" placeholder="Введите запрос для поиска..."/>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Результаты поиска -->
+    <div class="card" id="resultsSection" style="display:none;">
+      <div class="card__body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="mb-0">Результаты поиска</h3>
+          <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-striped table-hover" id="resultsTable">
+            <thead class="table-dark">
+              <tr>
+                <th>Наименование</th>
+                <th>Артикул</th>
+                <th>Цена</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+
+        <div class="no-results text-center py-4" id="noResults" style="display:none;">
+          <p class="text-muted">По вашему запросу ничего не найдено</p>
+          <small>Попробуйте изменить условия поиска или проверьте правописание</small>
+        </div>
+
+        <div id="resultsShowMore" style="display:flex; justify-content:center; padding:12px;"></div>
+      </div>
+    </div>
+
+    <!-- Модальное окно ошибок -->
+    <div class="modal fade" id="errorModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Ошибка</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body" id="errorMessage"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Закрыть</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Скрипты -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="app.js?v=stg-1"></script>
+</body>
+</html>
 
