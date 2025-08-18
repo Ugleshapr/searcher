@@ -242,19 +242,49 @@ if (isReload) {
   displayResults() {
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
-    const noResults = document.getElementById('noResults');
+    const banner  = document.getElementById('stateBanner');
+    const titleEl = document.getElementById('stateBannerTitle');
+    const hintEl  = document.getElementById('stateBannerHint');
+
     const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
 
     const total = this.filteredData.length;
-    if (total === 0) {
-      resultsBody.innerHTML = '';
-      noResults.style.display = 'block';
-      resultsCount.textContent = 'Найдено: 0 результатов';
-      this._renderShowMore(false);
-      return;
-    }
+const banner = document.getElementById('stateBanner');
+const titleEl = document.getElementById('stateBannerTitle');
+const hintEl  = document.getElementById('stateBannerHint');
 
-    noResults.style.display = 'none';
+if (total === 0) {
+  // очищаем таблицу
+  resultsBody.innerHTML = '';
+
+  // что введено в поле поиска?
+  const isEmptyQuery = rawQuery.length === 0;
+
+  if (banner && titleEl && hintEl) {
+    if (isEmptyQuery) {
+      // Пустое поле: зелёный баннер
+      banner.className = 'state-banner state--empty';
+      titleEl.textContent = 'Введите текст для поиска';
+      hintEl.textContent = '';
+    } else {
+      // Запрос есть, но ничего не нашли: красный баннер
+      banner.className = 'state-banner state--noresults';
+      titleEl.textContent = 'По вашему запросу ничего не найдено';
+      hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
+    }
+    banner.style.display = 'block';
+  }
+
+  resultsCount.textContent = 'Найдено: 0 результатов';
+  this._renderShowMore(false);
+  return;
+} else {
+  // есть результаты — скрываем баннер
+  const banner = document.getElementById('stateBanner');
+  if (banner) banner.style.display = 'none';
+}
+
+     if (banner) banner.style.display = 'none';
 
     let highlightTokens = rawQuery
       .split(/\s+/)
