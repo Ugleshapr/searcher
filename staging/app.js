@@ -155,7 +155,19 @@ class PriceListSearchApp {
       }
 
       this.showSearchSection();
+// Очистить строку поиска ТОЛЬКО при "reload" (F5/Ctrl+R/кнопка обновить),
+// но НЕ при возврате "назад" (bfcache сохраняется).
+const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+const isReload = nav ? (nav.type === 'reload')
+                     : (performance.navigation && performance.navigation.type === 1); // старый API для старых браузеров
 
+if (isReload) {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = '';
+  this.filteredData = [];
+  this._page = 1;
+  this.displayResults();
+}
     } catch (e) {
       console.error('Загрузка base.xlsx не удалась:', e);
       this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
