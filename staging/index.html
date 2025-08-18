@@ -84,10 +84,11 @@
           </table>
         </div>
 
-        <div class="no-results text-center py-4" id="noResults" style="display:none;">
-          <p class="text-muted">По вашему запросу ничего не найдено</p>
-          <small>Попробуйте изменить условия поиска или проверьте правописание</small>
-        </div>
+        <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
+<div class="state-banner text-center py-4" id="stateBanner" style="display:none;">
+  <p class="mb-1" id="stateBannerTitle"></p>
+  <small id="stateBannerHint"></small>
+</div>
 
         <div id="resultsShowMore" style="display:flex; justify-content:center; padding:12px;"></div>
       </div>
