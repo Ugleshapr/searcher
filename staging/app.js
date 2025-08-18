@@ -261,12 +261,12 @@ if (total === 0) {
   if (banner && titleEl && hintEl) {
     if (isEmptyQuery) {
       // Пустое поле: зелёный баннер
-      banner.className = 'state-banner state--empty';
+      banner.className = 'no-results no-results--empty text-center py-4';
       titleEl.textContent = 'Введите текст для поиска';
       hintEl.textContent = '';
     } else {
       // Запрос есть, но ничего не нашли: красный баннер
-      banner.className = 'state-banner no-results';
+      banner.className = 'no-results text-center py-4';
       titleEl.textContent = 'По вашему запросу ничего не найдено';
       hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
     }
