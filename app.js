@@ -1,5 +1,4 @@
-// app.js — версия под base.search.json
-// Приложение для поиска по предобработанной JSON-базе
+// Приложение для поиска по Excel прайс-листу (STAGING, автозагрузка ./base.xlsx)
 class PriceListSearchApp {
   constructor() {
     this.data = [];
@@ -11,9 +10,10 @@ class PriceListSearchApp {
     this.MAX_TOKENS = 6;
     this.MAX_TOKEN_LEN = 64;
     this.MAX_REGEX_TOTAL = 2000;
+    this.MAX_XLSX_BYTES = 15 * 1024 * 1024;
     this.MAX_ROWS = 200000;
 
-    // Транслитерация (как было)
+    // Транслитерация
     this.translitMap = {
       'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'yo','ж':'zh',
       'з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o',
@@ -24,7 +24,7 @@ class PriceListSearchApp {
       'r':'р','s':'с','t':'т','u':'у','w':'в','x':'кс','y':'ы','z':'з'
     };
 
-    // Омографы (лат/кирилл) — как было
+    // Омографы (лат/кирилл)
     this.homoglyphCanon = new Map([
       ['a','a'],['b','b'],['c','c'],['e','e'],['h','h'],['k','k'],
       ['m','m'],['o','o'],['p','p'],['t','t'],['x','x'],['y','y'],
@@ -42,14 +42,12 @@ class PriceListSearchApp {
     ]);
 
     this.initializeEventListeners();
-
-    // Отключаем автоподсказки истории
-    const si = document.getElementById('searchInput');
-    if (si) {
-      si.setAttribute('autocomplete', 'off');
-      si.setAttribute('name', `q_${Date.now().toString(36)}`);
-    }
-
+    // Отключаем подсказки по истории окончательно: делаем уникальное имя поля
+const si = document.getElementById('searchInput');
+if (si) {
+  si.setAttribute('autocomplete', 'off');               // дублируем на всякий
+  si.setAttribute('name', `q_${Date.now().toString(36)}`); // уникальное имя каждый раз
+}
     this.loadDefaultFile();
   }
 
@@ -115,75 +113,72 @@ class PriceListSearchApp {
       input.addEventListener('input', debounced);
       input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
     }
-
     // Копирование "Наименование\tАртикул" по ЛКМ на первой колонке
-    const tbody = document.getElementById('resultsBody');
-    if (tbody) {
-      tbody.addEventListener('click', async (e) => {
-        const cell = e.target.closest('td.copyable');
-        if (!cell) return;
-        const name = cell.textContent.trim();
-        const row = cell.parentElement;
-        const articleCell = row ? row.children[1] : null;
-        const article = articleCell ? articleCell.textContent.trim() : '';
-        const tsv = `${name}\t${article}`;
-        try {
-          await navigator.clipboard.writeText(tsv);
-          const prev = cell.getAttribute('title') || '';
-          cell.setAttribute('title', 'Скопировано');
-          setTimeout(() => cell.setAttribute('title', prev), 800);
-        } catch (err) {
-          console.warn('Clipboard error:', err);
-        }
-      });
+const tbody = document.getElementById('resultsBody');
+if (tbody) {
+  tbody.addEventListener('click', async (e) => {
+    const cell = e.target.closest('td.copyable');
+    if (!cell) return; // клик не по первой колонке
+
+    // Берём текст без HTML (textContent убирает <span class="highlight">)
+    const name = cell.textContent.trim();
+
+    // Вторая ячейка той же строки — это "Артикул"
+    const row = cell.parentElement;
+    const articleCell = row ? row.children[1] : null;
+    const article = articleCell ? articleCell.textContent.trim() : '';
+
+    const tsv = `${name}\t${article}`;
+    try {
+      await navigator.clipboard.writeText(tsv);
+      // маленькая визуальная подсказка через title (необязательно)
+      const prev = cell.getAttribute('title') || '';
+      cell.setAttribute('title', 'Скопировано');
+      setTimeout(() => cell.setAttribute('title', prev), 800);
+    } catch (err) {
+      console.warn('Clipboard error:', err);
     }
+  });
+}
   }
 
-  // ---------- Загрузка данных (JSON) ----------
+  // ---------- Загрузка данных ----------
   async loadDefaultFile() {
     try {
-      const resp = await fetch('base.search.json', { cache: 'no-cache' });
+      // Проверка версии с сервером без постоянно перекачки
+      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
       if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-      const json = await resp.json();
-      if (!Array.isArray(json) || json.length === 0) throw new Error('Файл пустой или неправильного формата');
-      if (json.length > this.MAX_ROWS) throw new Error(`Слишком много строк (${json.length}). Предел ${this.MAX_ROWS}.`);
 
-      const first = json[0] || {};
-      const nameKey    = ('name'    in first) ? 'name'    : (('Наименование' in first) ? 'Наименование' : null);
-      const articleKey = ('article' in first) ? 'article' : (('Артикул'       in first) ? 'Артикул'       : null);
-      const priceKey   = ('price'   in first) ? 'price'   : (('Цена'          in first) ? 'Цена'          : 'price');
-
-      if (!nameKey || !articleKey) {
-        throw new Error('Отсутствуют обязательные колонки: name/Наименование и/или article/Артикул');
+      const clen = resp.headers.get('content-length');
+      if (clen && +clen > this.MAX_XLSX_BYTES) {
+        throw new Error(`Файл слишком большой (${Math.round(+clen/1024/1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES/1024/1024)} МБ.`);
       }
 
-      // Подготовка записей: берём предвычисленные __name/__article если даны, иначе считаем
-      this.data = json.map(row => {
-        const name = row[nameKey] ?? '';
-        const article = row[articleKey] ?? '';
-        let priceNum = row[priceKey];
+      const buf = await resp.arrayBuffer();
+      if (buf.byteLength > this.MAX_XLSX_BYTES) {
+        throw new Error(`Файл слишком большой (${Math.round(buf.byteLength/1024/1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES/1024/1024)} МБ.`);
+      }
 
-        // цена с НДС: если нет — 0
-        if (priceNum === null || priceNum === undefined || priceNum === '' || Number.isNaN(Number(priceNum))) {
-          priceNum = 0;
-        } else {
-          priceNum = Number(priceNum);
-        }
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const ws = wb.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(ws);
 
-        const __name    = row.__name    ? String(row.__name)    : this.normalizeForFuzzySearch(name);
-        const __article = row.__article ? String(row.__article) : this.normalizeForFuzzySearch(article);
+      if (!jsonData.length) throw new Error('Файл пустой или не содержит данных');
+      if (jsonData.length > this.MAX_ROWS) throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
 
-        return {
-          // сохраняем исходные поля на всякий
-          ...row,
-          name,
-          article,
-          price: priceNum,
-          __name,
-          __article,
-          __price: this._formatPriceCached(priceNum),
-        };
-      });
+      const required = ['Наименование', 'Артикул', 'Цена'];
+      const firstRow = jsonData[0] || {};
+      const missing = required.filter(c => !(c in firstRow));
+      if (missing.length) throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+
+      // Прединдексация + формат цены (без ₽)
+      this.data = jsonData.map(row => ({
+        ...row,
+        __name: this.normalizeForFuzzySearch(row['Наименование'] || ''),
+        __article: this.normalizeForFuzzySearch(row['Артикул'] || ''),
+        __price: this._formatPriceCached(row['Цена']),
+      }));
 
       const info = document.getElementById('datasetInfo');
       if (info) {
@@ -192,21 +187,22 @@ class PriceListSearchApp {
       }
 
       this.showSearchSection();
+// Очистить строку поиска ТОЛЬКО при "reload" (F5/Ctrl+R/кнопка обновить),
+// но НЕ при возврате "назад" (bfcache сохраняется).
+const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+const isReload = nav ? (nav.type === 'reload')
+                     : (performance.navigation && performance.navigation.type === 1); // старый API для старых браузеров
 
-      // При полном перезагрузе чистим интерфейс
-      const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-      const isReload = nav ? (nav.type === 'reload')
-                           : (performance.navigation && performance.navigation.type === 1);
-      if (isReload) {
-        const input = document.getElementById('searchInput');
-        if (input) input.value = '';
-        this.filteredData = [];
-        this._page = 1;
-        this.displayResults();
-      }
+if (isReload) {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = '';
+  this.filteredData = [];
+  this._page = 1;
+  this.displayResults();
+}
     } catch (e) {
-      console.error('Загрузка base.search.json не удалась:', e);
-      this.showError(`Не удалось загрузить base.search.json\n${e.message}`);
+      console.error('Загрузка base.xlsx не удалась:', e);
+      this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
     }
   }
 
@@ -226,16 +222,12 @@ class PriceListSearchApp {
       return;
     }
 
-    // Токены из оригинала + из транслитерации
-    const variants = this.createSearchVariants(query);
-    const partsSet = new Set();
-    for (const v of variants) {
-      const toks = v.split(/\s+/).filter(Boolean).slice(0, this.MAX_TOKENS)
-        .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
-        .filter(Boolean);
-      toks.forEach(t => partsSet.add(t));
-    }
-    const parts = Array.from(partsSet);
+    const parts = query
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, this.MAX_TOKENS)
+      .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
+      .filter(Boolean);
 
     this.filteredData = this.data.filter(item =>
       parts.every(part => item.__name.includes(part) || item.__article.includes(part))
@@ -257,29 +249,36 @@ class PriceListSearchApp {
 
     const total = this.filteredData.length;
 
-    if (total === 0) {
-      resultsBody.innerHTML = '';
 
-      const isEmptyQuery = rawQuery.length === 0;
-      if (banner && titleEl && hintEl) {
-        if (isEmptyQuery) {
-          banner.className = 'no-results no-results--empty text-center py-4';
-          titleEl.textContent = 'Введите текст для поиска';
-          hintEl.textContent = '';
-        } else {
-          banner.className = 'no-results text-center py-4';
-          titleEl.textContent = 'По вашему запросу ничего не найдено';
-          hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
-        }
-        banner.style.display = 'block';
-      }
+if (total === 0) {
+  // очищаем таблицу
+  resultsBody.innerHTML = '';
 
-      resultsCount.textContent = 'Найдено: 0 результатов';
-      this._renderShowMore(false);
-      return;
+  // что введено в поле поиска?
+  const isEmptyQuery = rawQuery.length === 0;
+
+  if (banner && titleEl && hintEl) {
+    if (isEmptyQuery) {
+      // Пустое поле: зелёный баннер
+      banner.className = 'no-results no-results--empty text-center py-4';
+      titleEl.textContent = 'Введите текст для поиска';
+      hintEl.textContent = '';
     } else {
-      if (banner) banner.style.display = 'none';
+      // Запрос есть, но ничего не нашли: красный баннер
+      banner.className = 'no-results text-center py-4';
+      titleEl.textContent = 'По вашему запросу ничего не найдено';
+      hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
     }
+    banner.style.display = 'block';
+  }
+
+  resultsCount.textContent = 'Найдено: 0 результатов';
+  this._renderShowMore(false);
+  return;
+} else {
+  // есть результаты — скрываем баннер
+  if (banner) banner.style.display = 'none';
+}
 
     let highlightTokens = rawQuery
       .split(/\s+/)
@@ -297,8 +296,8 @@ class PriceListSearchApp {
 
     const tooMany = total > 5000;
     resultsBody.innerHTML = slice.map(item => {
-      const nameSafe = this.escapeHTML(item.name ?? item['Наименование'] ?? '');
-      const artSafe  = this.escapeHTML(item.article ?? item['Артикул'] ?? '');
+      const nameSafe = this.escapeHTML(item['Наименование'] || '');
+      const artSafe  = this.escapeHTML(item['Артикул'] || '');
       const nameHtml = (tooMany || highlightTokens.length === 0)
         ? nameSafe : this.highlightHomoglyphs(nameSafe, highlightTokens);
       const artHtml  = (tooMany || highlightTokens.length === 0)
@@ -327,12 +326,11 @@ class PriceListSearchApp {
     };
   }
 
-  // формат цены БЕЗ символа рубля — число с 2 знаками; если нет — 0,00
+  // формат цены БЕЗ символа рубля — число с 2 знаками
   _formatPriceCached(price) {
-    if (price === null || price === undefined || price === '' || Number.isNaN(Number(price))) {
-      return (0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    const num = Number(price);
+    if (price === null || price === undefined || price === '') return '—';
+    const num = parseFloat(price);
+    if (Number.isNaN(num)) return String(price);
     return num.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }
@@ -340,4 +338,3 @@ class PriceListSearchApp {
 document.addEventListener('DOMContentLoaded', () => {
   new PriceListSearchApp();
 });
-
