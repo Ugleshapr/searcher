@@ -113,6 +113,33 @@ if (si) {
       input.addEventListener('input', debounced);
       input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
     }
+    // Копирование "Наименование\tАртикул" по ЛКМ на первой колонке
+const tbody = document.getElementById('resultsBody');
+if (tbody) {
+  tbody.addEventListener('click', async (e) => {
+    const cell = e.target.closest('td.copyable');
+    if (!cell) return; // клик не по первой колонке
+
+    // Берём текст без HTML (textContent убирает <span class="highlight">)
+    const name = cell.textContent.trim();
+
+    // Вторая ячейка той же строки — это "Артикул"
+    const row = cell.parentElement;
+    const articleCell = row ? row.children[1] : null;
+    const article = articleCell ? articleCell.textContent.trim() : '';
+
+    const tsv = `${name}\t${article}`;
+    try {
+      await navigator.clipboard.writeText(tsv);
+      // маленькая визуальная подсказка через title (необязательно)
+      const prev = cell.getAttribute('title') || '';
+      cell.setAttribute('title', 'Скопировано');
+      setTimeout(() => cell.setAttribute('title', prev), 800);
+    } catch (err) {
+      console.warn('Clipboard error:', err);
+    }
+  });
+}
   }
 
   // ---------- Загрузка данных ----------
@@ -253,7 +280,7 @@ if (isReload) {
         ? artSafe  : this.highlightHomoglyphs(artSafe, highlightTokens);
       return `
         <tr>
-          <td>${nameHtml}</td>
+          <td class="copyable">${nameHtml}</td>
           <td>${artHtml}</td>
           <td class="text-price">${item.__price}</td>
         </tr>
