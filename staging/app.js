@@ -249,9 +249,7 @@ if (isReload) {
     const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
 
     const total = this.filteredData.length;
-const banner = document.getElementById('stateBanner');
-const titleEl = document.getElementById('stateBannerTitle');
-const hintEl  = document.getElementById('stateBannerHint');
+
 
 if (total === 0) {
   // очищаем таблицу
@@ -268,7 +266,7 @@ if (total === 0) {
       hintEl.textContent = '';
     } else {
       // Запрос есть, но ничего не нашли: красный баннер
-      banner.className = 'state-banner state--noresults';
+      banner.className = 'state-banner no-results';
       titleEl.textContent = 'По вашему запросу ничего не найдено';
       hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
     }
@@ -280,11 +278,8 @@ if (total === 0) {
   return;
 } else {
   // есть результаты — скрываем баннер
-  const banner = document.getElementById('stateBanner');
   if (banner) banner.style.display = 'none';
 }
-
-     if (banner) banner.style.display = 'none';
 
     let highlightTokens = rawQuery
       .split(/\s+/)
