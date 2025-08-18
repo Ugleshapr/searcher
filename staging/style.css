@@ -1058,19 +1058,10 @@ select.form-control {
   padding-bottom: 8px;
 }
 td.copyable { cursor: copy; }
-/* Универсальный баннер состояния */
-.state-banner {
-  border-radius: var(--radius-base); /* как у .no-results */
-  padding: 0;                        /* паддинг берём из классов .py-4 в разметке */
-}
 
-/* Пустое поле (зелёный) — пара к твоей красной плашке */
-.state-banner.state--empty {
-  background: #d1e7dd; /* оттенок Bootstrap success subtle */
-  color: #0f5132;      /* текст success */
-}
-/* Выравниваем типографику зелёного баннера под красный */
-.state-banner p {
-  font-size: var(--font-size-lg);
-  margin-bottom: var(--space-8);
+/* Зеленая версия старого баннера (пустой запрос) — те же размеры/типографика, другие цвета */
+.no-results.no-results--empty {
+  background: #d1e7dd;          /* мягкий зелёный фон */
+  color: #0f5132;               /* зелёный текст */
+  border-color: #badbcc;        /* зелёная граница (как красная, только оттенок success) */
 }
