@@ -1057,4 +1057,4 @@ select.form-control {
   padding-top: 8px;
   padding-bottom: 8px;
 }
-
+td.copyable { cursor: copy; }
