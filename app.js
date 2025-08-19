@@ -65,7 +65,29 @@ if (si) {
   transliterate(text) {
     return String(text).toLowerCase().split('').map(c => this.translitMap[c] || c).join('');
   }
+// Подсчёт пересечения символов (с учётом кратности), регистр/кирилл-лат уже нормализованы
+_countCharOverlap(target, query) {
+  if (!target || !query) return 0;
+  const qmap = new Map();
+  for (const ch of query) qmap.set(ch, (qmap.get(ch) || 0) + 1);
 
+  let cnt = 0;
+  for (const ch of target) {
+    const n = qmap.get(ch);
+    if (n > 0) { qmap.set(ch, n - 1); cnt++; }
+  }
+  return cnt;
+}
+// Канонизация с сохранением разделителей (нижний регистр + омографы, но НЕ выкидываем знаки)
+canonKeepDelims(text) {
+  if (!text) return '';
+  const lower = String(text).toLowerCase();
+  let out = '';
+  for (const ch of lower) {
+    out += this.homoglyphCanon.has(ch) ? this.homoglyphCanon.get(ch) : ch;
+  }
+  return out; // пунктуация и пробелы остаются
+}
   escapeRegExp(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
   escapeHTML(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
@@ -177,6 +199,8 @@ if (tbody) {
         ...row,
         __name: this.normalizeForFuzzySearch(row['Наименование'] || ''),
         __article: this.normalizeForFuzzySearch(row['Артикул'] || ''),
+        __name_delim: this.canonKeepDelims(row['Наименование'] || ''),   
+        __article_delim: this.canonKeepDelims(row['Артикул'] || ''),   
         __price: this._formatPriceCached(row['Цена']),
       }));
 
@@ -233,10 +257,47 @@ if (isReload) {
       parts.every(part => item.__name.includes(part) || item.__article.includes(part))
     );
 
-    this._page = 1;
-    this.displayResults();
-  }
+    const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
+const qn = this.normalizeForFuzzySearch(rawQuery);
 
+// parts уже посчитаны выше как нормализованные токены запроса
+for (const it of this.filteredData) {
+  // базовый скор по пересечению символов (как у тебя было)
+  const concat = it.__article + it.__name;
+  it.__score = this._countCharOverlap(concat, qn);
+
+  // --- НОВОЕ: бонус за контiguous-совпадение токена ---
+  // Если ТЕКСТ С РАЗДЕЛИТЕЛЯМИ содержит токен "как есть" подряд,
+  // даём большой бонус. Это поднимет "16А" над "1,6А" и "61А".
+  for (const p of parts) {
+    if (it.__article_delim.includes(p)) it.__score += 1000; // артикул — выше
+    if (it.__name_delim.includes(p))    it.__score += 600;  // название — тоже важно
+  }
+}
+
+// сортировка по скору + несколько тай-брейкеров
+this.filteredData.sort((a, b) => {
+  if (b.__score !== a.__score) return b.__score - a.__score;
+
+  // тай-брейкер 1: более ранняя позиция токена в артикуле (с разделителями)
+  const bestPos = (it) => {
+    let best = 1e9;
+    for (const p of parts) {
+      const i = it.__article_delim.indexOf(p);
+      if (i !== -1 && i < best) best = i;
+    }
+    return best;
+  };
+  const ap = bestPos(a), bp = bestPos(b);
+  if (ap !== bp) return ap - bp;
+
+  // тай-брейкер 2: покороче наименование — чуть выше
+  return a.__name.length - b.__name.length;
+});
+
+this._page = 1;
+this.displayResults();
+}
   // ---------- Отрисовка ----------
   displayResults() {
     const resultsBody = document.getElementById('resultsBody');
