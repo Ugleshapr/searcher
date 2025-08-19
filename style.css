@@ -1065,3 +1065,6 @@ td.copyable { cursor: copy; }
   color: #0f5132;               /* зелёный текст */
   border-color: #badbcc;        /* зелёная граница (как красная, только оттенок success) */
 }
+/* Документы: компактная колонка с кнопкой */
+.col-docs { width: 1%; white-space: nowrap; text-align: right; }
+.docs-menu a.dropdown-item { white-space: normal; }
