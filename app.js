@@ -59,7 +59,7 @@ if (si) {
     for (const ch of lower) {
       canon += this.homoglyphCanon.has(ch) ? this.homoglyphCanon.get(ch) : ch;
     }
-    return canon.replace(/[^a-z0-9а-яё]/g, '');
+    return canon.replace(/[^a-z0-9а-яё/]/g, '');
   }
 
   transliterate(text) {
@@ -108,14 +108,17 @@ canonKeepDelims(text) {
   }
 
   highlightHomoglyphs(escapedText, tokenPatterns) {
-    if (!escapedText || !tokenPatterns.length) return escapedText;
-    let out = String(escapedText);
-    for (const pat of tokenPatterns) {
-      try { out = out.replace(new RegExp(`(${pat})`,'gi'), '<span class="highlight">$1</span>'); }
-      catch {}
-    }
-    return out;
-  }
+  if (!escapedText || !tokenPatterns.length) return escapedText;
+
+  // 1) убираем дубликаты и сортируем по длине, чтобы длинные ловились первыми
+  const uniq = [...new Set(tokenPatterns)].sort((a, b) => b.length - a.length);
+
+  // 2) один объединённый регэксп вместо N проходов
+  const re = new RegExp(`(${uniq.join('|')})`, 'gi');
+
+  // 3) единичная замена — не заденем вставленный <span>
+  return escapedText.replace(re, '<span class="highlight">$1</span>');
+}
 
   showError(message) {
     const modal = new bootstrap.Modal(document.getElementById('errorModal'));
