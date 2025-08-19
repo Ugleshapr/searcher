@@ -93,6 +93,27 @@ canonKeepDelims(text) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
+  // Парсит строку вида: "Каталог ... https://... Руководство ... https://..."
+  parseDocs(raw) {
+    if (!raw) return [];
+    const text = String(raw).replace(/\s+/g, ' ').trim();
+    const urls = [...text.matchAll(/https?:\/\/\S+/g)];
+    if (!urls.length) return [];
+
+    const docs = [];
+    let last = 0, n = 1;
+    for (const m of urls) {
+      const url = m[0];
+      // заголовок — текст между предыдущим концом и началом URL
+      let title = text.slice(last, m.index).trim();
+      // чуть подчистим хвостовую пунктуацию
+      title = title.replace(/[—–-]+$/,'').replace(/[:;,.\u00A0\s]+$/,'').trim();
+      docs.push({ title: title || `Документ ${n}`, url });
+      last = m.index + url.length;
+      n++;
+    }
+    return docs;
+  }
   debounce(fn, ms=200){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn.apply(this,a),ms); }; }
 
   buildHomoglyphRegexToken(token) {
@@ -205,6 +226,7 @@ if (tbody) {
         __name_delim: this.canonKeepDelims(row['Наименование'] || ''),   
         __article_delim: this.canonKeepDelims(row['Артикул'] || ''),   
         __price: this._formatPriceCached(row['Цена']),
+        __docs: this.parseDocs(row['Документы'])  
       }));
 
       const info = document.getElementById('datasetInfo');
@@ -366,13 +388,34 @@ if (total === 0) {
         ? nameSafe : this.highlightHomoglyphs(nameSafe, highlightTokens);
       const artHtml  = (tooMany || highlightTokens.length === 0)
         ? artSafe  : this.highlightHomoglyphs(artSafe, highlightTokens);
-      return `
-        <tr>
-          <td class="copyable">${nameHtml}</td>
-          <td>${artHtml}</td>
-          <td class="text-price">${item.__price}</td>
-        </tr>
-      `;
+     const docs = item.__docs || [];
+let docsHtml = '—';
+if (docs.length) {
+  const items = docs.map(d =>
+    `<li><a class="dropdown-item" href="${this.escapeHTML(d.url)}" target="_blank" rel="noopener">${this.escapeHTML(d.title)}</a></li>`
+  ).join('');
+  docsHtml = `
+    <div class="dropdown">
+      <button type="button" class="btn btn--outline btn--sm" data-bs-toggle="dropdown" aria-expanded="false" title="Документы">
+        <!-- inline SVG folder -->
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M10 4l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h5z" fill="currentColor"/>
+        </svg>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end docs-menu">
+        ${items}
+      </ul>
+    </div>`;
+}
+
+return `
+  <tr>
+    <td class="copyable">${nameHtml}</td>
+    <td>${artHtml}</td>
+    <td class="text-price">${item.__price}</td>
+    <td class="col-docs">${docsHtml}</td>   <!-- NEW -->
+  </tr>
+`;
     }).join('');
 
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
