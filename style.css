@@ -483,5 +483,11 @@ td.copyable { cursor: copy; }
 .pulse { animation: pulse 2s infinite; }
 @keyframes pulse { 0%{opacity:1;} 50%{opacity:.5;} 100%{opacity:1;} }
 
+/* Пустые строки для визуального минимума */
+#resultsTable .placeholder-row { pointer-events: none; background: transparent !important; }
+#resultsTable .placeholder-row td {
+  color: transparent;          /* содержание невидимо, но границы сохраняются */
+  border-bottom: 1px solid var(--color-border);
+}
 
 
