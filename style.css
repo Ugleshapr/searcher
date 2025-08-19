@@ -1101,6 +1101,39 @@ td.copyable { cursor: copy; }
 #resultsTable td.text-price {
   text-align: center !important;
 }
+/* Выпадашка Документы — ярче hover/focus/active */
+.docs-menu .dropdown-item {
+  position: relative;
+}
+
+/* фон и текст при наведении/фокусе/активе */
+.docs-menu .dropdown-item:hover,
+.docs-menu .dropdown-item:focus,
+.docs-menu .dropdown-item:active,
+.docs-menu .dropdown-item.active {
+  background-color: rgba(79, 103, 83, 0.16); /* плотнее, чем стандартный */
+  color: #1f2a21; /* чуть темнее текст для контраста */
+}
+
+/* тонкая акцент-полоска слева при наведении */
+.docs-menu .dropdown-item:hover::before,
+.docs-menu .dropdown-item:focus::before,
+.docs-menu .dropdown-item:active::before,
+.docs-menu .dropdown-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: #4f6753;
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+/* для клавиатуры — видимое focus-ring */
+.docs-menu .dropdown-item:focus-visible {
+  outline: 2px solid rgba(79, 103, 83, 0.6);
+  outline-offset: -2px;
+}
 
 
 
