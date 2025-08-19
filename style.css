@@ -1078,19 +1078,18 @@ td.copyable { cursor: copy; }
 
 
 /* Разрешаем выпадающему меню выходить за границы карточки результатов */
-#resultsSection { overflow: visible; }
-
-/* На случай, если меню упирается в обёртку таблицы */
+#resultsSection,
+#resultsSection .card__body,
 #resultsSection .table-responsive {
   overflow-x: auto;   /* сохранить горизонтальный скролл */
-  overflow-y: visible;/* дать выпадашке выходить вниз/вверх */
+  overflow-y: visible !important;/* дать выпадашке выходить вниз/вверх */
 }
 
 /* Чтоб длинные списки не упирались в край экрана */
 .docs-menu { max-height: 60vh; overflow: auto; }
 
 /* Если вдруг окажется под соседними элементами — поднимем слой */
-.dropdown-menu { z-index: 2000; }
+.dropdown-menu { z-index: 3000; }
 
 /* 3) Центрирование колонок "Артикул" и "Цена" (и их заголовков) */
 #resultsTable th:nth-child(2),
@@ -1102,3 +1101,6 @@ td.copyable { cursor: copy; }
 #resultsTable td.text-price {
   text-align: center !important;
 }
+
+
+
