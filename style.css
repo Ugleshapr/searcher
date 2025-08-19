@@ -1068,3 +1068,20 @@ td.copyable { cursor: copy; }
 /* Документы: компактная колонка с кнопкой */
 .col-docs { width: 1%; white-space: nowrap; text-align: right; }
 .docs-menu a.dropdown-item { white-space: normal; }
+
+
+/* Разрешаем выпадающему меню выходить за границы карточки результатов */
+#resultsSection { overflow: visible; }
+
+/* На случай, если меню упирается в обёртку таблицы */
+#resultsSection .table-responsive {
+  overflow-x: auto;   /* сохранить горизонтальный скролл */
+  overflow-y: visible;/* дать выпадашке выходить вниз/вверх */
+}
+
+/* Чтоб длинные списки не упирались в край экрана */
+.docs-menu { max-height: 60vh; overflow: auto; }
+
+/* Если вдруг окажется под соседними элементами — поднимем слой */
+.dropdown-menu { z-index: 2000; }
+
