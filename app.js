@@ -409,15 +409,31 @@ if (docs.length) {
 }
 
 return `
-  <tr>
-    <td class="copyable">${nameHtml}</td>
-    <td>${artHtml}</td>
-    <td class="text-price">${item.__price}</td>
-    <td class="col-docs">${docsHtml}</td>   <!-- NEW -->
-  </tr>
-`;
-    }).join('');
+    <tr>
+      <td class="copyable">${nameHtml}</td>
+      <td>${artHtml}</td>
+      <td class="text-price">${item.__price}</td>
+      <td class="col-docs">${docsHtml}</td>
+    </tr>
+  `;
+}).join('');
 
+// Добавляем «пустые» строки до минимума в 3
+let fillerRows = '';
+if (slice.length > 0) { // при 0 результатов оставляем твой "no-results"
+  const need = Math.max(0, 3 - slice.length);
+  if (need > 0) {
+    fillerRows = Array.from({ length: need }, () => `
+      <tr class="placeholder-row" aria-hidden="true">
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td>&nbsp;</td>
+        <td class="col-docs">&nbsp;</td>
+      </tr>
+    `).join('');
+  }
+}
+    resultsBody.innerHTML = rowsHtml + fillerRows;
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
   }
