@@ -277,51 +277,53 @@ if (isReload) {
       .slice(0, this.MAX_TOKENS)
       .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
       .filter(Boolean);
+    // Есть ли буквы в запросе?
+   const hasLetters = /[a-zA-Zа-яА-ЯёЁ]/.test(query);
 
-    this.filteredData = this.data.filter(item =>
-      parts.every(part => item.__name.includes(part) || item.__article.includes(part))
-    );
+  // Фильтрация: если есть буквы — ищем только по названию
+  this.filteredData = this.data.filter(item =>
+    parts.every(part =>
+      item.__name.includes(part) || (!hasLetters && item.__article.includes(part))
+    )
+  );
 
-    const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
-const qn = this.normalizeForFuzzySearch(rawQuery);
+  const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
+  const qn = this.normalizeForFuzzySearch(rawQuery);
 
-// parts уже посчитаны выше как нормализованные токены запроса
-for (const it of this.filteredData) {
-  // базовый скор по пересечению символов (как у тебя было)
-  const concat = it.__article + it.__name;
-  it.__score = this._countCharOverlap(concat, qn);
+  // Скоринг
+  for (const it of this.filteredData) {
+    // если есть буквы — считаем пересечение только с названием
+    const concat = hasLetters ? it.__name : (it.__article + it.__name);
+    it.__score = this._countCharOverlap(concat, qn);
 
-  // --- НОВОЕ: бонус за контiguous-совпадение токена ---
-  // Если ТЕКСТ С РАЗДЕЛИТЕЛЯМИ содержит токен "как есть" подряд,
-  // даём большой бонус. Это поднимет "16А" над "1,6А" и "61А".
-  for (const p of parts) {
-    if (it.__article_delim.includes(p)) it.__score += 1000; // артикул — выше
-    if (it.__name_delim.includes(p))    it.__score += 600;  // название — тоже важно
-  }
-}
-
-// сортировка по скору + несколько тай-брейкеров
-this.filteredData.sort((a, b) => {
-  if (b.__score !== a.__score) return b.__score - a.__score;
-
-  // тай-брейкер 1: более ранняя позиция токена в артикуле (с разделителями)
-  const bestPos = (it) => {
-    let best = 1e9;
+    // Бонусы за "цельные" вхождения
     for (const p of parts) {
-      const i = it.__article_delim.indexOf(p);
-      if (i !== -1 && i < best) best = i;
+      if (!hasLetters && it.__article_delim.includes(p)) it.__score += 1000; // артикул учитываем ТОЛЬКО без букв
+      if (it.__name_delim.includes(p)) it.__score += 600;
     }
-    return best;
-  };
-  const ap = bestPos(a), bp = bestPos(b);
-  if (ap !== bp) return ap - bp;
+  }
 
-  // тай-брейкер 2: покороче наименование — чуть выше
-  return a.__name.length - b.__name.length;
-});
+  // Сортировка: тай-брейкер смотрит в артикул только если нет букв
+  this.filteredData.sort((a, b) => {
+    if (b.__score !== a.__score) return b.__score - a.__score;
 
-this._page = 1;
-this.displayResults();
+    const bestPos = (it) => {
+      const hay = hasLetters ? it.__name_delim : it.__article_delim;
+      let best = 1e9;
+      for (const p of parts) {
+        const i = hay.indexOf(p);
+        if (i !== -1 && i < best) best = i;
+      }
+      return best;
+    };
+    const ap = bestPos(a), bp = bestPos(b);
+    if (ap !== bp) return ap - bp;
+
+    return a.__name.length - b.__name.length;
+  });
+
+  this._page = 1;
+  this.displayResults();
 }
   // ---------- Отрисовка ----------
   displayResults() {
