@@ -402,8 +402,8 @@ if (hasLetters && parts.length >= 2) {
 {
   const nd = it.__name_delim || String(it['Наименование'] || '');
   // \b в JS плохо работает с кириллицей, поэтому границы делаем руками
-  const hasExactNovyi = /(^|[^a-zа-яё0-9])новый(?=$|[^a-zа-яё0-9])/i.test(nd);
-  if (hasExactNovyi) it.__score += 700; 
+  const hasExactNovyi = /(^|[^a-zа-яё0-9])Новый(?=$|[^a-zа-яё0-9])/i.test(nd);
+  if (hasExactNovyi) it.__score += 800; 
 }
     // ШТРАФ за нежелательные серии в названии: "ОМ4/OM4" и "РЕГ/REG"
 {
