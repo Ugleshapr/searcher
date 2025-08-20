@@ -385,7 +385,7 @@ if (isReload) {
       if (!hasLetters && it.__article_delim.includes(p)) it.__score += 1000; // артикул учитываем ТОЛЬКО без букв
       if (it.__name_delim.includes(p)) it.__score += 600;
     }
-    // NEW: фразовый бонус за соседние токены в названии (только для запросов с буквами)
+    // Фразовый бонус за соседние токены в названии (только для запросов с буквами)
 if (hasLetters && parts.length >= 2) {
   const nd = it.__name_delim; // канонизированное название с сохранением разделителей
   for (let i = 0; i < parts.length - 1; i++) {
@@ -397,6 +397,18 @@ if (hasLetters && parts.length >= 2) {
     const re = new RegExp(this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b), 'i');
     if (re.test(nd)) it.__score += 900; // вес подбирается эмпирически
   }
+}
+    // ШТРАФ за нежелательные серии в названии: "ОМ4/OM4" и "РЕГ/REG"
+{
+  // Берём «делимитированное» имя
+  const nd = it.__name_delim || String(it['Наименование'] || '');
+
+  // матчим токены как отдельные «словечки»: разделители — не буквы/цифры
+  const hasOM4 = /(^|[^a-zа-яё0-9])(?:om4|ом4)(?=$|[^a-zа-яё0-9])/i.test(nd);
+  const hasREG = /(^|[^a-zа-яё0-9])(?:reg|рег)(?=$|[^a-zа-яё0-9])/i.test(nd);
+
+  if (hasOM4) it.__score -= 800;  // величину можно подстроить
+  if (hasREG) it.__score -= 800;
 }
   }
 
