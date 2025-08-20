@@ -272,7 +272,7 @@ if (isReload) {
     }
 
     const parts = query
-      .split(/\s+/)
+      .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
       .filter(Boolean)
       .slice(0, this.MAX_TOKENS)
       .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
@@ -367,7 +367,7 @@ if (total === 0) {
 }
 
     let highlightTokens = rawQuery
-      .split(/\s+/)
+      .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
       .filter(Boolean)
       .slice(0, this.MAX_TOKENS)
       .map(tok => this.buildHomoglyphRegexToken(tok.slice(0, this.MAX_TOKEN_LEN)));
