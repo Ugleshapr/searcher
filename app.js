@@ -61,6 +61,22 @@ if (si) {
     }
     return canon.replace(/[^a-z0-9а-яё/]/g, '');
   }
+  
+// Подгоняет высоту контейнера таблицы под текущую высоту окна
+_fitResultsHeight() {
+  const box = document.querySelector('#resultsSection .table-responsive');
+  if (!box) return;
+
+  const gap = 24; // "воздух" снизу под тени/футер
+  const top = box.getBoundingClientRect().top;
+  let h = window.innerHeight - top - gap;
+
+  // разумные пределы
+  h = Math.max(320, Math.min(h, Math.floor(window.innerHeight * 0.92)));
+
+  box.style.maxHeight = h + 'px';
+  box.style.overflowY = 'auto';
+}
 
   transliterate(text) {
     return String(text).toLowerCase().split('').map(c => this.translitMap[c] || c).join('');
@@ -186,6 +202,72 @@ if (tbody) {
     }
   });
 }
+    // автоподгон высоты таблицы при изменении окна
+// автоподгон высоты таблицы при изменении окна (дебаунс 50 мс)
+const fit = this.debounce(this._fitResultsHeight.bind(this), 50);
+window.addEventListener('resize', fit, { passive: true });
+window.addEventListener('orientationchange', fit);
+// --- Не даём выпадашке "Документы" обрезаться скролл-контейнером таблицы ---
+// Переносим .dropdown-menu во <body> при открытии и позиционируем у кнопки
+document.addEventListener('shown.bs.dropdown', (e) => {
+  const dd = e.target.closest('.dropdown');
+  if (!dd || !dd.closest('#resultsSection')) return; // работаем только внутри секции результатов
+
+  const menu = dd.querySelector('.dropdown-menu');
+  const btn  = dd.querySelector('[data-bs-toggle="dropdown"]');
+  if (!menu || !btn) return;
+
+  // переносим меню в body
+  menu.dataset.portal = '1';
+  document.body.appendChild(menu);
+
+  const place = () => {
+    const r = btn.getBoundingClientRect();
+
+    // измеряем размеры меню (вне потока)
+    const prevVis = menu.style.visibility, prevDisp = menu.style.display;
+    menu.style.visibility = 'hidden';
+    menu.style.display    = 'block';
+    const mw = menu.offsetWidth, mh = menu.offsetHeight;
+    menu.style.visibility = prevVis;
+    menu.style.display    = prevDisp;
+
+    // решаем: вверх или вниз (если внизу мало места — открываем вверх)
+    const spaceBelow = window.innerHeight - r.bottom;
+    const spaceAbove = r.top;
+    const openAbove  = spaceBelow < mh && spaceAbove > spaceBelow;
+
+    // позиционируем у правого края кнопки
+    const left = Math.round(r.right - mw);
+    const top  = Math.round(openAbove ? (r.top - mh) : r.bottom);
+
+    Object.assign(menu.style, {
+      position: 'fixed',
+      left:     left + 'px',
+      top:      top  + 'px',
+      zIndex:   3000
+    });
+  };
+
+  place();
+  menu._reposition = place;
+  window.addEventListener('scroll', place, true);
+  window.addEventListener('resize', place);
+});
+
+document.addEventListener('hide.bs.dropdown', (e) => {
+  const dd = e.target.closest('.dropdown');
+  const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+  if (!menu) return;
+
+  window.removeEventListener('scroll', menu._reposition, true);
+  window.removeEventListener('resize', menu._reposition);
+  menu.removeAttribute('style');
+  menu.removeAttribute('data-portal');
+  if (dd) dd.appendChild(menu); // возвращаем меню назад к своей кнопке
+});
+// первичная подгонка сразу после инициализации слушателей
+this._fitResultsHeight();
   }
 
   // ---------- Загрузка данных ----------
@@ -236,6 +318,8 @@ if (tbody) {
       }
 
       this.showSearchSection();
+      this._fitResultsHeight(); // сразу выставить высоту контейнера
+
 // Очистить строку поиска ТОЛЬКО при "reload" (F5/Ctrl+R/кнопка обновить),
 // но НЕ при возврате "назад" (bfcache сохраняется).
 const nav = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
@@ -342,6 +426,7 @@ if (total === 0) {
   // очищаем таблицу
   resultsBody.innerHTML = '';
 
+
   // что введено в поле поиска?
   const isEmptyQuery = rawQuery.length === 0;
 
@@ -362,6 +447,7 @@ if (total === 0) {
 
   resultsCount.textContent = 'Найдено: 0 результатов';
   this._renderShowMore(false);
+  this._fitResultsHeight();
   return;
 } else {
   // есть результаты — скрываем баннер
@@ -384,7 +470,7 @@ if (total === 0) {
     const slice = this.filteredData.slice(0, end);
 
     const tooMany = total > 5000;
-    resultsBody.innerHTML = slice.map(item => {
+    const rowsHtml = slice.map (item => {
       const nameSafe = this.escapeHTML(item['Наименование'] || '');
       const artSafe  = this.escapeHTML(item['Артикул'] || '');
       const nameHtml = (tooMany || highlightTokens.length === 0)
@@ -421,24 +507,11 @@ return `
   `;
 }).join('');
 
-// Добавляем «пустые» строки до минимума в 3
-let fillerRows = '';
-if (slice.length > 0) { // при 0 результатов оставляем твой "no-results"
-  const need = Math.max(0, 3 - slice.length);
-  if (need > 0) {
-    fillerRows = Array.from({ length: need }, () => `
-      <tr class="placeholder-row" aria-hidden="true">
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td>&nbsp;</td>
-        <td class="col-docs">&nbsp;</td>
-      </tr>
-    `).join('');
-  }
-}
-    resultsBody.innerHTML = rowsHtml + fillerRows;
+
+    resultsBody.innerHTML = rowsHtml;
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
+    this._fitResultsHeight();
   }
 
   _renderShowMore(show) {
