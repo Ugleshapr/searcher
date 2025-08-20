@@ -490,4 +490,13 @@ td.copyable { cursor: copy; }
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Dark theme: белый текст на обеих плашках — красной и зелёной */
+@media (prefers-color-scheme: dark) {
+  .no-results { color: #fff !important; }
+  .no-results.no-results--empty { color: #fff !important; }
+}
+[data-color-scheme="dark"] .no-results { color: #fff !important; }
+[data-color-scheme="dark"] .no-results.no-results--empty { color: #fff !important; }
+
+
 
