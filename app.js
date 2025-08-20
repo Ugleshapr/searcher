@@ -385,6 +385,19 @@ if (isReload) {
       if (!hasLetters && it.__article_delim.includes(p)) it.__score += 1000; // артикул учитываем ТОЛЬКО без букв
       if (it.__name_delim.includes(p)) it.__score += 600;
     }
+    // NEW: фразовый бонус за соседние токены в названии (только для запросов с буквами)
+if (hasLetters && parts.length >= 2) {
+  const nd = it.__name_delim; // канонизированное название с сохранением разделителей
+  for (let i = 0; i < parts.length - 1; i++) {
+    const a = parts[i], b = parts[i + 1];
+    // Отсекаем совсем маленькие пары, но оставляем "mat"+"d" (3+1=4)
+    if ((a.length + b.length) < 3) continue;
+
+    // Ищем «a» затем «b» через любые обычные разделители
+    const re = new RegExp(this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b), 'i');
+    if (re.test(nd)) it.__score += 900; // вес подбирается эмпирически
+  }
+}
   }
 
   // Сортировка: тай-брейкер смотрит в артикул только если нет букв
