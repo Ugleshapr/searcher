@@ -168,107 +168,119 @@ canonKeepDelims(text) {
     document.getElementById('resultsSection').style.display = 'block';
   }
 
-  initializeEventListeners() {
-    const input = document.getElementById('searchInput');
-    const debounced = this.debounce(() => this.performSearch(), 200);
-    if (input) {
-      input.addEventListener('input', debounced);
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
-    }
-    // Копирование "Наименование\tАртикул" по ЛКМ на первой колонке
-const tbody = document.getElementById('resultsBody');
-if (tbody) {
-  tbody.addEventListener('click', async (e) => {
-    const cell = e.target.closest('td.copyable');
-    if (!cell) return; // клик не по первой колонке
+initializeEventListeners() {
+  const input = document.getElementById('searchInput');
+  const debounced = this.debounce(() => this.performSearch(), 200);
+  if (input) {
+    input.addEventListener('input', debounced);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+  }
 
-    // Берём текст без HTML (textContent убирает <span class="highlight">)
-    const name = cell.textContent.trim();
+  // 1) Копирование "Наименование\tАртикул" по клику на 1-й колонке
+  const tbody = document.getElementById('resultsBody');
+  if (tbody) {
+    tbody.addEventListener('click', async (e) => {
+      const cell = e.target.closest('td.copyable');
+      if (!cell) return;
 
-    // Вторая ячейка той же строки — это "Артикул"
-    const row = cell.parentElement;
-    const articleCell = row ? row.children[1] : null;
-    const article = articleCell ? articleCell.textContent.trim() : '';
+      const name = cell.textContent.trim();
+      const row = cell.parentElement;
+      const articleCell = row ? row.children[1] : null;
+      const article = articleCell ? articleCell.textContent.trim() : '';
 
-    const tsv = `${name}\t${article}`;
-    try {
-      await navigator.clipboard.writeText(tsv);
-      // маленькая визуальная подсказка через title (необязательно)
-      const prev = cell.getAttribute('title') || '';
-      cell.setAttribute('title', 'Скопировано');
-      setTimeout(() => cell.setAttribute('title', prev), 800);
-    } catch (err) {
-      console.warn('Clipboard error:', err);
-    }
-  });
-}
-    // автоподгон высоты таблицы при изменении окна
-// автоподгон высоты таблицы при изменении окна (дебаунс 50 мс)
-const fit = this.debounce(this._fitResultsHeight.bind(this), 50);
-window.addEventListener('resize', fit, { passive: true });
-window.addEventListener('orientationchange', fit);
-// --- Не даём выпадашке "Документы" обрезаться скролл-контейнером таблицы ---
-// Переносим .dropdown-menu во <body> при открытии и позиционируем у кнопки
-document.addEventListener('shown.bs.dropdown', (e) => {
-  const dd = e.target.closest('.dropdown');
-  if (!dd || !dd.closest('#resultsSection')) return; // работаем только внутри секции результатов
-
-  const menu = dd.querySelector('.dropdown-menu');
-  const btn  = dd.querySelector('[data-bs-toggle="dropdown"]');
-  if (!menu || !btn) return;
-
-  // переносим меню в body
-  menu.dataset.portal = '1';
-  document.body.appendChild(menu);
-
-  const place = () => {
-    const r = btn.getBoundingClientRect();
-
-    // измеряем размеры меню (вне потока)
-    const prevVis = menu.style.visibility, prevDisp = menu.style.display;
-    menu.style.visibility = 'hidden';
-    menu.style.display    = 'block';
-    const mw = menu.offsetWidth, mh = menu.offsetHeight;
-    menu.style.visibility = prevVis;
-    menu.style.display    = prevDisp;
-
-    // решаем: вверх или вниз (если внизу мало места — открываем вверх)
-    const spaceBelow = window.innerHeight - r.bottom;
-    const spaceAbove = r.top;
-    const openAbove  = spaceBelow < mh && spaceAbove > spaceBelow;
-
-    // позиционируем у правого края кнопки
-    const left = Math.round(r.right - mw);
-    const top  = Math.round(openAbove ? (r.top - mh) : r.bottom);
-
-    Object.assign(menu.style, {
-      position: 'fixed',
-      left:     left + 'px',
-      top:      top  + 'px',
-      zIndex:   3000
+      const tsv = `${name}\t${article}`;
+      try {
+        await navigator.clipboard.writeText(tsv);
+        const prev = cell.getAttribute('title') || '';
+        cell.setAttribute('title', 'Скопировано');
+        setTimeout(() => cell.setAttribute('title', prev), 800);
+      } catch (err) { console.warn('Clipboard error:', err); }
     });
+  }
+
+  // 2) Кнопка очистки поля поиска (вынесено из клика по таблице)
+  const inputEl = document.getElementById('searchInput');
+  const clearBtn = document.getElementById('clearSearch');
+
+  const toggleClear = () => {
+    inputEl.parentElement.classList.toggle('has-value', !!inputEl.value.trim());
   };
 
-  place();
-  menu._reposition = place;
-  window.addEventListener('scroll', place, true);
-  window.addEventListener('resize', place);
-});
+  inputEl.addEventListener('input', toggleClear);
 
-document.addEventListener('hide.bs.dropdown', (e) => {
-  const dd = e.target.closest('.dropdown');
-  const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
-  if (!menu) return;
+  clearBtn?.addEventListener('click', () => {
+    inputEl.value = '';
+    toggleClear();
+    this._page = 1;
+    this.performSearch();
+    inputEl.focus();
+  });
 
-  window.removeEventListener('scroll', menu._reposition, true);
-  window.removeEventListener('resize', menu._reposition);
-  menu.removeAttribute('style');
-  menu.removeAttribute('data-portal');
-  if (dd) dd.appendChild(menu); // возвращаем меню назад к своей кнопке
-});
-// первичная подгонка сразу после инициализации слушателей
-this._fitResultsHeight();
-  }
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && inputEl.value) {
+      e.preventDefault();
+      clearBtn.click();
+    }
+  });
+
+  toggleClear(); // первичное состояние
+
+  // 3) Автоподгон высоты с дебаунсом
+  const fit = this.debounce(this._fitResultsHeight.bind(this), 50);
+  window.addEventListener('resize', fit, { passive: true });
+  window.addEventListener('orientationchange', fit);
+
+  // 4) "Портал" для выпадашки "Документы"
+  document.addEventListener('shown.bs.dropdown', (e) => {
+    const dd = e.target.closest('.dropdown');
+    if (!dd || !dd.closest('#resultsSection')) return;
+    const menu = dd.querySelector('.dropdown-menu');
+    const btn  = dd.querySelector('[data-bs-toggle="dropdown"]');
+    if (!menu || !btn) return;
+
+    menu.dataset.portal = '1';
+    document.body.appendChild(menu);
+
+    const place = () => {
+      const r = btn.getBoundingClientRect();
+      const prevVis = menu.style.visibility, prevDisp = menu.style.display;
+      menu.style.visibility = 'hidden'; menu.style.display = 'block';
+      const mw = menu.offsetWidth, mh = menu.offsetHeight;
+      menu.style.visibility = prevVis; menu.style.display = prevDisp;
+
+      const spaceBelow = window.innerHeight - r.bottom;
+      const spaceAbove = r.top;
+      const openAbove  = spaceBelow < mh && spaceAbove > spaceBelow;
+
+      Object.assign(menu.style, {
+        position: 'fixed',
+        left:  Math.round(r.right - mw) + 'px',
+        top:   Math.round(openAbove ? (r.top - mh) : r.bottom) + 'px',
+        zIndex: 3000
+      });
+    };
+
+    place();
+    menu._reposition = place;
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+  });
+
+  document.addEventListener('hide.bs.dropdown', (e) => {
+    const dd = e.target.closest('.dropdown');
+    const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+    if (!menu) return;
+    window.removeEventListener('scroll', menu._reposition, true);
+    window.removeEventListener('resize', menu._reposition);
+    menu.removeAttribute('style');
+    menu.removeAttribute('data-portal');
+    if (dd) dd.appendChild(menu);
+  });
+
+  // первичная подгонка
+  this._fitResultsHeight();
+}
+  
 
   // ---------- Загрузка данных ----------
   async loadDefaultFile() {

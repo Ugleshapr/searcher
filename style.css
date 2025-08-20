@@ -492,5 +492,28 @@ td.copyable { cursor: copy; }
 [data-color-scheme="dark"] .no-results { color: #fff !important; }
 [data-color-scheme="dark"] .no-results.no-results--empty { color: #fff !important; }
 
+/* Кнопка очистки в строке поиска */
+.search-input-container { position: relative; }
+.search-input-container .form-control { padding-right: 40px; } /* место под кнопку */
+
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;                /* по умолчанию скрыта */
+  border: 0;
+  background: transparent;
+  padding: 0 6px;
+  line-height: 1;
+  font-size: 20px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.search-clear-btn:hover { color: var(--color-primary); background: var(--color-secondary); }
+
+/* показываем кнопку, когда в поле есть текст */
+.search-input-container.has-value .search-clear-btn { display: inline-block; }
 
 
