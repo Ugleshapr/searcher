@@ -7,9 +7,9 @@ class PriceListSearchApp {
     this._pageSize = 200;
 
     // Анти-DoS / безопасность
-    this.MAX_TOKENS = 6;
+    this.MAX_TOKENS = 18;
     this.MAX_TOKEN_LEN = 64;
-    this.MAX_REGEX_TOTAL = 2000;
+    this.MAX_REGEX_TOTAL = 3000;
     this.MAX_XLSX_BYTES = 15 * 1024 * 1024;
     this.MAX_ROWS = 200000;
 
@@ -398,6 +398,13 @@ if (hasLetters && parts.length >= 2) {
     if (re.test(nd)) it.__score += 900; // вес подбирается эмпирически
   }
 }
+    // Бонус за слово "новый" как отдельный токен
+{
+  const nd = it.__name_delim || String(it['Наименование'] || '');
+  // \b в JS плохо работает с кириллицей, поэтому границы делаем руками
+  const hasExactNovyi = /(^|[^a-zа-яё0-9])новый(?=$|[^a-zа-яё0-9])/i.test(nd);
+  if (hasExactNovyi) it.__score += 700; 
+}
     // ШТРАФ за нежелательные серии в названии: "ОМ4/OM4" и "РЕГ/REG"
 {
   // Берём «делимитированное» имя
@@ -407,7 +414,7 @@ if (hasLetters && parts.length >= 2) {
   const hasOM4 = /(^|[^a-zа-яё0-9])(?:om4|ом4)(?=$|[^a-zа-яё0-9])/i.test(nd);
   const hasREG = /(^|[^a-zа-яё0-9])(?:reg|рег)(?=$|[^a-zа-яё0-9])/i.test(nd);
 
-  if (hasOM4) it.__score -= 800;  // величину можно подстроить
+  if (hasOM4) it.__score -= 800;  
   if (hasREG) it.__score -= 800;
 }
   }
