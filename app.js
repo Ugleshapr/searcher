@@ -397,14 +397,14 @@ if (hasLetters && parts.length >= 2) {
     const re = new RegExp(this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b), 'i');
     if (re.test(nd)) it.__score += 900; // вес подбирается эмпирически
   }
-}
-    // Бонус за слово "новый" как отдельный токен
+}   
+  // --- БОНУС за точное слово "новый" (только это слово) ---
 {
-  const nd = it.__name_delim || String(it['Наименование'] || '');
-  // \b в JS плохо работает с кириллицей, поэтому границы делаем руками
-  const hasExactNovyi = /(^|[^a-zа-яё0-9])Новый(?=$|[^a-zа-яё0-9])/i.test(nd);
-  if (hasExactNovyi) it.__score += 800; 
+  const nameRaw = String(it['Наименование'] || '');
+  it.__isNew = /(^|[^A-Za-zА-Яа-яЁё0-9])новый(?=$|[^A-Za-zА-Яа-яЁё0-9])/i.test(nameRaw);
+  if (it.__isNew) it.__score += 1200; // при необходимости подстрой 900–1500
 }
+
     // ШТРАФ за нежелательные серии в названии: "ОМ4/OM4" и "РЕГ/REG"
 {
   // Берём «делимитированное» имя
