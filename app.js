@@ -371,6 +371,7 @@ if (total === 0) {
     let highlightTokens = rawQuery
       .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
       .filter(Boolean)
+      .filter(tok => this.normalizeForFuzzySearch(tok).length >= 2) // убираем 1-символьные выделения
       .slice(0, this.MAX_TOKENS)
       .map(tok => this.buildHomoglyphRegexToken(tok.slice(0, this.MAX_TOKEN_LEN)));
 
