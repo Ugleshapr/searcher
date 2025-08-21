@@ -518,19 +518,3 @@ td.copyable { cursor: copy; }
 
 Отключение темной темы
 :root { color-scheme: light; }
-
-/* Кнопка-индикатор "i" */
-.info-circle{
-  width: 22px; height: 22px;
-  display: inline-flex; align-items: center; justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: 50%;
-  font-weight: 600; font-size: 13px; line-height: 1;
-  color: var(--color-primary);
-  background: var(--color-bg);
-  cursor: default; /* это не action, просто подсказка */
-  padding: 0;
-}
-.info-circle:hover{ background: var(--color-secondary); }
-
-
