@@ -516,4 +516,5 @@ td.copyable { cursor: copy; }
 /* показываем кнопку, когда в поле есть текст */
 .search-input-container.has-value .search-clear-btn { display: inline-block; }
 
-
+Отключение темной темы
+:root { color-scheme: light; }
