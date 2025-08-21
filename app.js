@@ -375,7 +375,25 @@ if (isReload) {
       .filter(Boolean);
     // Есть ли буквы в запросе?
    const hasLetters = /[a-zA-Zа-яА-ЯёЁ]/.test(query);
+// РЕЖИМ СПИСКА АРТИКУЛОВ: если 2+ токена и каждый строго 6 цифр —
+// ищем только по артикулу и выводим в порядке ввода.
+const isMultiArticle = (parts.length >= 2) && parts.every(p => /^\d{6}$/.test(p));
 
+if (isMultiArticle) {
+  // уникальные коды в порядке ввода
+  const uniq = [...new Set(parts)];
+  const order = new Map(uniq.map((a, i) => [a, i]));
+
+  // фильтруем строго по __article (он у тебя уже нормализован)
+  this.filteredData = this.data.filter(it => order.has(it.__article));
+
+  // сортируем как ввели
+  this.filteredData.sort((a, b) => order.get(a.__article) - order.get(b.__article));
+
+  this._page = 1;
+  this.displayResults();
+  return; // важно: не запускаем обычную логику every()/скоринга ниже
+}
   // Фильтрация: если есть буквы — ищем только по названию
   this.filteredData = this.data.filter(item =>
     parts.every(part =>
