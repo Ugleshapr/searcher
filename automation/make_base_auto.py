@@ -1,40 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-make_base_auto.py — конвертация исходного Excel (.xls/.xlsx) в base.xlsx (и только его)
-+ замена наименований из products.xlsx/product.xlsx
-+ формирование столбца «Документы» (по products_files.csv)
-+ ДОБАВЛЕНО: первая строка «Сайт ссылка …» из 14-го столбца products.xlsx.
 
-Что делает:
-1) Скачивает исходный файл по жёстко заданной ссылке SOURCE_URL (ниже), сохраняет рядом со скриптом.
-2) Авто-определяет строку заголовков и берёт колонки:
-   - Наименование ← 'Номенклатура' или 'Наименование' (по синонимам)
-   - Артикул     ← 'Артикул'       (по синонимам)
-   - Цена        ← колонка с «Цена (с НДС) …»/«Цена с НДС …»; если нет — ставит 0.00
-3) Собирает base.xlsx (лист TDSheet) с колонками: Наименование | Артикул | Цена | Документы.
-4) После сборки пытается открыть products.xlsx / product.xlsx (или .xls):
-   - Заменяет Наименования по Артикулу (как и раньше);
-   - ДОБАВЛЕНО: берёт ссылку из 14-го столбца и ставит её первой строкой в «Документы» как «Сайт ссылка <URL>».
-5) Открывает products_files.csv (или product.csv/products.csv) в папке скрипта (БЕЗ заголовка):
-   Ожидаемые колонки: [0]=Артикул, [1]=Категория, [2]=Название, [3]=URL, …
-   Для каждой строки base по её Артикулу собираются документы с фильтром:
-     - «Каталог/Каталоги» ИЛИ «Руководство по эксплуатации» ИЛИ «РЭ» (как отдельное слово)
-       ИЛИ ДОБАВЛЕНО: «Паспорт»;
-     - Пропускаются англоязычные («(En)», отдельные en/eng/english);
-     - Исключаются дубли по URL.
-   Итог в ячейке «Документы»:
-       Сайт ссылка URL\nНазвание1 URL1\nНазвание2 URL2\n…
-6) Удаляет скачанный временный файл.
-
-Зависимости: pandas, openpyxl (для записи .xlsx), xlrd (для чтения .xls).
-Использование:
-  pip install pandas openpyxl xlrd
-  # укажи SOURCE_URL ниже
-  python make_base_auto.py
-"""
-
-import sys, re, ssl, shutil
+import sys, re, ssl, shutil, os
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -42,8 +9,15 @@ from urllib.error import URLError, HTTPError
 import pandas as pd
 
 # ──────────────────────────────────────────────────────────────────────────────
-# УКАЖИ ПРЯМОЙ URL НА ИСХОДНЫЙ XLS/XLSX
-SOURCE_URL = "https://files.keaz.ru/ftp/keaz.xls?1755595229"   # пример: "https://files.keaz.ru/ftp/keaz.xls"
+# URL обязателен: либо ENV SOURCE_URL, либо 1-й аргумент CLI.
+SOURCE_URL = os.environ.get("SOURCE_URL") or (sys.argv[1] if len(sys.argv) > 1 else None)
+if not SOURCE_URL:
+    sys.stderr.write(
+        "ERROR: SOURCE_URL is not set.\n"
+        "Set env:    SOURCE_URL=https://... python make_base_auto.py\n"
+        "or run as:  python make_base_auto.py https://...\n"
+    )
+    sys.exit(2)
 SHEET      = 0                             # номер/имя листа (0 — первый)
 TMP_NAME   = "_source_download"            # базовое имя временного файла
 # Если products-файл называется иначе — можно переопределить; иначе ищется автоматически
