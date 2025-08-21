@@ -1,4 +1,4 @@
-// Приложение для поиска по Excel прайс-листу (STAGING, автозагрузка ./base.xlsx)
+// Приложение для поиска по Excel прайс-листу (автозагрузка ./base.xlsx)
 class PriceListSearchApp {
   constructor() {
     this.data = [];
@@ -228,23 +228,51 @@ initializeEventListeners() {
 
   inputEl.addEventListener('input', toggleClear);
 
-  clearBtn?.addEventListener('click', () => {
-    inputEl.value = '';
-    toggleClear();
-    this._page = 1;
-    this.performSearch();
-    inputEl.focus();
-  });
-
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && inputEl.value) {
-      e.preventDefault();
-      clearBtn.click();
-    }
-  });
-
+  
   toggleClear(); // первичное состояние
+// Единая функция очистки поиска
+const doClear = () => {
+  if (!inputEl) return;
+  if (!inputEl.value) return;      // уже пусто — выходим
+  inputEl.value = '';
+  toggleClear();
+  this._page = 1;
+  this.performSearch();
+  inputEl.focus();
+};
 
+// Заменяем клик по кнопке × на вызов doClear
+clearBtn?.addEventListener('click', doClear);
+
+// Локальный Esc в самом инпуте — тоже вызывает doClear
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && inputEl.value) {
+    e.preventDefault();
+    doClear();
+  }
+});
+
+// Глобальный Esc: работает где угодно на странице
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+
+  // Если открыт наш dropdown "Документы" — даём Esc его закрыть и не чистим поиск
+  if (document.querySelector('.dropdown.show') ||
+      document.querySelector('.dropdown-menu[data-portal="1"]')) {
+    return;
+  }
+
+  // Если фокус в другом текстовом поле/редакторе — не мешаем
+  const ae = document.activeElement;
+  const isOtherTextField =
+    ae && ae !== inputEl &&
+    ((ae.tagName === 'INPUT' && !['checkbox','radio','button','submit','reset','file','image','range','color','hidden'].includes(ae.type)) ||
+      ae.tagName === 'TEXTAREA' || ae.isContentEditable);
+  if (isOtherTextField) return;
+
+  e.preventDefault();
+  doClear();
+});
   // 3) Автоподгон высоты с дебаунсом
   const fit = this.debounce(this._fitResultsHeight.bind(this), 50);
   window.addEventListener('resize', fit, { passive: true });
