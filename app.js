@@ -62,6 +62,26 @@ if (si) {
     return canon.replace(/[^a-z0-9а-яё/]/g, '');
   }
   
+ // Заменяет только слитные "УЗ" → "У3" и "УХЛЗ" → "УХЛ3" (без разделителей)
+_applyUZAliases(str = '') {
+  let s = String(str);
+
+  // УХЛЗ как отдельный токен: .../начало-строки + "УХЛЗ" + граница слова
+  s = s.replace(
+    /(^|[^A-Za-zА-Яа-яЁё0-9])ухл[зЗ](?=$|[^A-Za-zА-Яа-яЁё0-9])/g,
+    (_m, pre) => pre + 'ухл3'
+  );
+
+  // УЗ как отдельный токен: .../начало-строки + "УЗ" + граница слова
+  s = s.replace(
+    /(^|[^A-Za-zА-Яа-яЁё0-9])у[зЗ](?=$|[^A-Za-zА-Яа-яЁё0-9])/g,
+    (_m, pre) => pre + 'у3'
+  );
+
+  return s;
+}
+
+  
 // Подгоняет высоту контейнера таблицы под текущую высоту окна
 _fitResultsHeight() {
   const box = document.querySelector('#resultsSection .table-responsive');
@@ -367,14 +387,17 @@ if (isReload) {
       return;
     }
 
-    const parts = query
-      .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
-      .filter(Boolean)
-      .slice(0, this.MAX_TOKENS)
-      .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
-      .filter(Boolean);
-    // Есть ли буквы в запросе?
-   const hasLetters = /[a-zA-Zа-яА-ЯёЁ]/.test(query);
+    const qAliased = this._applyUZAliases(query);
+
+const parts = qAliased
+  .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
+  .filter(Boolean)
+  .slice(0, this.MAX_TOKENS)
+  .map(p => this.normalizeForFuzzySearch(p.slice(0, this.MAX_TOKEN_LEN)))
+  .filter(Boolean);
+
+const hasLetters = /[a-zA-Zа-яА-ЯёЁ]/.test(query); // считаем по исходному
+    
 // РЕЖИМ СПИСКА АРТИКУЛОВ: если 2+ токена и каждый строго 6 цифр —
 // ищем только по артикулу и выводим в порядке ввода.
 const isMultiArticle = (parts.length >= 2) && parts.every(p => /^\d{6}$/.test(p));
@@ -402,7 +425,7 @@ if (isMultiArticle) {
   );
 
   const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
-  const qn = this.normalizeForFuzzySearch(rawQuery);
+  const qn = this.normalizeForFuzzySearch(this._applyUZAliases(rawQuery));
 
   // Скоринг
   for (const it of this.filteredData) {
@@ -516,12 +539,12 @@ if (total === 0) {
   if (banner) banner.style.display = 'none';
 }
 
-    let highlightTokens = rawQuery
-      .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
-      .filter(Boolean)
-      .filter(tok => this.normalizeForFuzzySearch(tok).length >= 2) // убираем 1-символьные выделения
-      .slice(0, this.MAX_TOKENS)
-      .map(tok => this.buildHomoglyphRegexToken(tok.slice(0, this.MAX_TOKEN_LEN)));
+    let highlightTokens = this._applyUZAliases(rawQuery)
+  .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
+  .filter(Boolean)
+  .filter(tok => this.normalizeForFuzzySearch(tok).length >= 2)
+  .slice(0, this.MAX_TOKENS)
+  .map(tok => this.buildHomoglyphRegexToken(tok.slice(0, this.MAX_TOKEN_LEN)));
 
     const totalPatternLen = highlightTokens.join('').length;
     if (totalPatternLen > this.MAX_REGEX_TOTAL) {
