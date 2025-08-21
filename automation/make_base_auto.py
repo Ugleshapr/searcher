@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import sys, re, ssl, shutil, os
+import sys, re, ssl, shutil
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -9,15 +9,7 @@ from urllib.error import URLError, HTTPError
 import pandas as pd
 
 # ──────────────────────────────────────────────────────────────────────────────
-# URL обязателен: либо ENV SOURCE_URL, либо 1-й аргумент CLI.
-SOURCE_URL = os.environ.get("SOURCE_URL") or (sys.argv[1] if len(sys.argv) > 1 else None)
-if not SOURCE_URL:
-    sys.stderr.write(
-        "ERROR: SOURCE_URL is not set.\n"
-        "Set env:    SOURCE_URL=https://... python make_base_auto.py\n"
-        "or run as:  python make_base_auto.py https://...\n"
-    )
-    sys.exit(2)
+SOURCE_URL = "https://files.keaz.ru/ftp/keaz.xls?1755595229"   
 SHEET      = 0                             # номер/имя листа (0 — первый)
 TMP_NAME   = "_source_download"            # базовое имя временного файла
 # Если products-файл называется иначе — можно переопределить; иначе ищется автоматически
