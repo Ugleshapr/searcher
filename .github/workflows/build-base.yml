@@ -3,7 +3,7 @@ name: Build base.xlsx
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 6 * * *"  # ежедневно в 06:00 UTC
+    - cron: "0 5 * * *"  # ежедневно в 08:00 MSK
 
 permissions:
   contents: write
