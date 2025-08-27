@@ -140,7 +140,7 @@
 
 /* Auto dark mode */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-color-scheme]) {
+  :root {
     --color-gray-400-rgb: 119, 124, 124;
     --color-teal-300-rgb: 50, 184, 198;
     --color-gray-300-rgb: 167, 169, 169;
