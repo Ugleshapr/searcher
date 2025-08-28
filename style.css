@@ -532,5 +532,7 @@ td.copyable { cursor: copy; }
   padding: 0;
 }
 .info-circle:hover{ background: var(--color-secondary); }
-
+.text-price .info-circle { margin-left: 6px; vertical-align: middle; }
+/* Характеристики — тултип пошире и с переносами строк */
+.tooltip-inner { max-width: 520px; text-align: left; white-space: normal; }
 

@@ -140,7 +140,7 @@
 
 /* Auto dark mode */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-color-scheme]) {
     --color-gray-400-rgb: 119, 124, 124;
     --color-teal-300-rgb: 50, 184, 198;
     --color-gray-300-rgb: 167, 169, 169;
@@ -532,5 +532,5 @@ td.copyable { cursor: copy; }
   padding: 0;
 }
 .info-circle:hover{ background: var(--color-secondary); }
-
+.text-price .info-circle { margin-left: 6px; vertical-align: middle; }
 
