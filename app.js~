@@ -181,20 +181,6 @@ class PriceListSearchApp {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
-  
-  _featuresToHtml(raw) {
-  const s = String(raw || '').trim();
-  if (!s) return '';
-  // экранируем HTML, потом заменяем переводы строк/точки с запятой на <br>
-  let h = this.escapeHTML(s);
-  h = h.replace(/\r?\n/g, '<br>');
-  h = h.replace(/;\s*/g, '<br>');
-  // лишние <br> по краям — убрать
-  h = h.replace(/^(<br>)+|(<br>)+$/g, '');
-  return h;
-}
-
-  
   // Парсит строку вида: "Каталог ... https://... Руководство ... https://..."
   parseDocs(raw) {
     if (!raw) return [];
@@ -482,7 +468,6 @@ class PriceListSearchApp {
         __article_delim: this.canonKeepDelims(row['Артикул'] || ''),
         __price: this._formatPriceCached(row['Цена']),
         __docs: this.parseDocs(row['Документы']),
-        __featHtml: this._featuresToHtml(row['Характеристики']), 
       }));
 
       this._updateInfoTooltip();
