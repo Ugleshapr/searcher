@@ -307,82 +307,6 @@ def attach_documents_column(base_df: pd.DataFrame, search_dir: Path, site_link_m
     out.insert(3, "Документы", pd.Series(docs_col, index=out.index).fillna(""))  # 4-я колонка
     return out
 # ───────────────────────── КОНЕЦ ДОБАВЛЕННОГО ────────────────────────────────
-def _find_enriched_file(search_dir: Path) -> Path | None:
-    p = (search_dir / "enriched.xlsx").resolve()
-    return p if p.exists() else None
-
-def _normalize_specs(text: str) -> str:
-    """
-    Удаляет ведущий код вида `272 |` в КАЖДОЙ строке и чистит пробелы.
-    Сохраняет порядок строк и переносы.
-    """
-    if text is None or (isinstance(text, float) and pd.isna(text)):
-        return ""
-    # приводим к str и нормализуем переносы
-    s = str(text).replace("\r\n", "\n").replace("\r", "\n")
-    lines = [ln for ln in s.split("\n")]
-    out_lines = []
-    for ln in lines:
-        # срезать "числа |" в начале строки
-        ln2 = re.sub(r"^\s*\d+\s*\|\s*", "", ln).strip()
-        # иногда встречаются пустые строки — оставим только значимые
-        if ln2:
-            out_lines.append(ln2)
-    return "\n".join(out_lines)
-
-def attach_specs_from_enriched(base_df: pd.DataFrame, search_dir: Path) -> pd.DataFrame:
-    """
-    Если рядом лежит enriched.xlsx (без заголовков): 
-      col1=Артикул, col2=Наименование, col3=Характеристики,
-    то переносим по совпадению артикула в ПЯТУЮ колонку base.xlsx — «Характеристики».
-    Коды вида "272 | ..." удаляются.
-    Для отсутствующих артикулов — пусто.
-    """
-    enr_path = _find_enriched_file(search_dir)
-    out = base_df.copy()
-
-    # зафиксируем место вставки: пятая колонка (после «Документы»)
-    insert_at = 4  # 0-based
-
-    if not enr_path:
-        # колонки ещё нет — создадим пустую
-        out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
-        print("[i] enriched.xlsx не найден — колонка «Характеристики» оставлена пустой.")
-        return out
-
-    try:
-        enr = pd.read_excel(enr_path, header=None, dtype=str)
-    except Exception as e:
-        print(f"[!] Не удалось прочитать enriched.xlsx: {e}")
-        out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
-        return out
-
-    if enr.shape[1] < 3:
-        print("[!] В enriched.xlsx меньше 3 столбцов — «Характеристики» пропущены.")
-        out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
-        return out
-
-    enr = enr.iloc[:, :3].copy()
-    enr.columns = ["Артикул", "НаименованиеEnriched", "Характеристики"]
-    enr["Артикул"] = enr["Артикул"].map(clean_article)
-    enr["Характеристики"] = enr["Характеристики"].map(_normalize_specs)
-
-    # Отбрасываем пустые артикула и полностью пустые характеристики
-    enr = enr[(enr["Артикул"] != "") & enr["Характеристики"].astype(str).str.strip().ne("")]
-
-    # Если дубликаты — берём первую непустую запись по артикулу
-    enr = enr.drop_duplicates(subset=["Артикул"], keep="first")
-
-    m_specs = dict(zip(enr["Артикул"], enr["Характеристики"]))
-
-    # Сопоставление с base
-    arts = out["Артикул"].map(clean_article)
-    col = arts.map(m_specs).fillna("")
-    out.insert(insert_at, "Характеристики", col)
-
-    print(f"[i] Перенесены характеристики из enriched.xlsx для {int(col.astype(bool).sum())} позиций.")
-    return out
-
 
 def enrich_names_with_products(base_df: pd.DataFrame, search_dir: Path) -> pd.DataFrame:
     """
@@ -499,13 +423,10 @@ def main():
     # 5.1) Колонка «Документы»: сначала «Сайт ссылка», затем документы из CSV (если есть)
     base = attach_documents_column(base, script_dir, site_link_map=site_link_map)
 
-    # 5.2) Колонка 5: «Характеристики» из enriched.xlsx (если есть)
-    base = attach_specs_from_enriched(base, script_dir)
-
     # 6) Сохранение base.xlsx в ПАПКЕ СКРИПТА
     xlsx_path = script_dir / "base.xlsx"
     with pd.ExcelWriter(xlsx_path, engine="openpyxl") as wt:
-        base[["Наименование","Артикул","Цена","Документы","Характеристики"]].to_excel(wt, index=False, sheet_name="TDSheet")
+        base[["Наименование","Артикул","Цена","Документы"]].to_excel(wt, index=False, sheet_name="TDSheet")
     print(f"[✓] Готово: {len(base)} строк")
     print(f"[→] {xlsx_path}")
 
