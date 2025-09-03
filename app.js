@@ -543,6 +543,8 @@ class PriceListSearchApp {
     // Разрешаем только если в запросе НЕТ букв и общее число цифр кратно 6
     const digitCount = query.replace(/\D/g, '').length;
     const permitArticle = !hasLetters && digitCount > 0 && digitCount % 6 === 0;
+    // Последовательность чисто цифровых токенов (в порядке ввода)
+	const numericSeq = parts.filter(p => /^\d+$/.test(p));
 
     // РЕЖИМ СПИСКА АРТИКУЛОВ: если 2+ токена и каждый строго 6 цифр —
     // ищем только по артикулу и выводим в порядке ввода.
@@ -591,23 +593,54 @@ class PriceListSearchApp {
         if (permitArticle && it.__article_delim.includes(p)) it.__score += 1000;  // артикул учитываем ТОЛЬКО без букв
         if (it.__name_delim.includes(p)) it.__score += 600;
       }
-      // Фразовый бонус за соседние токены в названии (только для запросов с буквами)
-      if (hasLetters && parts.length >= 2) {
-        const nd = it.__name_delim; // канонизированное название с сохранением разделителей
-        for (let i = 0; i < parts.length - 1; i++) {
-          const a = parts[i],
-            b = parts[i + 1];
-          // Отсекаем совсем маленькие пары, но оставляем "mat"+"d" (3+1=4)
-          if (a.length + b.length < 3) continue;
+      // Фразовый бонус:
+	// 1) для буквенных запросов (соседние токены)
+	// 2) для чисто цифровых последовательностей (например, 47-29-3),
+	//    даже если hasLetters === false
+	{
+ 	 const nd = it.__name_delim;
 
-          // Ищем «a» затем «b» через любые обычные разделители
-          const re = new RegExp(
-            this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b),
-            'i'
-          );
-          if (re.test(nd)) it.__score += 900; // вес подбирается эмпирически
+ 	 // (1) механизм для буквенных запросов
+  	if (hasLetters && parts.length >= 2) {
+    for (let i = 0; i < parts.length - 1; i++) {
+      const a = parts[i], b = parts[i + 1];
+      if (a.length + b.length < 3) continue;
+      const re = new RegExp(
+        this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b),
+        'i'
+      );
+      if (re.test(nd)) it.__score += 900;
+    }
+  }
+
+  // (2) Цифровые цепочки (приоритет для 3 и более подряд: 47→29→3)
+  if (!permitArticle && numericSeq.length >= 2) {
+    // Соберём регэксп для всей цепочки целиком в порядке ввода
+    // 47[\s\-_/.]*29[\s\-_/.]*3[\s\-_/.]*25 ...
+    const chain = numericSeq
+      .map(tok => this.escapeRegExp(tok))
+      .join('[\\s\\-_/.,]*');
+
+    const reFull = new RegExp(chain, 'i');
+    if (reFull.test(nd)) {
+      // Полная цепочка нашлась — большой бонус      
+      it.__score += 600;
+    } else {
+      // Иначе пробуем укороченные хвосты: чем длиннее — тем больше бонус
+      // Например: 47→29→3 (три числа подряд)
+      for (let len = Math.min(numericSeq.length, 4); len >= 2; len--) {
+        const sub = numericSeq.slice(0, len).join('[\\s\\-_/.,]*');
+        const reSub = new RegExp(sub, 'i');
+        if (reSub.test(nd)) {
+          // градуированный бонус
+          const step = {2: 100, 3: 200, 4: 400};
+          it.__score += step[len] || 500;
+          break; // первый самый длинный матч — достаточно
         }
       }
+    }
+  }
+}
       // --- БОНУС за точное слово "новый" (только это слово) ---
       {
         const nameRaw = String(it['Наименование'] || '');
