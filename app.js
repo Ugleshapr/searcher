@@ -538,6 +538,11 @@ class PriceListSearchApp {
       .filter(Boolean);
 
     const hasLetters = /[a-zA-Zа-яА-ЯёЁ]/.test(query); // считаем по исходному
+    
+    // Можно ли подключать поиск по артикулу?
+    // Разрешаем только если в запросе НЕТ букв и общее число цифр кратно 6
+    const digitCount = query.replace(/\D/g, '').length;
+    const permitArticle = !hasLetters && digitCount > 0 && digitCount % 6 === 0;
 
     // РЕЖИМ СПИСКА АРТИКУЛОВ: если 2+ токена и каждый строго 6 цифр —
     // ищем только по артикулу и выводим в порядке ввода.
@@ -563,12 +568,12 @@ class PriceListSearchApp {
     }
     // Фильтрация: если есть буквы — ищем только по названию
     this.filteredData = this.data.filter(item =>
-      parts.every(
-        part =>
-          item.__name.includes(part) ||
-          (!hasLetters && item.__article.includes(part))
-      )
-    );
+  parts.every(
+    part =>
+      item.__name.includes(part) ||
+      (permitArticle && item.__article.includes(part))
+  	)
+	);
 
     const rawQuery = (
       document.getElementById('searchInput')?.value || ''
@@ -578,12 +583,12 @@ class PriceListSearchApp {
     // Скоринг
     for (const it of this.filteredData) {
       // если есть буквы — считаем пересечение только с названием
-      const concat = hasLetters ? it.__name : it.__article + it.__name;
+      const concat = permitArticle ? it.__article + it.__name : it.__name;
       it.__score = this._countCharOverlap(concat, qn);
 
       // Бонусы за "цельные" вхождения
       for (const p of parts) {
-        if (!hasLetters && it.__article_delim.includes(p)) it.__score += 1000; // артикул учитываем ТОЛЬКО без букв
+        if (permitArticle && it.__article_delim.includes(p)) it.__score += 1000;  // артикул учитываем ТОЛЬКО без букв
         if (it.__name_delim.includes(p)) it.__score += 600;
       }
       // Фразовый бонус за соседние токены в названии (только для запросов с буквами)
@@ -636,14 +641,15 @@ class PriceListSearchApp {
       if (b.__score !== a.__score) return b.__score - a.__score;
 
       const bestPos = it => {
-        const hay = hasLetters ? it.__name_delim : it.__article_delim;
-        let best = 1e9;
-        for (const p of parts) {
-          const i = hay.indexOf(p);
-          if (i !== -1 && i < best) best = i;
-        }
-        return best;
-      };
+  	const hay = permitArticle ? it.__article_delim : it.__name_delim;
+  	let best = 1e9;
+  	for (const p of parts) {
+    	const i = hay.indexOf(p);
+    	if (i !== -1 && i < best) best = i;
+ 	 }
+ 	 return best;
+	};
+
       const ap = bestPos(a),
         bp = bestPos(b);
       if (ap !== bp) return ap - bp;

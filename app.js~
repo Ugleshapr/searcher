@@ -181,6 +181,20 @@ class PriceListSearchApp {
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
   }
+  
+  _featuresToHtml(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  // экранируем HTML, потом заменяем переводы строк/точки с запятой на <br>
+  let h = this.escapeHTML(s);
+  h = h.replace(/\r?\n/g, '<br>');
+  h = h.replace(/;\s*/g, '<br>');
+  // лишние <br> по краям — убрать
+  h = h.replace(/^(<br>)+|(<br>)+$/g, '');
+  return h;
+}
+
+  
   // Парсит строку вида: "Каталог ... https://... Руководство ... https://..."
   parseDocs(raw) {
     if (!raw) return [];
@@ -468,6 +482,7 @@ class PriceListSearchApp {
         __article_delim: this.canonKeepDelims(row['Артикул'] || ''),
         __price: this._formatPriceCached(row['Цена']),
         __docs: this.parseDocs(row['Документы']),
+        __featHtml: this._featuresToHtml(row['Характеристики']), 
       }));
 
       this._updateInfoTooltip();
@@ -737,12 +752,21 @@ class PriceListSearchApp {
       </ul>
     </div>`;
         }
+      const featBtn = item.__featHtml
+  ? `<button type="button"
+             class="info-circle feat-info"
+             data-bs-toggle="tooltip"
+             data-bs-html="true"
+             data-bs-placement="top"
+             title=""
+             data-bs-title="${item.__featHtml}">i</button>`
+  : '';
 
         return `
     <tr>
       <td class="copyable">${nameHtml}</td>
       <td>${artHtml}</td>
-      <td class="text-price">${item.__price}</td>
+      <td class="text-price">${item.__price}${featBtn}</td>
       <td class="col-docs">${docsHtml}</td>
     </tr>
   `;
@@ -750,6 +774,14 @@ class PriceListSearchApp {
       .join('');
 
     resultsBody.innerHTML = rowsHtml;
+    // тултипы для характеристик
+if (window.bootstrap && window.bootstrap.Tooltip) {
+  document.querySelectorAll('.feat-info').forEach(el => {
+    const t = window.bootstrap.Tooltip.getInstance(el);
+    if (t) t.dispose();
+    new window.bootstrap.Tooltip(el, { html: true, sanitize: false, placement: 'top' });
+  });
+}
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
     this._fitResultsHeight();
