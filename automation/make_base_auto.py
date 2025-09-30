@@ -175,7 +175,7 @@ def _is_wanted_doc(category: str, title: str) -> bool:
     has_re_abbr = re.search(r"(?<![А-Яа-яA-Za-z])РЭ(?![А-Яа-яA-Za-z])", s) is not None
     has_passport = re.search(r"паспорт", s, flags=re.IGNORECASE) is not None
     has_oprosny   = re.search(r"опросн", s, flags=re.IGNORECASE) is not None   
-    return bool(has_catalog or has_re_full or has_re_abbr or has_passport)
+    return bool(has_catalog or has_re_full or has_re_abbr or has_passport or has_oprosny)
 
 def build_docs_map_from_csv(csv_path: Path) -> dict:
     """
