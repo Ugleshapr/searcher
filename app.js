@@ -801,11 +801,11 @@ class PriceListSearchApp {
       const featBtn = item.__featHtml
   ? `<button type="button"
              class="info-circle feat-info"
-             data-bs-toggle="tooltip"
+             data-bs-toggle="popover"
              data-bs-html="true"
              data-bs-placement="top"
-             title=""
-             data-bs-title="${item.__featHtml}">i</button>`
+             data-bs-content="${item.__featHtml}"
+             title="Характеристики">i</button>`
   : '';
 
         return `
@@ -821,12 +821,37 @@ class PriceListSearchApp {
 
     resultsBody.innerHTML = rowsHtml;
     // тултипы для характеристик
-if (window.bootstrap && window.bootstrap.Tooltip) {
+// поповеры для характеристик (копируемый текст)
+if (window.bootstrap && window.bootstrap.Popover) {
+  // На всякий случай «погасим» возможные инстансы Tooltip, если они были
   document.querySelectorAll('.feat-info').forEach(el => {
-    const t = window.bootstrap.Tooltip.getInstance(el);
-    if (t) t.dispose();
-    new window.bootstrap.Tooltip(el, { html: true, sanitize: false, placement: 'top' });
+    const tt = window.bootstrap.Tooltip?.getInstance?.(el);
+    tt?.dispose();
   });
+
+  // Инициализация Popover
+  document.querySelectorAll('.feat-info').forEach(el => {
+    const pop = window.bootstrap.Popover.getInstance(el);
+    if (pop) pop.dispose();
+    new window.bootstrap.Popover(el, {
+      html: true,
+      sanitize: false,
+      placement: 'top',
+      trigger: 'click',
+      container: 'body'
+    });
+  });
+
+  // Клик вне поповера — закрываем открытые
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('.feat-info').forEach(el => {
+      const pop = window.bootstrap.Popover.getInstance(el);
+      if (!pop) return;
+      const tip = pop.tip;
+      const clickedInside = el.contains(e.target) || (tip && tip.contains(e.target));
+      if (!clickedInside) pop.hide();
+    });
+  }, { capture: true });
 }
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
     this._renderShowMore(end < total);
