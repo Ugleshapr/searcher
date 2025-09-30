@@ -164,7 +164,8 @@ def _is_wanted_doc(category: str, title: str) -> bool:
       - Каталог/Каталоги
       - Руководство по эксплуатации
       - РЭ (как отдельное слово)
-      - ДОБАВЛЕНО: Паспорт
+      - Паспорт
+      - Опросный
     """
     s = f"{category or ''} {title or ''}"
     if _is_en_text(s):
@@ -173,6 +174,7 @@ def _is_wanted_doc(category: str, title: str) -> bool:
     has_re_full = re.search(r"руководств[оа]\s*по\s*эксплуатац", s, flags=re.IGNORECASE) is not None
     has_re_abbr = re.search(r"(?<![А-Яа-яA-Za-z])РЭ(?![А-Яа-яA-Za-z])", s) is not None
     has_passport = re.search(r"паспорт", s, flags=re.IGNORECASE) is not None
+    has_oprosny   = re.search(r"опросн", s, flags=re.IGNORECASE) is not None   
     return bool(has_catalog or has_re_full or has_re_abbr or has_passport)
 
 def build_docs_map_from_csv(csv_path: Path) -> dict:
