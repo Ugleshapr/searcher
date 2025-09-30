@@ -667,7 +667,14 @@ class PriceListSearchApp {
         if (hasOM4) it.__score -= 800;
         if (hasREG) it.__score -= 800;
       }
+      // ШТРАФ за отсутствие документов
+	{
+ 	if (!it.__docs || it.__docs.length === 0) {
+    	it.__score -= 300;
+  	}
+     }
     }
+    
 
     // Сортировка: тай-брейкер смотрит в артикул только если нет букв
     this.filteredData.sort((a, b) => {
