@@ -88,17 +88,22 @@ class PriceListSearchApp {
 
     // если кнопка ещё не вставлена — вставим
     if (!host.querySelector('#dataInfo')) {
-      host.innerHTML = `
-      <button type="button"
-              id="dataInfo"
-              class="info-circle"
-              data-bs-toggle="tooltip"
-              data-bs-html="true"
-              data-bs-placement="top"
-              title="">
-        i
-      </button>`;
-    }
+  host.innerHTML = `
+    <button type="button"
+            id="helpLink"
+            class="info-circle link"
+            title="Открыть справку"
+            onclick="window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290,'_blank')">?</button>
+    <button type="button"
+            id="dataInfo"
+            class="info-circle"
+            data-bs-toggle="tooltip"
+            data-bs-html="true"
+            data-bs-placement="top"
+            title="">
+      i
+    </button>`;
+}
 
     host.style.display = 'inline-flex';
 
@@ -300,26 +305,35 @@ class PriceListSearchApp {
         }
       });
     }
-    // 1) Двойной клик по кнопке "i" — открываем заглушку страницы товара
+    // 1) Двойной клик по кнопке "i" — открываем страницу товара с артикулом и названием
 if (tbody) {
   tbody.addEventListener('dblclick', e => {
     const btn = e.target.closest('.info-circle');
     if (!btn) return;
 
-    // артикул берём в приоритете из data-атрибута
-    let art = btn.dataset.article || '';
-    if (!art) {
-      // fallback: из второй ячейки строки
-      const row = btn.closest('tr');
-      const artCell = row ? row.children[1] : null;
-      art = artCell ? artCell.textContent.trim() : '';
+    const row = btn.closest('tr');
+
+    // артикул
+    let art = (btn.dataset.article || '').trim();
+    if (!art && row) {
+      const artCell = row.children[1];
+      if (artCell) art = artCell.textContent.trim();
     }
+
+    // наименование
+    let rawName = '';
+    if (row) {
+      const nameCell = row.children[0];
+      if (nameCell) rawName = nameCell.textContent.trim();
+    }
+
     if (!art) return;
 
-    const url = `product.html?art=${encodeURIComponent(art)}`;
+    const url = `product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
     window.open(url, '_blank', 'noopener');
   });
 }
+
 
     // 2) Кнопка очистки поля поиска (вынесено из клика по таблице)
     const inputEl = document.getElementById('searchInput');

@@ -88,17 +88,22 @@ class PriceListSearchApp {
 
     // если кнопка ещё не вставлена — вставим
     if (!host.querySelector('#dataInfo')) {
-      host.innerHTML = `
-      <button type="button"
-              id="dataInfo"
-              class="info-circle"
-              data-bs-toggle="tooltip"
-              data-bs-html="true"
-              data-bs-placement="top"
-              title="">
-        i
-      </button>`;
-    }
+  host.innerHTML = `
+    <button type="button"
+            id="helpLink"
+            class="info-circle link"
+            title="Открыть справку"
+            onclick="window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290','_blank')">?</button>
+    <button type="button"
+            id="dataInfo"
+            class="info-circle"
+            data-bs-toggle="tooltip"
+            data-bs-html="true"
+            data-bs-placement="top"
+            title="">
+      i
+    </button>`;
+}
 
     host.style.display = 'inline-flex';
 
