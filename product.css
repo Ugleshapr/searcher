@@ -37,18 +37,33 @@ html, body {
   border-radius: 12px;
 }
 
-/* Контейнер групп */
-.groups-root {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+/* Контейнер групп — masonry через CSS columns */
+.groups-root{
+  column-width: 480px;   /* браузер сам подберёт 2–3 колонки по ширине окна */
+  column-gap: 16px;
 }
 
-@media (min-width: 900px){
-  .groups-root {
-    grid-template-columns: 1fr 1fr;
-  }
+/* Карточка группы — не дробить между колонками */
+.group-card{
+  break-inside: avoid;
+  display: inline-block; /* важно для columns */
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
 }
+
+/* остальное без изменений */
+.group-card__header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+.group-card__body { padding: 8px 14px 14px; }
+
 
 /* Карточка группы */
 .group-card {

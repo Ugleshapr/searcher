@@ -12,14 +12,6 @@
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
-    
-  const unquote = s => {
-  let t = String(s ?? '').trim();
-  t = t.replace(/^'+|'+$/g, ''); // срезаем обрамляющие одинарные кавычки
-  t = t.replace(/''/g, "'");     // схлопываем экранированные пары
-  return t;
-};
-
 
   function showState(kind, text) {
     const box = qs('#stateBox');
@@ -72,7 +64,7 @@
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws);
       const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
-      return (found && found['Наименование']) ? unquote(String(found['Наименование'])) : '';
+      return (found && found['Наименование']) ? String(found['Наименование']) : '';
     } catch {
       return '';
     }
@@ -80,11 +72,9 @@
 
   /*** render ***/
   function renderTitle(name, art) {
-  const cleanName = unquote(name);
-  qs('#prodTitle').textContent = cleanName || 'Без названия';
-  qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
-}
-
+    qs('#prodTitle').textContent = name || 'Без названия';
+    qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
+  }
 
   function renderGroups(grouped) {
     const root = qs('#groupsRoot');
@@ -162,11 +152,11 @@
       const id = String(s['spec_id'] ?? s['specId'] ?? s['id']).trim();
       if (!id) continue;
       specMap.set(id, {
-  title: unquote(s['title']),
-  value_type: String(s['value_type'] ?? '').trim(),
-  group_id: s['group_id'] !== undefined && s['group_id'] !== '' ? Number(s['group_id']) : null,
-  group_name: unquote(s['group_name'])
-});
+        title: String(s['title'] ?? '').trim(),
+        value_type: String(s['value_type'] ?? '').trim(),
+        group_id: s['group_id'] !== undefined && s['group_id'] !== '' ? Number(s['group_id']) : null,
+        group_name: String(s['group_name'] ?? '').trim()
+      });
     }
 
     // 2) Значения по продуктам
@@ -180,13 +170,12 @@
       const sid = String(v['spec_id'] ?? '').trim();
       const dict = specMap.get(sid) || {};
       rows.push({
-  spec_id: sid,
-  title: unquote(dict.title || sid),
-  value: unquote(v['value']),
-  group_id: dict.group_id,
-  group_name: unquote(dict.group_name || '')
-});
-
+        spec_id: sid,
+        title: dict.title || sid,
+        value: String(v['value'] ?? '').trim(),
+        group_id: dict.group_id,
+        group_name: dict.group_name || ''
+      });
     }
 
     // 4) Группировка по group_name, сортировка групп по group_id, внутри — по title

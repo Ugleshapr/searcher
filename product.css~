@@ -1,0 +1,107 @@
+:root {
+  --color-bg: #fffefb;
+  --color-surface: #ffffff;
+  --color-text: #13343b;
+  --color-muted: #62706e;
+  --color-accent: #21808d;
+  --color-border: rgba(94, 82, 64, 0.18);
+  --radius: 12px;
+  --shadow: 0 8px 20px rgba(0,0,0,.05);
+}
+
+html, body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.page-title {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0;
+  font-weight: 650;
+}
+
+.btn--secondary {
+  background: rgba(94, 82, 64, .12);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 14px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+.btn--secondary:hover {
+  background: rgba(94, 82, 64, .18);
+}
+
+.alert {
+  border-radius: 12px;
+}
+
+/* Контейнер групп */
+.groups-root {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 900px){
+  .groups-root {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Карточка группы */
+.group-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.group-card__header {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+.group-card__body {
+  padding: 8px 14px 14px;
+}
+
+/* Таблица характеристик */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.spec-table th,
+.spec-table td {
+  font-size: 14px;
+  padding: 8px 6px;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+
+.spec-table th {
+  width: 42%;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.spec-table td {
+  color: var(--color-muted);
+  word-break: break-word;
+}
+
+.spec-table tr:last-child th,
+.spec-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Плашки состояния */
+.alert-info    { background:#e7f6f9; border-color:#c7e8ee; color:#0b5360; }
+.alert-warning { background:#fff6e7; border-color:#ffe2b3; color:#5f3b00; }
+.alert-danger  { background:#fde8ea; border-color:#f8c5cc; color:#6f1321; }
+
