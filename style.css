@@ -548,3 +548,13 @@ td.copyable { cursor: copy; }
   cursor: pointer;
 }
 
+/* "i" без характеристик */
+.info-circle.is-disabled{
+  color: var(--color-text-secondary);
+  border-color: var(--color-border);
+  opacity: .65;
+}
+.info-circle.is-disabled:hover{
+  background: none;
+}
+

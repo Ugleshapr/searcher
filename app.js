@@ -300,6 +300,26 @@ class PriceListSearchApp {
         }
       });
     }
+    // 1) Двойной клик по кнопке "i" — открываем заглушку страницы товара
+if (tbody) {
+  tbody.addEventListener('dblclick', e => {
+    const btn = e.target.closest('.info-circle');
+    if (!btn) return;
+
+    // артикул берём в приоритете из data-атрибута
+    let art = btn.dataset.article || '';
+    if (!art) {
+      // fallback: из второй ячейки строки
+      const row = btn.closest('tr');
+      const artCell = row ? row.children[1] : null;
+      art = artCell ? artCell.textContent.trim() : '';
+    }
+    if (!art) return;
+
+    const url = `product.html?art=${encodeURIComponent(art)}`;
+    window.open(url, '_blank', 'noopener');
+  });
+}
 
     // 2) Кнопка очистки поля поиска (вынесено из клика по таблице)
     const inputEl = document.getElementById('searchInput');
@@ -798,24 +818,31 @@ class PriceListSearchApp {
       </ul>
     </div>`;
         }
-      const featBtn = item.__featHtml
+     const artRaw = item['Артикул'] || '';
+const hasFeat = !!item.__featHtml;
+
+const infoBtn = hasFeat
   ? `<button type="button"
              class="info-circle feat-info"
+             data-article="${this.escapeHTML(artRaw)}"
              data-bs-toggle="popover"
              data-bs-html="true"
              data-bs-placement="top"
              data-bs-content="${item.__featHtml}"
              title="Характеристики">i</button>`
-  : '';
+  : `<button type="button"
+             class="info-circle feat-info is-disabled"
+             data-article="${this.escapeHTML(artRaw)}"
+             title="Открыть страницу товара (двойной клик)">i</button>`;
 
-        return `
-    <tr>
-      <td class="copyable">${nameHtml}</td>
-      <td>${artHtml}</td>
-      <td class="text-price">${item.__price}${featBtn}</td>
-      <td class="col-docs">${docsHtml}</td>
-    </tr>
-  `;
+       return `
+  <tr>
+    <td class="copyable">${nameHtml}</td>
+    <td>${artHtml}</td>
+    <td class="text-price">${item.__price}${infoBtn}</td>
+    <td class="col-docs">${docsHtml}</td>
+  </tr>
+`;
       })
       .join('');
 
@@ -830,18 +857,17 @@ if (window.bootstrap && window.bootstrap.Popover) {
   });
 
   // Инициализация Popover
-  document.querySelectorAll('.feat-info').forEach(el => {
-    const pop = window.bootstrap.Popover.getInstance(el);
-    if (pop) pop.dispose();
-    new window.bootstrap.Popover(el, {
-      html: true,
-      sanitize: false,
-      placement: 'top',
-      trigger: 'click',
-      container: 'body'
-    });
+  document.querySelectorAll('.feat-info:not(.is-disabled)').forEach(el => {
+  const pop = window.bootstrap.Popover.getInstance(el);
+  if (pop) pop.dispose();
+  new window.bootstrap.Popover(el, {
+    html: true,
+    sanitize: false,
+    placement: 'top',
+    trigger: 'click',
+    container: 'body'
   });
-
+});
   // Клик вне поповера — закрываем открытые
   document.addEventListener('click', (e) => {
     document.querySelectorAll('.feat-info').forEach(el => {
