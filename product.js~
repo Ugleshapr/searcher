@@ -12,6 +12,14 @@
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+    
+  const unquote = s => {
+  let t = String(s ?? '').trim();
+  t = t.replace(/^'+|'+$/g, ''); // срезаем обрамляющие одинарные кавычки
+  t = t.replace(/''/g, "'");     // схлопываем экранированные пары
+  return t;
+};
+
 
   function showState(kind, text) {
     const box = qs('#stateBox');
@@ -56,25 +64,39 @@
 
   /*** base.xlsx lookup (optional) ***/
   async function lookupNameFromBaseXlsx(art) {
-    try {
-      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
-      if (!resp.ok) return '';
-      const buf = await resp.arrayBuffer();
-      const wb = XLSX.read(buf, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws);
-      const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
-      return (found && found['Наименование']) ? String(found['Наименование']) : '';
-    } catch {
-      return '';
+  try {
+    // Лениво подгружаем библиотеку XLSX, если её ещё нет
+    if (!window.XLSX) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
     }
+
+    const resp = await fetch('base.xlsx'); // пусть браузер кэширует
+    if (!resp.ok) return '';
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws);
+
+    const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
+    return (found && found['Наименование']) ? unquote(String(found['Наименование'])) : '';
+  } catch {
+    return '';
   }
+}
 
   /*** render ***/
   function renderTitle(name, art) {
-    qs('#prodTitle').textContent = name || 'Без названия';
-    qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
-  }
+  const cleanName = unquote(name);
+  qs('#prodTitle').textContent = cleanName || 'Без названия';
+  qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
+}
+
 
   function renderGroups(grouped) {
     const root = qs('#groupsRoot');
@@ -104,6 +126,8 @@
 
       for (const row of group.items) {
         const tr = document.createElement('tr');
+        tr.dataset.title = row.title || '';
+  	tr.dataset.value = row.value || '';
         const th = document.createElement('th');
         th.innerHTML = escapeHTML(row.title || '');
         const td = document.createElement('td');
@@ -121,6 +145,33 @@
       root.appendChild(card);
     }
   }
+  
+  // Копирование "Название \t Значение" при клике по строке параметра
+document.addEventListener('click', async (e) => {
+  const root = document.getElementById('groupsRoot');
+  if (!root) return;
+
+  const tr = e.target.closest('tr');
+  if (!tr || !root.contains(tr)) return;
+
+  // Берём «сырые» значения из data-атрибутов (без HTML-энтити/кавычек)
+  const title = (tr.dataset.title || '').trim() || tr.querySelector('th')?.textContent.trim() || '';
+  const value = (tr.dataset.value || '').trim() || tr.querySelector('td')?.textContent.trim() || '';
+  if (!title && !value) return;
+
+  const tsv = `${title}\t${value}`;
+  try {
+    await navigator.clipboard.writeText(tsv);
+    const prev = tr.getAttribute('title') || '';
+    tr.setAttribute('title', 'Скопировано');
+    setTimeout(() => tr.setAttribute('title', prev), 800);
+  } catch (err) {
+    // молча игнорируем, если буфер недоступен
+    console.warn('Clipboard error:', err);
+  }
+});
+
+  
 
   /*** main ***/
   (async function main() {
@@ -152,11 +203,11 @@
       const id = String(s['spec_id'] ?? s['specId'] ?? s['id']).trim();
       if (!id) continue;
       specMap.set(id, {
-        title: String(s['title'] ?? '').trim(),
-        value_type: String(s['value_type'] ?? '').trim(),
-        group_id: s['group_id'] !== undefined && s['group_id'] !== '' ? Number(s['group_id']) : null,
-        group_name: String(s['group_name'] ?? '').trim()
-      });
+  title: unquote(s['title']),
+  value_type: String(s['value_type'] ?? '').trim(),
+  group_id: s['group_id'] !== undefined && s['group_id'] !== '' ? Number(s['group_id']) : null,
+  group_name: unquote(s['group_name'])
+});
     }
 
     // 2) Значения по продуктам
@@ -170,12 +221,13 @@
       const sid = String(v['spec_id'] ?? '').trim();
       const dict = specMap.get(sid) || {};
       rows.push({
-        spec_id: sid,
-        title: dict.title || sid,
-        value: String(v['value'] ?? '').trim(),
-        group_id: dict.group_id,
-        group_name: dict.group_name || ''
-      });
+  spec_id: sid,
+  title: unquote(dict.title || sid),
+  value: unquote(v['value']),
+  group_id: dict.group_id,
+  group_name: unquote(dict.group_name || '')
+});
+
     }
 
     // 4) Группировка по group_name, сортировка групп по group_id, внутри — по title

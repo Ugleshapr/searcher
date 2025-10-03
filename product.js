@@ -64,26 +64,40 @@
 
   /*** base.xlsx lookup (optional) ***/
   async function lookupNameFromBaseXlsx(art) {
-    try {
-      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
-      if (!resp.ok) return '';
-      const buf = await resp.arrayBuffer();
-      const wb = XLSX.read(buf, { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws);
-      const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
-      return (found && found['Наименование']) ? unquote(String(found['Наименование'])) : '';
-    } catch {
-      return '';
+  try {
+    // Лениво подгружаем библиотеку XLSX, если её ещё нет
+    if (!window.XLSX) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
     }
+
+    const resp = await fetch('base.xlsx'); // пусть браузер кэширует
+    if (!resp.ok) return '';
+    const buf = await resp.arrayBuffer();
+    const wb = XLSX.read(buf, { type: 'array' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws);
+
+    const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
+    return (found && found['Наименование']) ? unquote(String(found['Наименование'])) : '';
+  } catch {
+    return '';
   }
+}
 
   /*** render ***/
   function renderTitle(name, art) {
   const cleanName = unquote(name);
   qs('#prodTitle').textContent = cleanName || 'Без названия';
   qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
+  document.title = cleanName || 'Карточка товара';
 }
+
 
 
   function renderGroups(grouped) {
@@ -114,6 +128,8 @@
 
       for (const row of group.items) {
         const tr = document.createElement('tr');
+        tr.dataset.title = row.title || '';
+  	tr.dataset.value = row.value || '';
         const th = document.createElement('th');
         th.innerHTML = escapeHTML(row.title || '');
         const td = document.createElement('td');
@@ -131,6 +147,33 @@
       root.appendChild(card);
     }
   }
+  
+  // Копирование "Название \t Значение" при клике по строке параметра
+document.addEventListener('click', async (e) => {
+  const root = document.getElementById('groupsRoot');
+  if (!root) return;
+
+  const tr = e.target.closest('tr');
+  if (!tr || !root.contains(tr)) return;
+
+  // Берём «сырые» значения из data-атрибутов (без HTML-энтити/кавычек)
+  const title = (tr.dataset.title || '').trim() || tr.querySelector('th')?.textContent.trim() || '';
+  const value = (tr.dataset.value || '').trim() || tr.querySelector('td')?.textContent.trim() || '';
+  if (!title && !value) return;
+
+  const tsv = `${title}\t${value}`;
+  try {
+    await navigator.clipboard.writeText(tsv);
+    const prev = tr.getAttribute('title') || '';
+    tr.setAttribute('title', 'Скопировано');
+    setTimeout(() => tr.setAttribute('title', prev), 800);
+  } catch (err) {
+    // молча игнорируем, если буфер недоступен
+    console.warn('Clipboard error:', err);
+  }
+});
+
+  
 
   /*** main ***/
   (async function main() {

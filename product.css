@@ -120,3 +120,9 @@ html, body {
 .alert-warning { background:#fff6e7; border-color:#ffe2b3; color:#5f3b00; }
 .alert-danger  { background:#fde8ea; border-color:#f8c5cc; color:#6f1321; }
 
+/* Клик по параметрам: курсор "копировать" */
+.spec-table tr {
+  cursor: copy;
+}
+
+
