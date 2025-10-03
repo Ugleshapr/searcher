@@ -93,7 +93,7 @@ class PriceListSearchApp {
             id="helpLink"
             class="info-circle link"
             title="Открыть справку"
-            onclick="window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290,'_blank')">?</button>
+            onclick="window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290','_blank')">?</button>
     <button type="button"
             id="dataInfo"
             class="info-circle"

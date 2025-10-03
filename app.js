@@ -83,48 +83,55 @@ class PriceListSearchApp {
     return s;
   }
   _updateInfoTooltip() {
-    const host = document.getElementById('datasetInfo');
-    if (!host) return;
+  const host = document.getElementById('datasetInfo');
+  if (!host) return;
 
-    // если кнопка ещё не вставлена — вставим
-    if (!host.querySelector('#dataInfo')) {
-  host.innerHTML = `
-    <button type="button"
-            id="helpLink"
-            class="info-circle link"
-            title="Открыть справку"
-            onclick="window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290','_blank')">?</button>
-    <button type="button"
-            id="dataInfo"
-            class="info-circle"
-            data-bs-toggle="tooltip"
-            data-bs-html="true"
-            data-bs-placement="top"
-            title="">
-      i
-    </button>`;
-}
+  // 1) гарантированно показать контейнер
+  host.style.display = 'inline-flex';
 
-    host.style.display = 'inline-flex';
-
-    const el = host.querySelector('#dataInfo');
-    const total = Array.isArray(this.data) ? this.data.length : 0;
-    const html = `Загружено записей: <b>${total.toLocaleString('ru-RU')}</b><br>Номер версии: <b>${this.APP_VERSION}</b>`;
-
-    // Обновим контент тултипа (Bootstrap 5.3)
-    el.setAttribute('data-bs-title', html);
-    el.setAttribute('title', '');
-
-    if (window.bootstrap && window.bootstrap.Tooltip) {
-      const t = window.bootstrap.Tooltip.getInstance(el);
-      if (t) t.dispose();
-      new window.bootstrap.Tooltip(el, {
-        html: true,
-        sanitize: false,
-        placement: 'top',
-      });
-    }
+  // 2) если нет "?" — добавим слева
+  if (!host.querySelector('#helpLink')) {
+    host.insertAdjacentHTML(
+      'afterbegin',
+      `<button type="button" id="helpLink" class="info-circle" title="Открыть справку">?</button>`
+    );
+    // навешиваем клик без inline-скрипта (CSP-friendly)
+    const help = host.querySelector('#helpLink');
+    help?.addEventListener('click', () => {
+      // подставь свою ссылку сюда:
+      window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290', '_blank', 'noopener');
+    });
   }
+
+  // 3) если нет "i" — добавим справа
+  if (!host.querySelector('#dataInfo')) {
+    host.insertAdjacentHTML(
+      'beforeend',
+      `<button type="button"
+               id="dataInfo"
+               class="info-circle"
+               data-bs-toggle="tooltip"
+               data-bs-html="true"
+               data-bs-placement="top"
+               title="">
+         i
+       </button>`
+    );
+  }
+
+  // 4) контент тултипа и инициализация Bootstrap
+  const el = host.querySelector('#dataInfo');
+  const total = Array.isArray(this.data) ? this.data.length : 0;
+  const html = `Загружено записей: <b>${total.toLocaleString('ru-RU')}</b><br>Номер версии: <b>${this.APP_VERSION}</b>`;
+  el?.setAttribute('data-bs-title', html);
+  el?.setAttribute('title', '');
+
+  if (el && window.bootstrap?.Tooltip) {
+    const t = window.bootstrap.Tooltip.getInstance(el);
+    if (t) t.dispose();
+    new window.bootstrap.Tooltip(el, { html: true, sanitize: false, placement: 'top' });
+  }
+}
 
   // Подгоняет высоту контейнера таблицы под текущую высоту окна
   _fitResultsHeight() {

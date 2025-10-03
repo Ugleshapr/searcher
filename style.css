@@ -558,3 +558,6 @@ td.copyable { cursor: copy; }
   background: none;
 }
 
+#datasetInfo .info-circle + .info-circle { margin-left: 6px; }
+
+
