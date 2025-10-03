@@ -560,4 +560,8 @@ td.copyable { cursor: copy; }
 
 #datasetInfo .info-circle + .info-circle { margin-left: 6px; }
 
+#helpLink {
+  position: relative;
+  top: -0.5px; /* или 1px — подбирается по вкусу */
+}
 
