@@ -95,7 +95,9 @@
   const cleanName = unquote(name);
   qs('#prodTitle').textContent = cleanName || 'Без названия';
   qs('#prodMeta').textContent = `Артикул: ${art || '—'}`;
+  document.title = cleanName || 'Карточка товара';
 }
+
 
 
   function renderGroups(grouped) {

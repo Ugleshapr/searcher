@@ -240,12 +240,16 @@ document.addEventListener('click', async (e) => {
       byGroup.get(key).items.push(r);
     }
 
-    const grouped = Array.from(byGroup.values())
-      .sort((a, b) => byNum(a.group_id, b.group_id))
-      .map(g => ({ ...g, items: g.items.sort((a, b) => a.title.localeCompare(b.title, 'ru')) }));
+    let grouped = Array.from(byGroup.values())
+  .sort((a, b) => byNum(a.group_id, b.group_id))
+  .map(g => ({ ...g, items: g.items.sort((a, b) => a.title.localeCompare(b.title, 'ru')) }));
 
-    hideState();
-    renderGroups(grouped);
+//  фильтруем: убираем группу "Классификация" целиком
+grouped = grouped.filter(g => g.group_name.toLowerCase() !== 'классификация');
+
+hideState();
+renderGroups(grouped);
+
   })().catch(err => {
     console.error(err);
     showState('danger', 'Ошибка при загрузке данных. Открой консоль разработчика для деталей.');
