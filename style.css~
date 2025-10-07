@@ -636,19 +636,28 @@ td.copyable { cursor: copy; }
 .copy-count {
   font-weight: 600;
 }
-.btn {
+/* Кнопки ТОЛЬКО внутри панели COPY */
+.copy-panel .btn {
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--color-border, #d0d5dd);
   background: var(--color-bg, #fff);
   font-weight: 600;
 }
-.btn:hover { filter: brightness(0.98); }
-.btn-primary {
-  border-color: var(--color-primary, #3b82f6);
-}
-.btn-ghost {
+.copy-panel .btn:hover { filter: brightness(0.98); }
+.copy-panel .btn-ghost { background: transparent; }
+
+/* Спец-стиль именно для "Копировать N строк" */
+.copy-panel #copyDo {
+  color: #21808d;
+  border-color: #21808d;
   background: transparent;
+}
+.copy-panel #copyDo:hover,
+.copy-panel #copyDo:focus-visible {
+  background: #21808d;
+  color: #fff;
+  border-color: #21808d;
 }
 
 /* --- COPY: отметка выбранных позиций в таблице --- */
@@ -666,18 +675,6 @@ td.copyable .copy-badge {
   vertical-align: middle;
 }
 
-/* COPY: спец-стили для кнопки "Копировать N строк" */
-#copyDo {
-  color: #21808d;                 /* текст по умолчанию */
-  border-color: #21808d;          /* рамка в тон */
-  background: transparent;        /* без заливки */
-}
-#copyDo:hover,
-#copyDo:focus-visible {
-  background: #21808d;            /* при наведении — заливка */
-  color: #fff;                    /* и белые буквы */
-  border-color: #21808d;
-}
 
 /* COPY: компактная версия переключателя (для правого угла) */
 .copy-switch.copy-switch--compact {
@@ -695,9 +692,62 @@ td.copyable .copy-badge {
   color: var(--color-text-secondary);
 }
 /* Порядок элементов в правом верхнем углу */
-#datasetInfo { display: inline-flex; align-items: center; gap: 8px; }
+#datasetInfo { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 #datasetInfo .copy-inline-title { order: 1; }   /* COPY */
 #datasetInfo .copy-switch       { order: 2; }   /* переключатель */
 #datasetInfo .info-circle       { order: 3; }   /* затем ? и i */
+
+/* COPY: выпадающий список выбранных позиций */
+.copy-panel-left { position: relative; }
+
+.copy-list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 380px;
+  max-width: 520px;
+  max-height: 50vh;
+  overflow: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-md);
+  padding: 8px;
+  z-index: 3000;
+}
+.copy-list.hidden { display: none; }
+
+.copy-list-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.copy-list-item:hover {
+  background: var(--color-secondary);
+}
+.copy-list-title {
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.copy-list-article {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.copy-remove {
+  border: 1px solid var(--color-border);
+  background: transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  line-height: 1;
+  cursor: pointer;
+}
+.copy-remove:hover {
+  background: var(--color-secondary);
+}
 
 

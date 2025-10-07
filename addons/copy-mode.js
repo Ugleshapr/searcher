@@ -1,15 +1,5 @@
-/* addons/copy-mode.js
- * Режим массового копирования «COPY».
- * - Левый клик по наименованию в режиме COPY — добавляет/убирает позицию в список.
- * - Сохранение выбора между поисками и перезагрузками (localStorage).
- * - «Копировать N строк» кладёт в буфер TSV (Название<TAB>Артикул) построчно.
- * - Горячая клавиша: Ctrl/Cmd + Enter — копировать.
- */
-
+/* addons/copy-mode.js — режим COPY без localStorage + выпадающий список выбранных */
 (function () {
-  const LS_ON_KEY = 'copyMode:on';
-  const LS_ITEMS_KEY = 'copyMode:items'; // [{sku, name}] в JSON
-
   /** @type {Map<string,{sku:string,name:string}>} */
   const selected = new Map(); // key = `${sku}|||${name}`
 
@@ -19,39 +9,20 @@
     count: null,
     copyBtn: null,
     clearBtn: null,
+    list: null,
+    panelLeft: null,
   };
 
   function keyOf(sku, name) {
     return `${sku}|||${name}`;
   }
 
-  function readLS() {
-    try {
-      const raw = localStorage.getItem(LS_ITEMS_KEY);
-      if (!raw) return;
-      const arr = JSON.parse(raw);
-      selected.clear();
-      arr.forEach(({ sku, name }) => {
-        if (sku && name) selected.set(keyOf(sku, name), { sku, name });
-      });
-    } catch {}
-  }
-
-  function writeLS() {
-    const arr = Array.from(selected.values());
-    try {
-      localStorage.setItem(LS_ITEMS_KEY, JSON.stringify(arr));
-    } catch {}
-  }
-
   function isOn() {
     return !!(els.switch && els.switch.checked);
   }
-
   function setOn(on) {
     if (!els.switch) return;
     els.switch.checked = !!on;
-    localStorage.setItem(LS_ON_KEY, on ? '1' : '0');
     updatePanel();
     applyHighlights();
   }
@@ -59,15 +30,16 @@
   function updatePanel() {
     const n = selected.size;
     if (els.count) els.count.textContent = `Выбрано: ${n}`;
+    if (els.copyBtn) els.copyBtn.textContent = n > 0 ? `Копировать ${n} строк` : 'Копировать';
+
     if (!els.panel) return;
-    // панель показываем только когда режим включён
     if (isOn()) {
       els.panel.classList.remove('hidden');
       els.panel.setAttribute('aria-hidden', 'false');
-      if (els.copyBtn) els.copyBtn.textContent = n > 0 ? `Копировать ${n} строк` : 'Копировать';
     } else {
       els.panel.classList.add('hidden');
       els.panel.setAttribute('aria-hidden', 'true');
+      hideList();
     }
   }
 
@@ -82,9 +54,9 @@
     } else {
       selected.set(k, { sku, name });
     }
-    writeLS();
     markCell(cell);
     updatePanel();
+    if (!isListHidden()) renderList(); // если список открыт — обновим
   }
 
   function markCell(cell) {
@@ -101,19 +73,15 @@
   }
 
   function applyHighlights() {
-    // пройти по текущим видимым результатам и подсветить те, что в selected
-    const cells = document.querySelectorAll('td.copyable[data-sku][data-name]');
-    cells.forEach((cell) => markCell(cell));
+    document.querySelectorAll('td.copyable[data-sku][data-name]').forEach(markCell);
     updatePanel();
   }
 
   async function copyAll() {
     if (!selected.size) return;
 
-    // TSV: Название \t Артикул \n ...
     const lines = [];
     selected.forEach(({ sku, name }) => {
-      // подчищаем табы/переносы, чтобы вставка в Excel не съезжала
       const safeName = String(name).replace(/[\t\r\n]+/g, ' ').trim();
       const safeSku = String(sku).replace(/[\t\r\n]+/g, '').trim();
       lines.push(`${safeName}\t${safeSku}`);
@@ -125,7 +93,6 @@
       pulseCopied();
       clearAll();
     } catch {
-      // фоллбек через textarea
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';
@@ -148,27 +115,127 @@
 
   function clearAll() {
     selected.clear();
-    writeLS();
     applyHighlights();
+    renderList(); // если список открыт — очистится
   }
 
+  // ---------- выпадающий список ----------
+  function isListHidden() {
+    return !els.list || els.list.classList.contains('hidden');
+  }
+  function showList() {
+    if (!els.list) return;
+    renderList();
+    els.list.classList.remove('hidden');
+    els.list.setAttribute('aria-hidden', 'false');
+    // клик вне — закрыть
+    setTimeout(() => {
+      document.addEventListener('click', onDocClick, { capture: true, once: true });
+    }, 0);
+  }
+  function hideList() {
+    if (!els.list) return;
+    els.list.classList.add('hidden');
+    els.list.setAttribute('aria-hidden', 'true');
+  }
+  function onDocClick(e) {
+    if (!els.list || isListHidden()) return;
+    const within = els.list.contains(e.target) || els.count.contains(e.target);
+    if (!within) hideList();
+  }
+  function toggleList() {
+    if (isListHidden()) showList(); else hideList();
+  }
+  function renderList() {
+    if (!els.list) return;
+    if (selected.size === 0) {
+      els.list.innerHTML = `<div class="copy-list-item"><span class="copy-list-title">Список пуст</span></div>`;
+      return;
+    }
+    const rows = [];
+    selected.forEach(({sku, name}) => {
+      const title = escapeHtml(name);
+      const art = escapeHtml(sku);
+      const key = escapeAttr(keyOf(sku, name));
+      rows.push(`
+        <div class="copy-list-item" data-key="${key}">
+          <div>
+            <span class="copy-list-title">${title}</span>
+            <span class="copy-list-article">${art}</span>
+          </div>
+          <button type="button" class="copy-remove" data-key="${key}" title="Убрать из выбора">🗑</button>
+        </div>
+      `);
+    });
+    els.list.innerHTML = rows.join('');
+  }
+
+  function removeByKey(key) {
+    if (!key) return;
+    if (!selected.has(key)) return;
+    const { sku, name } = selected.get(key);
+    selected.delete(key);
+
+    // снять подсветку в таблице, если элемент виден
+    const cell = document.querySelector(`td.copyable[data-sku="${cssEscape(sku)}"][data-name="${cssEscape(name)}"]`);
+    if (cell) markCell(cell);
+
+    updatePanel();
+    renderList();
+  }
+
+  // ---------- utils ----------
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/"/g, '&quot;');
+  }
+  function cssEscape(s) {
+    // минимальный эскейп для селектора атрибута
+    return String(s).replace(/(["\\])/g, '\\$1');
+  }
+
+  // ---------- init/UI ----------
   function bindUI() {
-    els.switch = document.getElementById('copyModeSwitch');
-    els.panel  = document.getElementById('copyPanel');
-    els.count  = document.getElementById('copyCount');
-    els.copyBtn= document.getElementById('copyDo');
-    els.clearBtn=document.getElementById('copyClear');
+    els.switch    = document.getElementById('copyModeSwitch');
+    els.panel     = document.getElementById('copyPanel');
+    els.count     = document.getElementById('copyCount');
+    els.copyBtn   = document.getElementById('copyDo');
+    els.clearBtn  = document.getElementById('copyClear');
+    els.list      = document.getElementById('copyList');
+    els.panelLeft = document.querySelector('.copy-panel-left');
 
     if (els.switch) {
-      const saved = localStorage.getItem(LS_ON_KEY) === '1';
-      els.switch.checked = saved;
+      // по умолчанию режим выключен на каждой загрузке
+      els.switch.checked = false;
       els.switch.addEventListener('change', () => setOn(els.switch.checked));
     }
 
-    if (els.copyBtn) els.copyBtn.addEventListener('click', copyAll);
-    if (els.clearBtn) els.clearBtn.addEventListener('click', clearAll);
+    els.copyBtn  && els.copyBtn.addEventListener('click', copyAll);
+    els.clearBtn && els.clearBtn.addEventListener('click', clearAll);
 
-    // горячая клавиша: Ctrl/Cmd + Enter
+    // клик по "Выбрано: N" — открыть/закрыть список
+    els.count && els.count.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!isOn()) return; // список доступен только в режиме COPY
+      toggleList();
+    });
+
+    // делегат удаления
+    els.list && els.list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.copy-remove');
+      if (!btn) return;
+      const key = btn.getAttribute('data-key');
+      removeByKey(key);
+    });
+
+    // горячая клавиша: Ctrl/Cmd + Enter — копировать
     document.addEventListener('keydown', (e) => {
       const ctrlOrCmd = e.ctrlKey || e.metaKey;
       if (ctrlOrCmd && e.key === 'Enter' && isOn()) {
@@ -177,23 +244,16 @@
       }
     });
 
-    // когда результаты обновились — подсветить выбранные
+    // перерисовка результатов — обновить подсветку
     document.addEventListener('results:rendered', applyHighlights);
 
-    // начальная отрисовка
     updatePanel();
     applyHighlights();
   }
 
   function init() {
-    readLS();
-    
-    // при открытии/обновлении страницы — очищаем выбор прошлой сессии
-  try{
+    // Никакого localStorage: каждую загрузку начинаем с пустого выбора и COPY=OFF
     selected.clear();
-    localStorage.removeItem(LS_ITEMS_KEY);
-  }catch{}
-    // возможно, DOM ещё не готов
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bindUI);
     } else {
@@ -201,12 +261,7 @@
     }
   }
 
-  // публичный API для app.js
-  window.CopyMode = {
-    isOn,
-    toggleFromCell,
-    applyHighlights,
-  };
+  window.CopyMode = { isOn, toggleFromCell, applyHighlights };
 
   init();
 })();
