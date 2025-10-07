@@ -123,7 +123,6 @@
     try {
       await navigator.clipboard.writeText(text);
       pulseCopied();
-      clearAll();
     } catch {
       // фоллбек через textarea
       const ta = document.createElement('textarea');
@@ -135,7 +134,6 @@
       try { document.execCommand('copy'); } catch {}
       document.body.removeChild(ta);
       pulseCopied();
-      clearAll();
     }
   }
 
@@ -187,12 +185,6 @@
 
   function init() {
     readLS();
-    
-    // при открытии/обновлении страницы — очищаем выбор прошлой сессии
-  try{
-    selected.clear();
-    localStorage.removeItem(LS_ITEMS_KEY);
-  }catch{}
     // возможно, DOM ещё не готов
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', bindUI);

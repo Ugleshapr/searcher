@@ -84,6 +84,7 @@
     <button id="copyClear" class="btn btn-ghost" title="Очистить выбор">
   🧹<span class="sr-only">Очистить выбор</span>
 </button>
+
   </div>
 </div>
 
