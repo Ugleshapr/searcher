@@ -92,9 +92,10 @@ class PriceListSearchApp {
   // 2) если нет "?" — добавим слева
   if (!host.querySelector('#helpLink')) {
     host.insertAdjacentHTML(
-      'afterbegin',
-      `<button type="button" id="helpLink" class="info-circle" title="Открыть справку">?</button>`
-    );
+  'beforeend',
+  `<button type="button" id="helpLink" class="info-circle" title="Открыть справку">?</button>`
+);
+
     // навешиваем клик без inline-скрипта (CSP-friendly)
     const help = host.querySelector('#helpLink');
     help?.addEventListener('click', () => {

@@ -666,4 +666,33 @@ td.copyable .copy-badge {
   vertical-align: middle;
 }
 
+/* COPY: спец-стили для кнопки "Копировать N строк" */
+#copyDo {
+  color: #21808d;                 /* текст по умолчанию */
+  border-color: #21808d;          /* рамка в тон */
+  background: transparent;        /* без заливки */
+}
+#copyDo:hover,
+#copyDo:focus-visible {
+  background: #21808d;            /* при наведении — заливка */
+  color: #fff;                    /* и белые буквы */
+  border-color: #21808d;
+}
+
+/* COPY: компактная версия переключателя (для правого угла) */
+.copy-switch.copy-switch--compact {
+  height: 22px;
+  padding-left: 38px;
+}
+.copy-switch.copy-switch--compact::before { width: 34px; height: 18px; }
+.copy-switch.copy-switch--compact .copy-knob { width: 14px; height: 14px; }
+#copyModeSwitch:checked + .copy-switch.copy-switch--compact .copy-knob { left: 18px; }
+
+/* подпись COPY перед тумблером */
+.copy-inline-title {
+  font-weight: 600;
+  letter-spacing: .5px;
+  color: var(--color-text-secondary);
+}
+
 

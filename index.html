@@ -39,19 +39,17 @@
       <div class="card__body">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h3 class="mb-0">Поиск по прайс-листу</h3>
-          <span id="datasetInfo" class="text-secondary" style="display:none;"></span>
+          <span id="datasetInfo" class="text-secondary" style="display:inline-flex;align-items:center;gap:8px;">
+  <!-- COPY: компактный тумблер в правом верхнем углу -->
+  <span class="copy-inline-title">COPY</span>
+  <input type="checkbox" id="copyModeSwitch" />
+  <label for="copyModeSwitch" class="copy-switch copy-switch--compact">
+    <span class="copy-knob"></span>
+  </label>
+</span>
         </div>
 
-    <!-- COPY: тумблер режима (над поиском) -->
-  <div id="copyToggle" class="copy-toggle" style="margin-bottom:8px;">
-    <input type="checkbox" id="copyModeSwitch" />
-        <label for="copyModeSwitch" class="copy-switch">
-        <span class="copy-knob"></span>
-        <span class="copy-label">COPY</span>
-        </label>
-  </div>
-
-
+    
         <!-- Растянутое поле поиска -->
         <div class="search-controls">
           <div class="form-group mb-0">
