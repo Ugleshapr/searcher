@@ -636,28 +636,19 @@ td.copyable { cursor: copy; }
 .copy-count {
   font-weight: 600;
 }
-/* Кнопки ТОЛЬКО внутри панели COPY */
-.copy-panel .btn {
+.btn {
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--color-border, #d0d5dd);
   background: var(--color-bg, #fff);
   font-weight: 600;
 }
-.copy-panel .btn:hover { filter: brightness(0.98); }
-.copy-panel .btn-ghost { background: transparent; }
-
-/* Спец-стиль именно для "Копировать N строк" */
-.copy-panel #copyDo {
-  color: #21808d;
-  border-color: #21808d;
-  background: transparent;
+.btn:hover { filter: brightness(0.98); }
+.btn-primary {
+  border-color: var(--color-primary, #3b82f6);
 }
-.copy-panel #copyDo:hover,
-.copy-panel #copyDo:focus-visible {
-  background: #21808d;
-  color: #fff;
-  border-color: #21808d;
+.btn-ghost {
+  background: transparent;
 }
 
 /* --- COPY: отметка выбранных позиций в таблице --- */
@@ -675,6 +666,18 @@ td.copyable .copy-badge {
   vertical-align: middle;
 }
 
+/* COPY: спец-стили для кнопки "Копировать N строк" */
+#copyDo {
+  color: #21808d;                 /* текст по умолчанию */
+  border-color: #21808d;          /* рамка в тон */
+  background: transparent;        /* без заливки */
+}
+#copyDo:hover,
+#copyDo:focus-visible {
+  background: #21808d;            /* при наведении — заливка */
+  color: #fff;                    /* и белые буквы */
+  border-color: #21808d;
+}
 
 /* COPY: компактная версия переключателя (для правого угла) */
 .copy-switch.copy-switch--compact {
@@ -692,7 +695,7 @@ td.copyable .copy-badge {
   color: var(--color-text-secondary);
 }
 /* Порядок элементов в правом верхнем углу */
-#datasetInfo { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+#datasetInfo { display: inline-flex; align-items: center; gap: 8px; }
 #datasetInfo .copy-inline-title { order: 1; }   /* COPY */
 #datasetInfo .copy-switch       { order: 2; }   /* переключатель */
 #datasetInfo .info-circle       { order: 3; }   /* затем ? и i */
