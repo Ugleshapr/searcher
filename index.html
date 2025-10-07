@@ -42,6 +42,16 @@
           <span id="datasetInfo" class="text-secondary" style="display:none;"></span>
         </div>
 
+    <!-- COPY: тумблер режима (над поиском) -->
+  <div id="copyToggle" class="copy-toggle" style="margin-bottom:8px;">
+    <input type="checkbox" id="copyModeSwitch" />
+        <label for="copyModeSwitch" class="copy-switch">
+        <span class="copy-knob"></span>
+        <span class="copy-label">COPY</span>
+        </label>
+  </div>
+
+
         <!-- Растянутое поле поиска -->
         <div class="search-controls">
           <div class="form-group mb-0">
@@ -65,6 +75,18 @@
         </div>
       </div>
     </div>
+
+<!-- COPY: панель действий (показывается только в режиме COPY) -->
+<div id="copyPanel" class="copy-panel hidden" aria-hidden="true">
+  <div class="copy-panel-left">
+    <span id="copyCount" class="copy-count">Выбрано: 0</span>
+  </div>
+  <div class="copy-panel-right">
+    <button id="copyDo" class="btn btn-primary">Копировать N строк</button>
+    <button id="copyClear" class="btn btn-ghost">Очистить выбор</button>
+  </div>
+</div>
+
 
     <!-- Результаты поиска -->
     <div class="card" id="resultsSection" style="display:none;">
@@ -120,6 +142,7 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="app.js?v=prod-20250818"></script>
+  <script src="addons/copy-mode.js"></script>
 </body>
 </html>
 

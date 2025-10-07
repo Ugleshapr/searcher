@@ -76,7 +76,7 @@
       });
     }
 
-    const resp = await fetch('base.xlsx'); // пусть браузер кэширует
+    const resp = await fetch('../base.xlsx'); // пусть браузер кэширует
     if (!resp.ok) return '';
     const buf = await resp.arrayBuffer();
     const wb = XLSX.read(buf, { type: 'array' });
@@ -197,7 +197,7 @@ document.addEventListener('click', async (e) => {
 
     // 1) Загружаем словарь спецификаций
     //    Ожидаемые колонки: spec_id;title;value_type;group_id;group_name
-    const specs = await parseCSV('addons/products_spec.csv', /*header*/ true);
+    const specs = await parseCSV('../addons/products_spec.csv', /*header*/ true);
 
     // Сформируем map spec_id → {title, value_type, group_id, group_name}
     const specMap = new Map();
@@ -214,7 +214,7 @@ document.addEventListener('click', async (e) => {
 
     // 2) Значения по продуктам
     //    Ожидаемые колонки: product_id;spec_id;value
-    const values = await parseCSV('addons/products_spec_values.csv', /*header*/ true);
+    const values = await parseCSV('../addons/products_spec_values.csv', /*header*/ true);
     const mine = values.filter(v => String(v['product_id'] ?? '').trim() === art);
 
     // 3) Объединяем: подставляем title + group_* по spec_id
@@ -240,12 +240,16 @@ document.addEventListener('click', async (e) => {
       byGroup.get(key).items.push(r);
     }
 
-    const grouped = Array.from(byGroup.values())
-      .sort((a, b) => byNum(a.group_id, b.group_id))
-      .map(g => ({ ...g, items: g.items.sort((a, b) => a.title.localeCompare(b.title, 'ru')) }));
+    let grouped = Array.from(byGroup.values())
+  .sort((a, b) => byNum(a.group_id, b.group_id))
+  .map(g => ({ ...g, items: g.items.sort((a, b) => a.title.localeCompare(b.title, 'ru')) }));
 
-    hideState();
-    renderGroups(grouped);
+//  фильтруем: убираем группу "Классификация" целиком
+grouped = grouped.filter(g => g.group_name.toLowerCase() !== 'классификация');
+
+hideState();
+renderGroups(grouped);
+
   })().catch(err => {
     console.error(err);
     showState('danger', 'Ошибка при загрузке данных. Открой консоль разработчика для деталей.');

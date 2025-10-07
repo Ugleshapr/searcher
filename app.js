@@ -295,6 +295,13 @@ class PriceListSearchApp {
       tbody.addEventListener('click', async e => {
         const cell = e.target.closest('td.copyable');
         if (!cell) return;
+            // COPY mode: вместо мгновенного копирования — переключаем выбранность
+    if (window.CopyMode && window.CopyMode.isOn && window.CopyMode.isOn()) {
+      e.preventDefault();
+      window.CopyMode.toggleFromCell(cell);
+      return;
+    }
+
 
         const name = cell.textContent.trim();
         const row = cell.parentElement;
@@ -336,8 +343,9 @@ if (tbody) {
 
     if (!art) return;
 
-    const url = `product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
+    const url = `product/product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
     window.open(url, '_blank', 'noopener');
+
   });
 }
 
@@ -857,8 +865,13 @@ const infoBtn = hasFeat
              title="Открыть страницу товара (двойной клик)">i</button>`;
 
        return `
-  <tr>
-    <td class="copyable">${nameHtml}</td>
+  <tr data-sku="${this.escapeHTML(item['Артикул'] || '')}">
+    <td class="copyable"
+        data-name="${this.escapeHTML(item['Наименование'] || '')}"
+        data-sku="${this.escapeHTML(item['Артикул'] || '')}"
+        title="ЛКМ — ${window.CopyMode?.isOn && window.CopyMode.isOn() ? 'добавить/убрать из списка' : 'скопировать'}">
+      ${nameHtml}<span class="copy-badge" style="display:none">в списке</span>
+    </td>
     <td>${artHtml}</td>
     <td class="text-price">${item.__price}${infoBtn}</td>
     <td class="col-docs">${docsHtml}</td>
@@ -868,6 +881,9 @@ const infoBtn = hasFeat
       .join('');
 
     resultsBody.innerHTML = rowsHtml;
+    // COPY: сообщаем модулю, что таблица перерисована (подсветка выбранных)
+document.dispatchEvent(new CustomEvent('results:rendered'));
+
     // тултипы для характеристик
 // поповеры для характеристик (копируемый текст)
 if (window.bootstrap && window.bootstrap.Popover) {
