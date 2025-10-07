@@ -73,9 +73,12 @@
   }
 
   function applyHighlights() {
-    document.querySelectorAll('td.copyable[data-sku][data-name]').forEach(markCell);
-    updatePanel();
-  }
+  // если режим выключен и выбор пуст, вообще ничего не делаем
+  if (!isOn() && selected.size === 0) return;
+
+  document.querySelectorAll('td.copyable[data-sku][data-name]').forEach(markCell);
+  updatePanel();
+}
 
   async function copyAll() {
     if (!selected.size) return;
@@ -245,7 +248,10 @@
     });
 
     // перерисовка результатов — обновить подсветку
-    document.addEventListener('results:rendered', applyHighlights);
+    document.addEventListener('results:rendered', () => {
+  if (!isOn() && selected.size === 0) return;
+  applyHighlights();
+});
 
     updatePanel();
     applyHighlights();
