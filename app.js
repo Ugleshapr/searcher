@@ -304,20 +304,25 @@ class PriceListSearchApp {
     }
 
 
-        const name = cell.textContent.trim();
-        const row = cell.parentElement;
-        const articleCell = row ? row.children[1] : null;
-        const article = articleCell ? articleCell.textContent.trim() : '';
+        // Берём из data-* чтобы не тащить скрытый бейдж "в списке"
+const rawName = (cell.getAttribute('data-name') || '').trim();
+const article = (cell.getAttribute('data-sku')
+  || cell.closest('tr')?.getAttribute('data-sku')
+  || cell.parentElement?.children?.[1]?.textContent
+  || ''
+).trim();
 
-        const tsv = `${name}\t${article}`;
-        try {
-          await navigator.clipboard.writeText(tsv);
-          const prev = cell.getAttribute('title') || '';
-          cell.setAttribute('title', 'Скопировано');
-          setTimeout(() => cell.setAttribute('title', prev), 800);
-        } catch (err) {
-          console.warn('Clipboard error:', err);
-        }
+if (!rawName || !article) return;
+
+const tsv = `${rawName}\t${article}`;
+try {
+  await navigator.clipboard.writeText(tsv);
+  const prev = cell.getAttribute('title') || '';
+  cell.setAttribute('title', 'Скопировано');
+  setTimeout(() => cell.setAttribute('title', prev), 800);
+} catch (err) {
+  console.warn('Clipboard error:', err);
+}
       });
     }
     // 1) Двойной клик по кнопке "i" — открываем страницу товара с артикулом и названием

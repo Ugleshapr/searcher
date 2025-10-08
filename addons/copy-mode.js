@@ -110,16 +110,20 @@
   }
 
   function pulseCopied() {
-    if (!els.copyBtn) return;
-    const old = els.copyBtn.textContent;
-    els.copyBtn.textContent = 'Скопировано!';
-    setTimeout(() => { els.copyBtn.textContent = old; }, 900);
-  }
+  if (!els.copyBtn) return;
+  els.copyBtn.textContent = 'Скопировано!';
+  // Через 900 мс привести текст к актуальному состоянию (с учётом уже очищенного selected)
+  setTimeout(() => {
+    updatePanel(); // выставит "Копировать" при нуле выбранных
+  }, 900);
+}
+
 
   function clearAll() {
     selected.clear();
     applyHighlights();
     renderList(); // если список открыт — очистится
+    hideList();
   }
 
   // ---------- выпадающий список ----------
