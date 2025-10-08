@@ -340,12 +340,14 @@ if (tbody) {
       if (artCell) art = artCell.textContent.trim();
     }
 
-    // наименование
-    let rawName = '';
-    if (row) {
-      const nameCell = row.children[0];
-      if (nameCell) rawName = nameCell.textContent.trim();
-    }
+    // наименование (берём из data-name, без бейджа "в списке")
+let rawName = '';
+if (row) {
+  const nameCell = row.children[0];
+  if (nameCell) {
+    rawName = (nameCell.getAttribute('data-name') || nameCell.textContent || '').trim();
+  }
+}
 
     if (!art) return;
 
