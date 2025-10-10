@@ -258,46 +258,45 @@ _hasAnyWord(nd, wordList) {
   return false;
 }
 _applyRankRulesToItem(it, ctx) {
-    const raw = String(ctx.raw || '').toLowerCase(); // СЫРОЕ имя (кириллица остаётся кириллицей)
-    const ndLower = String(nd || '').toLowerCase(); // Канон, как было
-  const { nd, docs } = ctx; // nd = it.__name_delim
+  const { nd, docs } = ctx;               // ← сначала деструктурируем
+  const raw = String(ctx.raw || '').toLowerCase();
+  const ndLower = String(nd || '').toLowerCase();  // ← теперь тут всё ок
   const rr = this.rankRules;
 
   // Бонусы за слова
-for (const rule of rr.bonuses.wordBonuses || []) {
-  if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
-    it.__score += rule.score;
-  }
-}
-
-// Штрафы за слова
-for (const rule of rr.penalties.wordPenalties || []) {
-  if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
-    it.__score += rule.score;
-  }
-}
-
-// Штрафы за подстроки (например, -FERRAZ, БЗАВ-)
-for (const rule of rr.penalties.substrPenalties || []) {
-  for (const tok of rule.tokens) {
-    const re = new RegExp(this.escapeRegExp(tok), 'i');
-    // ВАЖНО: ищем по СЫРОМУ имени (кириллица не теряется)
-    if (re.test(raw) || re.test(ndLower)) {
+  for (const rule of rr.bonuses.wordBonuses || []) {
+    if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
       it.__score += rule.score;
-      break;
     }
   }
-}
 
-  // Штрафы за бренды/теги (как слова)
+  // Штрафы за слова
+  for (const rule of rr.penalties.wordPenalties || []) {
+    if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
+      it.__score += rule.score;
+    }
+  }
+
+  // Штрафы за подстроки
+  for (const rule of rr.penalties.substrPenalties || []) {
+    for (const tok of rule.tokens) {
+      const re = new RegExp(this.escapeRegExp(tok), 'i');
+      if (re.test(raw) || re.test(ndLower)) {
+        it.__score += rule.score;
+        break;
+      }
+    }
+  }
+
+  // (опц.) если brandPenalties больше не используешь — можно удалить блок ниже
   const bp = rr.penalties.brandPenalties;
-  if (bp?.list?.length && this._hasAnyWord(nd, bp.list)) {
+  if (bp?.list?.length && this._hasAnyWord(ndLower, bp.list)) {
     it.__score += bp.score;
   }
 
-  // Штраф за отсутствие документов
   if (!docs || docs.length === 0) it.__score += rr.penalties.noDocsPenalty;
 }
+
 
   escapeHTML(s) {
     return String(s)
