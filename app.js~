@@ -902,6 +902,7 @@ ${(() => {
         ${window.bootstrap ? 'data-bs-title="'+this.escapeHTML(hint)+'"' : ''}>
     ${item.__price}
   </span>`;
+`;
 
 
   return `

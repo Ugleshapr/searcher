@@ -760,46 +760,4 @@ td.copyable .copy-badge {
   transform: translateY(0);
 }
 
-/* Ячейка цены — центрируем и даём зазор под кружок "i" */
-.text-price { padding: 0.25rem 0.5rem; }
-.text-price .price-cell {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;   /* ← горизонтальная центровка */
-  gap: 8px;                  /* расстояние между ценой и "i" */
-  width: 100%;
-}
-
-/* Пилюля цены — базовый вид */
-.price-tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  line-height: 1.2;
-  white-space: nowrap;
-  transition: background-color .15s ease, color .15s ease, box-shadow .15s ease;
-  border: 1px solid transparent;
-}
-
-/* Когда есть наличие (Количество > 0) — пастельно зелёная пилюля */
-.price-tag.is-stock {
-  background: #eaf7ea;           /* пастельный зелёный фон */
-  color: #1f6f1f;                 /* тёмно-зелёный текст */
-  border-color: #d4efd4;          /* тонкая рамка */
-}
-
-/* Если нет наличия — оставляем спокойный нейтрал */
-.price-tag.is-empty {
-  background: transparent;
-  color: inherit;
-  border-color: transparent;
-}
-
-/* Кружок "i" в цене — чуть выровнять по оптической оси */
-.text-price .info-circle {
-  position: relative;
-  top: 0;                /* при необходимости поставь -0.5px */
-}
-
-
 

@@ -10,6 +10,7 @@ import pandas as pd
 
 # ──────────────────────────────────────────────────────────────────────────────
 SOURCE_URL = "https://files.keaz.ru/ftp/keaz.xls?1755595229"   
+YML_URL   = "https://files.keaz.ru/uploads/products-electro-msk.yml"
 SHEET      = 0                             # номер/имя листа (0 — первый)
 TMP_NAME   = "_source_download"            # базовое имя временного файла
 # Если products-файл называется иначе — можно переопределить; иначе ищется автоматически
@@ -105,6 +106,10 @@ def download_to_script_dir(url: str) -> Path:
         ext = ".xlsx"
     elif low.endswith(".xls"):
         ext = ".xls"
+    elif low.endswith((".yml", ".yaml")):
+        ext = ".yml"
+    elif low.endswith(".xml"):
+        ext = ".xml"
 
     tmp_path = script_dir / f"{TMP_NAME}{ext}"
     print(f"[i] Скачиваю:\n    {url}\n    → {tmp_path}")
@@ -259,6 +264,79 @@ def build_site_link_map_from_products(search_dir: Path) -> dict:
     m = dict(zip(tmp["Артикул"], tmp["URL"]))
     print(f"[i] «Сайт ссылка» из products: артикулами покрыто {len(m)}")
     return m
+
+def _parse_qty_or_zero(s: str) -> int:
+    if s is None:
+        return 0
+    s = str(s).strip()
+    # только целые неотрицательные числа; всё остальное -> 0
+    return int(s) if re.fullmatch(r"\d+", s) else 0
+
+
+def parse_yml_quantities(yml_path: Path) -> dict:
+    """
+    Читает YML (Yandex Market XML) и строит карту: очищенный vendorCode -> quantity (int >=0).
+    Ищем <offer> / <vendorCode> и <param name="quantity">...</param>.
+    """
+    import xml.etree.ElementTree as ET
+    qmap: dict[str, int] = {}
+    try:
+        # iterparse экономичнее по памяти
+        for event, elem in ET.iterparse(str(yml_path), events=("end",)):
+            tag = elem.tag.rsplit('}', 1)[-1]  # срез namespace, если есть
+            if tag == "offer":
+                art, qty = None, 0
+                for child in list(elem):
+                    ctag = child.tag.rsplit('}', 1)[-1]
+                    if ctag == "vendorCode" and art is None:
+                        art = clean_article(child.text)
+                    elif ctag == "param" and (child.attrib.get("name", "").strip().lower() == "quantity"):
+                        qty = _parse_qty_or_zero(child.text)
+                if art:
+                    # если нескольких офферов с одним артикулом нет — нормально;
+                    # если есть — последнее значение перезапишет предыдущее.
+                    qmap[art] = qty if qty > 0 else 0
+                elem.clear()
+    except Exception as e:
+        print(f"[!] Не удалось распарсить YML: {e}")
+        return {}
+    print(f"[i] Из YML считано количеств: {len(qmap)}")
+    return qmap
+
+
+def attach_quantity_from_yml(base_df: pd.DataFrame, script_dir: Path) -> pd.DataFrame:
+    """
+    Скачивает YML, строит карту артикул -> количество, добавляет 6-й столбец «Количество».
+    Если YML недоступен/ошибка/нет совпадений — везде 0.
+    """
+    # мягкая попытка скачать YML: не валим весь процесс, если не получилось
+    try:
+        yml_path = download_to_script_dir(YML_URL)
+    except SystemExit:
+        print("[i] Не удалось скачать YML — «Количество» будет заполнено нулями.")
+        yml_path = None
+
+    qmap = {}
+    if yml_path and yml_path.exists():
+        try:
+            qmap = parse_yml_quantities(yml_path)
+        finally:
+            # удалить временный YML
+            try:
+                yml_path.unlink()
+                print(f"[i] Временный YML удалён: {yml_path.name}")
+            except FileNotFoundError:
+                pass
+
+    out = base_df.copy()
+    arts = out["Артикул"].map(clean_article)
+    qty_series = arts.map(qmap).fillna(0).astype(int)
+
+    # вставляем именно 6-м столбцом (после «Характеристики»)
+    out.insert(5, "Количество", qty_series)
+    print(f"[i] Колонка «Количество»: >0 найдено для {int((qty_series > 0).sum())} позиций.")
+    return out
+
 
 def _extract_last_url(text: str) -> str:
     """Вытащить URL из конца строки '… https://…'. Нужен для дедупликации по URL."""
@@ -494,10 +572,14 @@ def main():
 
     # 5.2) Колонка 5: «Характеристики» из enriched.xlsx (если есть)
     base = attach_specs_from_enriched(base, script_dir)
+    
+    # 5.3) Колонка 6: «Количество» из YML по vendorCode
+    base = attach_quantity_from_yml(base, script_dir)
+
 
     # 6) Сохранение base.csv в ПАПКЕ СКРИПТА
     csv_path = script_dir / "base.csv"
-    base[["Наименование","Артикул","Цена","Документы","Характеристики"]]\
+    base[["Наименование","Артикул","Цена","Документы","Характеристики","Количество"]]\
         .to_csv(csv_path, index=False, sep=';', encoding='utf-8-sig')
     print(f"[✓] Готово: {len(base)} строк")
     print(f"[→] {csv_path}")
