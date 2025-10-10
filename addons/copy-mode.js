@@ -23,9 +23,14 @@
   function setOn(on) {
     if (!els.switch) return;
     els.switch.checked = !!on;
+  if (!on) {
+    // выключили режим — сразу чистим список и убираем бейджи/подсветку
+    clearAll();
+  } else {
     updatePanel();
     applyHighlights();
   }
+ }
 
   function updatePanel() {
   const n = selected.size;

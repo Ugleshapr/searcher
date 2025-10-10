@@ -57,10 +57,10 @@ class PriceListSearchApp {
     ],
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
-      { tokens: ['FERRAZ', 'БЗАВ'], score: -250 },
+      { tokens: ['FERRAZ', 'БЗАВ'], score: -150 },
     ],
     // - за отсутствие документов
-        noDocsPenalty: -700,
+        noDocsPenalty: -400,
   }
 };
 
@@ -232,6 +232,21 @@ _pluralRu(n, forms = ['штука','штуки','штук']) {
   if (!t) return null;
   return new RegExp(`(^|[^a-zа-яё0-9])${this.escapeRegExp(t)}(?=$|[^a-zа-яё0-9])`, 'i');
 }
+  _numTokenRegex(tok) {
+  // границы: не-цифра слева/справа (или край строки)
+  const t = String(tok).trim();
+  if (!/^\d+$/.test(t)) return null;
+  return new RegExp(`(^|\\D)${this.escapeRegExp(t)}(?!\\d)`, 'i');
+}
+  _phraseRegexFromParts(parts) {
+  // k f 09 30 → k [^a-z0-9]* f [^a-z0-9]* 09 [^a-z0-9]* 30
+  const segs = parts.map(p => {
+    if (/^\d+$/.test(p)) return this.escapeRegExp(p);
+    return this.escapeRegExp(p);
+  });
+  return new RegExp(segs.join('[^a-z0-9а-яё]*'), 'i');
+}
+
 _hasAnyWord(nd, wordList) {
   if (!nd || !wordList?.length) return false;
   for (const w of wordList) {
@@ -731,13 +746,44 @@ if (row) {
     const qn = this.normalizeForFuzzySearch(this._applyUZAliases(rawQuery));
 
     for (const it of this.filteredData) {
-  // … твой расчёт __score (совпадения, фразовые бонусы и т.п.) остаётся как есть …
+  it.__score = 0;
 
-  // применяем единые правила
   const nd = it.__name_delim || String(it['Наименование'] || '');
+  const ad = it.__article_delim || String(it['Артикул'] || '');
+
+  // Базовый скор по каждому токену
+  for (const p of parts) {
+    const inName = it.__name.includes(p);
+    const inArt  = permitArticle && it.__article.includes(p);
+
+    // простое вхождение → базовые очки
+    if (inName || inArt) it.__score += 1000;
+
+    // совпадение «словом»
+    const wre = this._wordRegex(p);
+    if (wre && wre.test(nd)) it.__score += 300;
+    if (permitArticle && wre && wre.test(ad)) it.__score += 200;
+
+    // ЧИСЛО: требуем полное числовое совпадение (не «30» в «300»)
+    const nre = this._numTokenRegex(p);
+    if (nre && nre.test(nd)) it.__score += 300;
+    if (permitArticle && nre && nre.test(ad)) it.__score += 200;
+
+    // Позиционный бонус — чем левее первый матч, тем лучше
+    const hay = permitArticle ? ad : nd;
+    const pos = hay.indexOf(p);
+    if (pos >= 0) it.__score += Math.max(0, 220 - pos);
+  }
+
+  // Бонус за «фразу» (все токены в правильном порядке с любыми разделителями)
+  if (parts.length >= 2) {
+    const pre = this._phraseRegexFromParts(parts);
+    if (pre.test(nd)) it.__score += 800;
+  }
+
+  // Общие бонусы/штрафы из конфига (FERRAZ/БЗАВ и т.п.)
   this._applyRankRulesToItem(it, { nd, docs: it.__docs });
 }
-
     
 
     // Сортировка: тай-брейкер смотрит в артикул только если нет букв
