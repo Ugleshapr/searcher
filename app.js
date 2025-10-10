@@ -52,15 +52,17 @@ class PriceListSearchApp {
         penalties: {
     // - за отдельные слова (границы слова)
         wordPenalties: [
-      { words: ['om4','ом4'], score: -800 },
-      { words: ['reg','рег'], score: -800 },
+      { words: ['om4','ом4'], score: -700 },
+      { words: ['reg','рег'], score: -700 },
     ],
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
-      { tokens: ['FERRAZ', 'БЗАВ'], score: -150 },
-    ],
+  
+  { tokens: ['БЗАВ'], score: -300 },
+  { tokens: ['FERRAZ'], score: -300 },
+],
     // - за отсутствие документов
-        noDocsPenalty: -300,
+        noDocsPenalty: -400,
   }
 };
 
@@ -106,6 +108,22 @@ class PriceListSearchApp {
 
     return s;
   }
+  
+  // Возвращает целое количество или 0
+_parseQty(v) {
+  const n = Number(String(v ?? '').replace(',', '.').trim());
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+}
+
+// Согласование по-русски: 1 штука, 2–4 штуки, 5+ штук
+_pluralRu(n, forms = ['штука','штуки','штук']) {
+  n = Math.abs(n) % 100; const n1 = n % 10;
+  if (n > 10 && n < 20) return forms[2];
+  if (n1 > 1 && n1 < 5) return forms[1];
+  if (n1 === 1) return forms[0];
+  return forms[2];
+}
+
   _updateInfoTooltip() {
   const host = document.getElementById('datasetInfo');
   if (!host) return;
@@ -216,6 +234,21 @@ class PriceListSearchApp {
   if (!t) return null;
   return new RegExp(`(^|[^a-zа-яё0-9])${this.escapeRegExp(t)}(?=$|[^a-zа-яё0-9])`, 'i');
 }
+  _numTokenRegex(tok) {
+  // границы: не-цифра слева/справа (или край строки)
+  const t = String(tok).trim();
+  if (!/^\d+$/.test(t)) return null;
+  return new RegExp(`(^|\\D)${this.escapeRegExp(t)}(?!\\d)`, 'i');
+}
+  _phraseRegexFromParts(parts) {
+  // k f 09 30 → k [^a-z0-9]* f [^a-z0-9]* 09 [^a-z0-9]* 30
+  const segs = parts.map(p => {
+    if (/^\d+$/.test(p)) return this.escapeRegExp(p);
+    return this.escapeRegExp(p);
+  });
+  return new RegExp(segs.join('[^a-z0-9а-яё]*'), 'i');
+}
+
 _hasAnyWord(nd, wordList) {
   if (!nd || !wordList?.length) return false;
   for (const w of wordList) {
@@ -225,39 +258,45 @@ _hasAnyWord(nd, wordList) {
   return false;
 }
 _applyRankRulesToItem(it, ctx) {
-  const { nd, docs } = ctx; // nd = it.__name_delim
+  const { nd, docs } = ctx;               // ← сначала деструктурируем
+  const raw = String(ctx.raw || '').toLowerCase();
+  const ndLower = String(nd || '').toLowerCase();  // ← теперь тут всё ок
   const rr = this.rankRules;
 
   // Бонусы за слова
   for (const rule of rr.bonuses.wordBonuses || []) {
-    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
+    if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
+      it.__score += rule.score;
+    }
   }
 
   // Штрафы за слова
   for (const rule of rr.penalties.wordPenalties || []) {
-    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
-  }
-  
-  // Штрафы за подстроки (например, -FERRAZ, БЗАВ-)
-for (const rule of rr.penalties.substrPenalties || []) {
-  for (const tok of rule.tokens) {
-    const re = new RegExp(this.escapeRegExp(tok), 'i');
-    if (re.test(nd)) {
+    if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
       it.__score += rule.score;
-      break; // одного совпадения достаточно
     }
   }
-}
 
-  // Штрафы за бренды/теги (как слова)
+  // Штрафы за подстроки
+  for (const rule of rr.penalties.substrPenalties || []) {
+    for (const tok of rule.tokens) {
+      const re = new RegExp(this.escapeRegExp(tok), 'i');
+      if (re.test(raw) || re.test(ndLower)) {
+        it.__score += rule.score;
+        break;
+      }
+    }
+  }
+
+  // (опц.) если brandPenalties больше не используешь — можно удалить блок ниже
   const bp = rr.penalties.brandPenalties;
-  if (bp?.list?.length && this._hasAnyWord(nd, bp.list)) {
+  if (bp?.list?.length && this._hasAnyWord(ndLower, bp.list)) {
     it.__score += bp.score;
   }
 
-  // Штраф за отсутствие документов
   if (!docs || docs.length === 0) it.__score += rr.penalties.noDocsPenalty;
 }
+
 
   escapeHTML(s) {
     return String(s)
@@ -613,6 +652,8 @@ if (row) {
         __price: this._formatPriceCached(row['Цена']),
         __docs: this.parseDocs(row['Документы']),
         __featHtml: this._featuresToHtml(row['Характеристики']), 
+         __qty: this._parseQty(row['Количество']),             
+         __qtyHint: null                           
       }));
 
       this._updateInfoTooltip();
@@ -713,13 +754,44 @@ if (row) {
     const qn = this.normalizeForFuzzySearch(this._applyUZAliases(rawQuery));
 
     for (const it of this.filteredData) {
-  // … твой расчёт __score (совпадения, фразовые бонусы и т.п.) остаётся как есть …
+  it.__score = 0;
 
-  // применяем единые правила
   const nd = it.__name_delim || String(it['Наименование'] || '');
-  this._applyRankRulesToItem(it, { nd, docs: it.__docs });
-}
+  const ad = it.__article_delim || String(it['Артикул'] || '');
 
+  // Базовый скор по каждому токену
+  for (const p of parts) {
+    const inName = it.__name.includes(p);
+    const inArt  = permitArticle && it.__article.includes(p);
+
+    // простое вхождение → базовые очки
+    if (inName || inArt) it.__score += 1000;
+
+    // совпадение «словом»
+    const wre = this._wordRegex(p);
+    if (wre && wre.test(nd)) it.__score += 300;
+    if (permitArticle && wre && wre.test(ad)) it.__score += 200;
+
+    // ЧИСЛО: требуем полное числовое совпадение (не «30» в «300»)
+    const nre = this._numTokenRegex(p);
+    if (nre && nre.test(nd)) it.__score += 300;
+    if (permitArticle && nre && nre.test(ad)) it.__score += 200;
+
+    // Позиционный бонус — чем левее первый матч, тем лучше
+    const hay = permitArticle ? ad : nd;
+    const pos = hay.indexOf(p);
+    if (pos >= 0) it.__score += Math.max(0, 120 - pos);
+  }
+
+  // Бонус за «фразу» (все токены в правильном порядке с любыми разделителями)
+  if (parts.length >= 2) {
+    const pre = this._phraseRegexFromParts(parts);
+    if (pre.test(nd)) it.__score += 800;
+  }
+
+  // Общие бонусы/штрафы из конфига (FERRAZ/БЗАВ и т.п.)
+  this._applyRankRulesToItem(it, { nd, raw: String(it['Наименование'] || ''), docs: it.__docs });
+}
     
 
     // Сортировка: тай-брейкер смотрит в артикул только если нет букв
@@ -870,8 +942,31 @@ const infoBtn = hasFeat
       ${nameHtml}<span class="copy-badge" style="display:none">в списке</span>
     </td>
     <td>${artHtml}</td>
-    <td class="text-price">${item.__price}${infoBtn}</td>
-    <td class="col-docs">${docsHtml}</td>
+${(() => {
+  const q = this._parseQty(item.__qty);
+  const inStock = q > 0;
+  const hint = inStock
+    ? `В наличии ${q} ${this._pluralRu(q, ['штука','штуки','штук'])}`
+    : 'Нет в наличии';
+
+  const price = `
+  <span class="price-tag ${inStock ? 'is-stock' : 'is-empty'}"
+        aria-label="${this.escapeHTML(hint)}"
+        ${window.bootstrap ? 'data-bs-toggle="tooltip"' : 'title="'+this.escapeHTML(hint)+'"'}
+        ${window.bootstrap ? 'data-bs-title="'+this.escapeHTML(hint)+'"' : ''}>
+    ${item.__price}
+  </span>`;
+
+
+  return `
+    <td class="text-price">
+      <div class="price-cell">
+        ${price}
+        ${infoBtn}
+      </div>
+    </td>`;
+})()}
+<td class="col-docs">${docsHtml}</td>
   </tr>
 `;
       })
@@ -902,6 +997,17 @@ if (window.bootstrap && window.bootstrap.Popover) {
     container: 'body'
   });
 });
+
+  }
+
+// Тултипы для цен (наличие)
+if (window.bootstrap?.Tooltip) {
+  document.querySelectorAll('.price-tag[data-bs-toggle="tooltip"]').forEach(el => {
+    const t = window.bootstrap.Tooltip.getInstance(el);
+    if (t) t.dispose();
+    new window.bootstrap.Tooltip(el, { html: false, placement: 'top' });
+  });
+
   // Клик вне поповера — закрываем открытые
   document.addEventListener('click', (e) => {
     document.querySelectorAll('.feat-info').forEach(el => {
