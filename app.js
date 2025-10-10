@@ -52,13 +52,13 @@ class PriceListSearchApp {
         penalties: {
     // - за отдельные слова (границы слова)
         wordPenalties: [
-      { words: ['om4','ом4'], score: -900 },
-      { words: ['reg','рег'], score: -900 },
+      { words: ['om4','ом4'], score: -700 },
+      { words: ['reg','рег'], score: -700 },
     ],
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
   
-  { tokens: ['БЗАВ'], score: -1200 },
+  { tokens: ['БЗАВ'], score: -300 },
   { tokens: ['FERRAZ'], score: -300 },
 ],
     // - за отсутствие документов
@@ -258,26 +258,33 @@ _hasAnyWord(nd, wordList) {
   return false;
 }
 _applyRankRulesToItem(it, ctx) {
+    const raw = String(ctx.raw || '').toLowerCase(); // СЫРОЕ имя (кириллица остаётся кириллицей)
+    const ndLower = String(nd || '').toLowerCase(); // Канон, как было
   const { nd, docs } = ctx; // nd = it.__name_delim
   const rr = this.rankRules;
 
   // Бонусы за слова
-  for (const rule of rr.bonuses.wordBonuses || []) {
-    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
+for (const rule of rr.bonuses.wordBonuses || []) {
+  if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
+    it.__score += rule.score;
   }
+}
 
-  // Штрафы за слова
-  for (const rule of rr.penalties.wordPenalties || []) {
-    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
+// Штрафы за слова
+for (const rule of rr.penalties.wordPenalties || []) {
+  if (this._hasAnyWord(raw, rule.words) || this._hasAnyWord(ndLower, rule.words)) {
+    it.__score += rule.score;
   }
-  
-  // Штрафы за подстроки (например, -FERRAZ, БЗАВ-)
+}
+
+// Штрафы за подстроки (например, -FERRAZ, БЗАВ-)
 for (const rule of rr.penalties.substrPenalties || []) {
   for (const tok of rule.tokens) {
     const re = new RegExp(this.escapeRegExp(tok), 'i');
-    if (re.test(nd)) {
+    // ВАЖНО: ищем по СЫРОМУ имени (кириллица не теряется)
+    if (re.test(raw) || re.test(ndLower)) {
       it.__score += rule.score;
-      break; // одного совпадения достаточно
+      break;
     }
   }
 }
@@ -774,7 +781,7 @@ if (row) {
     // Позиционный бонус — чем левее первый матч, тем лучше
     const hay = permitArticle ? ad : nd;
     const pos = hay.indexOf(p);
-    if (pos >= 0) it.__score += Math.max(0, 100 - pos);
+    if (pos >= 0) it.__score += Math.max(0, 120 - pos);
   }
 
   // Бонус за «фразу» (все токены в правильном порядке с любыми разделителями)
@@ -784,7 +791,7 @@ if (row) {
   }
 
   // Общие бонусы/штрафы из конфига (FERRAZ/БЗАВ и т.п.)
-  this._applyRankRulesToItem(it, { nd, docs: it.__docs });
+  this._applyRankRulesToItem(it, { nd, raw: String(it['Наименование'] || ''), docs: it.__docs });
 }
     
 
