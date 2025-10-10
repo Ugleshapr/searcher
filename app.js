@@ -57,8 +57,10 @@ class PriceListSearchApp {
     ],
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
-      { tokens: ['FERRAZ', 'БЗАВ'], score: -300 },
-    ],
+  
+  { tokens: ['БЗАВ'], score: -700 },
+  { tokens: ['FERRAZ'], score: -300 },
+],
     // - за отсутствие документов
         noDocsPenalty: -400,
   }
@@ -772,7 +774,7 @@ if (row) {
     // Позиционный бонус — чем левее первый матч, тем лучше
     const hay = permitArticle ? ad : nd;
     const pos = hay.indexOf(p);
-    if (pos >= 0) it.__score += Math.max(0, 220 - pos);
+    if (pos >= 0) it.__score += Math.max(0, 100 - pos);
   }
 
   // Бонус за «фразу» (все токены в правильном порядке с любыми разделителями)
