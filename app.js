@@ -52,12 +52,12 @@ class PriceListSearchApp {
         penalties: {
     // - за отдельные слова (границы слова)
         wordPenalties: [
-      { words: ['om4','ом4'], score: -800 },
-      { words: ['reg','рег'], score: -800 },
+      { words: ['om4','ом4'], score: -900 },
+      { words: ['reg','рег'], score: -900 },
     ],
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
-      { tokens: ['FERRAZ', 'БЗАВ'], score: -150 },
+      { tokens: ['FERRAZ', 'БЗАВ'], score: -300 },
     ],
     // - за отсутствие документов
         noDocsPenalty: -400,
