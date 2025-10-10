@@ -2,12 +2,10 @@ name: Pages (prod root)
 on:
   push:
     branches: [ main ]
-
 permissions:
   contents: read
   pages: write
   id-token: write
-
 concurrency:
   group: pages-prod
   cancel-in-progress: true
@@ -15,15 +13,10 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages        # <-- ОБЯЗАТЕЛЬНО
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4   # берём файлы из main
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          path: .                   
+      - uses: actions/deploy-pages@v4
 
