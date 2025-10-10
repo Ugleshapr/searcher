@@ -21,14 +21,23 @@
     return !!(els.switch && els.switch.checked);
   }
   function setOn(on) {
-    if (!els.switch) return;
-    els.switch.checked = !!on;
-    updatePanel();
+  if (!els.switch) return;
+  els.switch.checked = !!on;
+
+  if (!on) {
+    // при отключении — полностью очистить выбор и убрать бейджи/панель
+    clearAll(true);           // сброс selected, снятие бейджей, скрыть список
+  } else {
+    updatePanel();        // показать панель
     applyHighlights();
   }
- }
 
-  function updatePanel() {
+  // на всякий случай синхронизируем состояние панели и таблицы
+  updatePanel(); // при OFF всё уже очищено
+}
+
+function updatePanel() {
+
   const n = selected.size;
 
   if (els.count) els.count.textContent = `Выбрано: ${n}`;
@@ -54,6 +63,7 @@
 
 
   function toggleFromCell(cell) {
+    if (!isOn()) return;  // защита: вне режима COPY ничего не делаем
     const sku = (cell.getAttribute('data-sku') || '').trim();
     const name = (cell.getAttribute('data-name') || '').trim();
     if (!sku || !name) return;
@@ -131,12 +141,18 @@
 
 
 
-  function clearAll() {
-    selected.clear();
-    applyHighlights();
-    renderList(); // если список открыт — очистится
-    hideList();
-  }
+  function clearAll(forceDom = false) {
+   selected.clear();
+   if (forceDom) {
+     // убрать бейджи и подсветку, не трогая applyHighlights()
+     document.querySelectorAll('td.copyable .copy-badge').forEach(b => b.style.display = 'none');
+     document.querySelectorAll('tr.copy-selected').forEach(tr => tr.classList.remove('copy-selected'));
+   } else {
+     applyHighlights();
+   }
+   renderList(); // если список открыт — очистится
+   hideList();
+ }
 
   // ---------- выпадающий список ----------
   function isListHidden() {

@@ -58,7 +58,7 @@ class PriceListSearchApp {
     // - за подстроки (совпадения внутри слова)
         substrPenalties: [
   
-  { tokens: ['БЗАВ'], score: -700 },
+  { tokens: ['БЗАВ'], score: -1200 },
   { tokens: ['FERRAZ'], score: -300 },
 ],
     // - за отсутствие документов
