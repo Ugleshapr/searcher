@@ -60,7 +60,7 @@ class PriceListSearchApp {
       { tokens: ['FERRAZ', 'БЗАВ'], score: -150 },
     ],
     // - за отсутствие документов
-        noDocsPenalty: -300,
+        noDocsPenalty: -500,
   }
 };
 
