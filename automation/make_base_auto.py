@@ -310,7 +310,8 @@ def attach_documents_column(base_df: pd.DataFrame, search_dir: Path, site_link_m
     return out
 # ───────────────────────── КОНЕЦ ДОБАВЛЕННОГО ────────────────────────────────
 def _find_enriched_file(search_dir: Path) -> Path | None:
-    p = (search_dir / "enriched.xlsx").resolve()
+    """Ищет enriched.csv рядом со скриптом."""
+    p = (search_dir / "enriched.csv").resolve()
     return p if p.exists() else None
 
 def _normalize_specs(text: str) -> str:
@@ -334,33 +335,28 @@ def _normalize_specs(text: str) -> str:
 
 def attach_specs_from_enriched(base_df: pd.DataFrame, search_dir: Path) -> pd.DataFrame:
     """
-    Если рядом лежит enriched.xlsx (без заголовков): 
-      col1=Артикул, col2=Наименование, col3=Характеристики,
-    то переносим по совпадению артикула в ПЯТУЮ колонку base.xlsx — «Характеристики».
-    Коды вида "272 | ..." удаляются.
-    Для отсутствующих артикулов — пусто.
+    Если рядом лежит enriched.csv (без заголовков):
+      col1=Артикул; col2=Наименование; col3=Характеристики
+    то переносим по совпадению артикула в пятую колонку base.csv — «Характеристики».
     """
     enr_path = _find_enriched_file(search_dir)
     out = base_df.copy()
-
-    # зафиксируем место вставки: пятая колонка (после «Документы»)
-    insert_at = 4  # 0-based
+    insert_at = 4  # после «Документы»
 
     if not enr_path:
-        # колонки ещё нет — создадим пустую
         out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
-        print("[i] enriched.xlsx не найден — колонка «Характеристики» оставлена пустой.")
+        print("[i] enriched.csv не найден — колонка «Характеристики» оставлена пустой.")
         return out
 
     try:
-        enr = pd.read_excel(enr_path, header=None, dtype=str)
+        enr = pd.read_csv(enr_path, sep=';', header=None, dtype=str, encoding='utf-8', engine='python')
     except Exception as e:
-        print(f"[!] Не удалось прочитать enriched.xlsx: {e}")
+        print(f"[!] Не удалось прочитать enriched.csv: {e}")
         out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
         return out
 
     if enr.shape[1] < 3:
-        print("[!] В enriched.xlsx меньше 3 столбцов — «Характеристики» пропущены.")
+        print("[!] В enriched.csv меньше 3 столбцов — «Характеристики» пропущены.")
         out.insert(insert_at, "Характеристики", pd.Series([""] * len(out), index=out.index))
         return out
 
@@ -369,20 +365,15 @@ def attach_specs_from_enriched(base_df: pd.DataFrame, search_dir: Path) -> pd.Da
     enr["Артикул"] = enr["Артикул"].map(clean_article)
     enr["Характеристики"] = enr["Характеристики"].map(_normalize_specs)
 
-    # Отбрасываем пустые артикула и полностью пустые характеристики
     enr = enr[(enr["Артикул"] != "") & enr["Характеристики"].astype(str).str.strip().ne("")]
-
-    # Если дубликаты — берём первую непустую запись по артикулу
     enr = enr.drop_duplicates(subset=["Артикул"], keep="first")
 
     m_specs = dict(zip(enr["Артикул"], enr["Характеристики"]))
-
-    # Сопоставление с base
     arts = out["Артикул"].map(clean_article)
     col = arts.map(m_specs).fillna("")
     out.insert(insert_at, "Характеристики", col)
 
-    print(f"[i] Перенесены характеристики из enriched.xlsx для {int(col.astype(bool).sum())} позиций.")
+    print(f"[i] Перенесены характеристики из enriched.csv для {int(col.astype(bool).sum())} позиций.")
     return out
 
 
@@ -504,12 +495,13 @@ def main():
     # 5.2) Колонка 5: «Характеристики» из enriched.xlsx (если есть)
     base = attach_specs_from_enriched(base, script_dir)
 
-    # 6) Сохранение base.xlsx в ПАПКЕ СКРИПТА
-    xlsx_path = script_dir / "base.xlsx"
-    with pd.ExcelWriter(xlsx_path, engine="openpyxl") as wt:
-        base[["Наименование","Артикул","Цена","Документы","Характеристики"]].to_excel(wt, index=False, sheet_name="TDSheet")
+    # 6) Сохранение base.csv в ПАПКЕ СКРИПТА
+    csv_path = script_dir / "base.csv"
+    base[["Наименование","Артикул","Цена","Документы","Характеристики"]]\
+        .to_csv(csv_path, index=False, sep=';', encoding='utf-8-sig')
     print(f"[✓] Готово: {len(base)} строк")
-    print(f"[→] {xlsx_path}")
+    print(f"[→] {csv_path}")
+
 
     # 7) Удаляем исходный временный файл
     try:

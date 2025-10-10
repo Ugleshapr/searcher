@@ -493,42 +493,42 @@ if (row) {
 
   // ---------- Загрузка данных ----------
   async loadDefaultFile() {
-    try {
-      // Проверка версии с сервером без постоянно перекачки
-      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+  try {
+    const resp = await fetch('base.csv', { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+    const text = await resp.text();
 
-      const clen = resp.headers.get('content-length');
-      if (clen && +clen > this.MAX_XLSX_BYTES) {
-        throw new Error(
-          `Файл слишком большой (${Math.round(+clen / 1024 / 1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES / 1024 / 1024)} МБ.`
-        );
-      }
+    // Используем PapaParse для CSV
+    if (!window.Papa) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
 
-      const buf = await resp.arrayBuffer();
-      if (buf.byteLength > this.MAX_XLSX_BYTES) {
-        throw new Error(
-          `Файл слишком большой (${Math.round(buf.byteLength / 1024 / 1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES / 1024 / 1024)} МБ.`
-        );
-      }
+    const parsed = Papa.parse(text, {
+      header: true,
+      delimiter: ';',
+      skipEmptyLines: true,
+      transformHeader: h => h.trim(),
+    });
 
-      const wb = XLSX.read(buf, { type: 'array' });
-      const sheetName = wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(ws);
+    const jsonData = parsed.data;
 
-      if (!jsonData.length)
-        throw new Error('Файл пустой или не содержит данных');
-      if (jsonData.length > this.MAX_ROWS)
-        throw new Error(
-          `Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`
-        );
+    if (!jsonData.length)
+      throw new Error('Файл пустой или не содержит данных');
+    if (jsonData.length > this.MAX_ROWS)
+      throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
 
-      const required = ['Наименование', 'Артикул', 'Цена'];
-      const firstRow = jsonData[0] || {};
-      const missing = required.filter(c => !(c in firstRow));
-      if (missing.length)
-        throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+    const required = ['Наименование', 'Артикул', 'Цена'];
+    const firstRow = jsonData[0] || {};
+    const missing = required.filter(c => !(c in firstRow));
+    if (missing.length)
+      throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+     
 
       // Прединдексация + формат цены (без ₽)
       this.data = jsonData.map(row => ({
@@ -564,8 +564,8 @@ if (row) {
         this.displayResults();
       }
     } catch (e) {
-      console.error('Загрузка base.xlsx не удалась:', e);
-      this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
+      console.error('Загрузка base.csv не удалась:', e);
+      this.showError(`Не удалось загрузить base.csv\n${e.message}`);
     }
   }
 
