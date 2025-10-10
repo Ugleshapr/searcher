@@ -49,46 +49,60 @@
   }
 
   async function parseCSV(url, header = true) {
-    const text = await fetchText(url);
-    return new Promise((resolve, reject) => {
-      Papa.parse(text, {
-        header,
-        delimiter: ';',
-        skipEmptyLines: true,
-        transformHeader: h => h.trim(),
-        complete: result => resolve(result.data),
-        error: err => reject(err)
-      });
+  if (!window.Papa) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
     });
   }
+  const text = await fetchText(url);
+  return new Promise((resolve, reject) => {
+    Papa.parse(text, {
+      header,
+      delimiter: ';',
+      skipEmptyLines: true,
+      transformHeader: h => h.trim(),
+      complete: result => resolve(result.data),
+      error: err => reject(err),
+    });
+  });
+}
 
-  /*** base.xlsx lookup (optional) ***/
-  async function lookupNameFromBaseXlsx(art) {
+  /*** base.csv lookup (optional) ***/
+  async function lookupNameFromBaseCsv(art) {
   try {
-    // Лениво подгружаем библиотеку XLSX, если её ещё нет
-    if (!window.XLSX) {
+    if (!window.Papa) {
       await new Promise((resolve, reject) => {
         const s = document.createElement('script');
-        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
         s.onload = resolve;
         s.onerror = reject;
         document.head.appendChild(s);
       });
     }
 
-    const resp = await fetch('../base.xlsx'); // пусть браузер кэширует
+    const resp = await fetch('../base.csv', { cache: 'no-cache' });
     if (!resp.ok) return '';
-    const buf = await resp.arrayBuffer();
-    const wb = XLSX.read(buf, { type: 'array' });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws);
+    const text = await resp.text();
 
+    const parsed = Papa.parse(text, {
+      header: true,
+      delimiter: ';',
+      skipEmptyLines: true,
+      transformHeader: h => h.trim(),
+    });
+
+    const rows = parsed.data || [];
     const found = rows.find(r => String(r['Артикул'] || '').trim() === art);
-    return (found && found['Наименование']) ? unquote(String(found['Наименование'])) : '';
+    return (found && found['Наименование']) ? unquote(found['Наименование']) : '';
   } catch {
     return '';
   }
 }
+
 
   /*** render ***/
   function renderTitle(name, art) {
@@ -189,7 +203,7 @@ document.addEventListener('click', async (e) => {
     let displayName = name;
     if (!displayName) {
       renderTitle('Загрузка…', art);
-      displayName = await lookupNameFromBaseXlsx(art);
+      displayName = await lookupNameFromBaseCsv(art);
     }
     renderTitle(displayName || 'Товар', art);
 

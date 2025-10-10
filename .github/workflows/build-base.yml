@@ -1,4 +1,4 @@
-name: Build base.xlsx
+name: Build base.csv
 
 on:
   workflow_dispatch: {}
@@ -25,23 +25,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r automation/requirements.txt
 
-      - name: Build base.xlsx (inside /automation)
+      - name: Build base.csv (inside /automation)
         working-directory: automation
         run: |
           python make_base_auto.py
-          test -s base.xlsx
+          test -s base.csv
 
       - name: Move result to repo root
-        run: mv -f automation/base.xlsx ./base.xlsx
+        run: mv -f automation/base.csv ./base.csv
 
       - name: Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add base.xlsx
+          git add base.csv
           if git diff --cached --quiet; then
             echo "No changes."
             exit 0
           fi
-          git commit -m "auto: update base.xlsx"
+          git commit -m "auto: update base.csv"
           git push

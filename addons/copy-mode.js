@@ -28,20 +28,29 @@
   }
 
   function updatePanel() {
-    const n = selected.size;
-    if (els.count) els.count.textContent = `Выбрано: ${n}`;
-    if (els.copyBtn) els.copyBtn.textContent = n > 0 ? `Копировать ${n} строк` : 'Копировать';
+  const n = selected.size;
 
-    if (!els.panel) return;
-    if (isOn()) {
-      els.panel.classList.remove('hidden');
-      els.panel.setAttribute('aria-hidden', 'false');
-    } else {
-      els.panel.classList.add('hidden');
-      els.panel.setAttribute('aria-hidden', 'true');
-      hideList();
+  if (els.count) els.count.textContent = `Выбрано: ${n}`;
+
+  if (els.copyBtn) {
+    // если сейчас показываем «Скопировано!» — не трогаем текст
+    if (els.copyBtn.dataset.copied !== '1') {
+      const word = pluralRu(n, 'строку', 'строки', 'строк');
+      els.copyBtn.textContent = n > 0 ? `Копировать ${n} ${word}` : 'Копировать';
     }
   }
+
+  if (!els.panel) return;
+  if (isOn()) {
+    els.panel.classList.remove('hidden');
+    els.panel.setAttribute('aria-hidden', 'false');
+  } else {
+    els.panel.classList.add('hidden');
+    els.panel.setAttribute('aria-hidden', 'true');
+    hideList();
+  }
+}
+
 
   function toggleFromCell(cell) {
     const sku = (cell.getAttribute('data-sku') || '').trim();
@@ -111,12 +120,14 @@
 
   function pulseCopied() {
   if (!els.copyBtn) return;
+  els.copyBtn.dataset.copied = '1';
   els.copyBtn.textContent = 'Скопировано!';
-  // Через 900 мс привести текст к актуальному состоянию (с учётом уже очищенного selected)
   setTimeout(() => {
-    updatePanel(); // выставит "Копировать" при нуле выбранных
+    delete els.copyBtn.dataset.copied;
+    updatePanel(); // вернём «Копировать …»
   }, 900);
 }
+
 
 
   function clearAll() {
@@ -203,6 +214,16 @@
   function escapeAttr(s) {
     return String(s).replace(/"/g, '&quot;');
   }
+  
+  function pluralRu(n, one, few, many) {
+  n = Math.abs(n) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return many;      // 11–19
+  if (n1 === 1) return one;               // 1, 21, 31...
+  if (n1 >= 2 && n1 <= 4) return few;     // 2–4, 22–24...
+  return many;                            // 0, 5–9, 10–20, 25–30...
+}
+
   function cssEscape(s) {
     // минимальный эскейп для селектора атрибута
     return String(s).replace(/(["\\])/g, '\\$1');

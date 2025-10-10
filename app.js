@@ -43,6 +43,30 @@ class PriceListSearchApp {
       ['p','[pр]'],['t','[tт]'],['x','[xх]'],['y','[yу]'],
     ]);
 
+    // Правила ранжирования: меняем только эти массивы/списки
+    this.rankRules = {
+        bonuses: {
+    // + за отдельные слова
+        wordBonuses: [{ words: ['новый'], score: +1200 }],
+  },
+        penalties: {
+    // - за отдельные слова (границы слова)
+        wordPenalties: [
+      { words: ['om4','ом4'], score: -800 },
+      { words: ['reg','рег'], score: -800 },
+    ],
+    // - за подстроки (совпадения внутри слова)
+        substrPenalties: [
+      { tokens: ['FERRAZ', 'БЗАВ'], score: -150 },
+    ],
+    // - за отсутствие документов
+        noDocsPenalty: -300,
+  }
+};
+
+
+
+
     this.initializeEventListeners();
     // Отключаем подсказки по истории окончательно: делаем уникальное имя поля
     const si = document.getElementById('searchInput');
@@ -186,6 +210,55 @@ class PriceListSearchApp {
   escapeRegExp(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
+  _wordRegex(tok) {
+  // границы слова: всё, что не буква/цифра — разделитель
+  const t = String(tok).trim();
+  if (!t) return null;
+  return new RegExp(`(^|[^a-zа-яё0-9])${this.escapeRegExp(t)}(?=$|[^a-zа-яё0-9])`, 'i');
+}
+_hasAnyWord(nd, wordList) {
+  if (!nd || !wordList?.length) return false;
+  for (const w of wordList) {
+    const re = this._wordRegex(w);
+    if (re && re.test(nd)) return true;
+  }
+  return false;
+}
+_applyRankRulesToItem(it, ctx) {
+  const { nd, docs } = ctx; // nd = it.__name_delim
+  const rr = this.rankRules;
+
+  // Бонусы за слова
+  for (const rule of rr.bonuses.wordBonuses || []) {
+    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
+  }
+
+  // Штрафы за слова
+  for (const rule of rr.penalties.wordPenalties || []) {
+    if (this._hasAnyWord(nd, rule.words)) it.__score += rule.score;
+  }
+  
+  // Штрафы за подстроки (например, -FERRAZ, БЗАВ-)
+for (const rule of rr.penalties.substrPenalties || []) {
+  for (const tok of rule.tokens) {
+    const re = new RegExp(this.escapeRegExp(tok), 'i');
+    if (re.test(nd)) {
+      it.__score += rule.score;
+      break; // одного совпадения достаточно
+    }
+  }
+}
+
+  // Штрафы за бренды/теги (как слова)
+  const bp = rr.penalties.brandPenalties;
+  if (bp?.list?.length && this._hasAnyWord(nd, bp.list)) {
+    it.__score += bp.score;
+  }
+
+  // Штраф за отсутствие документов
+  if (!docs || docs.length === 0) it.__score += rr.penalties.noDocsPenalty;
+}
+
   escapeHTML(s) {
     return String(s)
       .replace(/&/g, '&amp;')
@@ -493,42 +566,42 @@ if (row) {
 
   // ---------- Загрузка данных ----------
   async loadDefaultFile() {
-    try {
-      // Проверка версии с сервером без постоянно перекачки
-      const resp = await fetch('base.xlsx', { cache: 'no-cache' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+  try {
+    const resp = await fetch('base.csv', { cache: 'no-cache' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+    const text = await resp.text();
 
-      const clen = resp.headers.get('content-length');
-      if (clen && +clen > this.MAX_XLSX_BYTES) {
-        throw new Error(
-          `Файл слишком большой (${Math.round(+clen / 1024 / 1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES / 1024 / 1024)} МБ.`
-        );
-      }
+    // Используем PapaParse для CSV
+    if (!window.Papa) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
 
-      const buf = await resp.arrayBuffer();
-      if (buf.byteLength > this.MAX_XLSX_BYTES) {
-        throw new Error(
-          `Файл слишком большой (${Math.round(buf.byteLength / 1024 / 1024)} МБ). Предел ~${Math.round(this.MAX_XLSX_BYTES / 1024 / 1024)} МБ.`
-        );
-      }
+    const parsed = Papa.parse(text, {
+      header: true,
+      delimiter: ';',
+      skipEmptyLines: true,
+      transformHeader: h => h.trim(),
+    });
 
-      const wb = XLSX.read(buf, { type: 'array' });
-      const sheetName = wb.SheetNames[0];
-      const ws = wb.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(ws);
+    const jsonData = parsed.data;
 
-      if (!jsonData.length)
-        throw new Error('Файл пустой или не содержит данных');
-      if (jsonData.length > this.MAX_ROWS)
-        throw new Error(
-          `Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`
-        );
+    if (!jsonData.length)
+      throw new Error('Файл пустой или не содержит данных');
+    if (jsonData.length > this.MAX_ROWS)
+      throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
 
-      const required = ['Наименование', 'Артикул', 'Цена'];
-      const firstRow = jsonData[0] || {};
-      const missing = required.filter(c => !(c in firstRow));
-      if (missing.length)
-        throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+    const required = ['Наименование', 'Артикул', 'Цена'];
+    const firstRow = jsonData[0] || {};
+    const missing = required.filter(c => !(c in firstRow));
+    if (missing.length)
+      throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
+     
 
       // Прединдексация + формат цены (без ₽)
       this.data = jsonData.map(row => ({
@@ -564,8 +637,8 @@ if (row) {
         this.displayResults();
       }
     } catch (e) {
-      console.error('Загрузка base.xlsx не удалась:', e);
-      this.showError(`Не удалось загрузить base.xlsx\n${e.message}`);
+      console.error('Загрузка base.csv не удалась:', e);
+      this.showError(`Не удалось загрузить base.csv\n${e.message}`);
     }
   }
 
@@ -639,98 +712,14 @@ if (row) {
     ).trim();
     const qn = this.normalizeForFuzzySearch(this._applyUZAliases(rawQuery));
 
-    // Скоринг
     for (const it of this.filteredData) {
-      // если есть буквы — считаем пересечение только с названием
-      const concat = permitArticle ? it.__article + it.__name : it.__name;
-      it.__score = this._countCharOverlap(concat, qn);
+  // … твой расчёт __score (совпадения, фразовые бонусы и т.п.) остаётся как есть …
 
-      // Бонусы за "цельные" вхождения
-      for (const p of parts) {
-        if (permitArticle && it.__article_delim.includes(p)) it.__score += 1000;  // артикул учитываем ТОЛЬКО без букв
-        if (it.__name_delim.includes(p)) it.__score += 600;
-      }
-      // Фразовый бонус:
-	// 1) для буквенных запросов (соседние токены)
-	// 2) для чисто цифровых последовательностей (например, 47-29-3),
-	//    даже если hasLetters === false
-	{
- 	 const nd = it.__name_delim;
-
- 	 // (1) механизм для буквенных запросов
-  	if (hasLetters && parts.length >= 2) {
-    for (let i = 0; i < parts.length - 1; i++) {
-      const a = parts[i], b = parts[i + 1];
-      if (a.length + b.length < 3) continue;
-      const re = new RegExp(
-        this.escapeRegExp(a) + '[\\s\\-_/.,]*' + this.escapeRegExp(b),
-        'i'
-      );
-      if (re.test(nd)) it.__score += 900;
-    }
-  }
-
-  // (2) Цифровые цепочки (приоритет для 3 и более подряд: 47→29→3)
-  if (!permitArticle && numericSeq.length >= 2) {
-    // Соберём регэксп для всей цепочки целиком в порядке ввода
-    // 47[\s\-_/.]*29[\s\-_/.]*3[\s\-_/.]*25 ...
-    const chain = numericSeq
-      .map(tok => this.escapeRegExp(tok))
-      .join('[\\s\\-_/.,]*');
-
-    const reFull = new RegExp(chain, 'i');
-    if (reFull.test(nd)) {
-      // Полная цепочка нашлась — большой бонус      
-      it.__score += 600;
-    } else {
-      // Иначе пробуем укороченные хвосты: чем длиннее — тем больше бонус
-      // Например: 47→29→3 (три числа подряд)
-      for (let len = Math.min(numericSeq.length, 4); len >= 2; len--) {
-        const sub = numericSeq.slice(0, len).join('[\\s\\-_/.,]*');
-        const reSub = new RegExp(sub, 'i');
-        if (reSub.test(nd)) {
-          // градуированный бонус
-          const step = {2: 100, 3: 200, 4: 400};
-          it.__score += step[len] || 500;
-          break; // первый самый длинный матч — достаточно
-        }
-      }
-    }
-  }
+  // применяем единые правила
+  const nd = it.__name_delim || String(it['Наименование'] || '');
+  this._applyRankRulesToItem(it, { nd, docs: it.__docs });
 }
-      // --- БОНУС за точное слово "новый" (только это слово) ---
-      {
-        const nameRaw = String(it['Наименование'] || '');
-        it.__isNew =
-          /(^|[^A-Za-zА-Яа-яЁё0-9])новый(?=$|[^A-Za-zА-Яа-яЁё0-9])/i.test(
-            nameRaw
-          );
-        if (it.__isNew) it.__score += 1200; // при необходимости подстрой 900–1500
-      }
 
-      // ШТРАФ за нежелательные серии в названии: "ОМ4/OM4" и "РЕГ/REG"
-      {
-        // Берём «делимитированное» имя
-        const nd = it.__name_delim || String(it['Наименование'] || '');
-
-        // матчим токены как отдельные «словечки»: разделители — не буквы/цифры
-        const hasOM4 = /(^|[^a-zа-яё0-9])(?:om4|ом4)(?=$|[^a-zа-яё0-9])/i.test(
-          nd
-        );
-        const hasREG = /(^|[^a-zа-яё0-9])(?:reg|рег)(?=$|[^a-zа-яё0-9])/i.test(
-          nd
-        );
-
-        if (hasOM4) it.__score -= 800;
-        if (hasREG) it.__score -= 800;
-      }
-      // ШТРАФ за отсутствие документов
-	{
- 	if (!it.__docs || it.__docs.length === 0) {
-    	it.__score -= 300;
-  	}
-     }
-    }
     
 
     // Сортировка: тай-брейкер смотрит в артикул только если нет букв
