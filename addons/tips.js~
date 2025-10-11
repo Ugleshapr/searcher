@@ -15,14 +15,13 @@
       const key = this._hash(name);
       if (this._memo.has(key)) return this._memo.get(key);
 
-      const nd = (canonizer ? canonizer(name) : name).toUpperCase();
-      const res = [];
-      // матч по "словам": не допускаем склейку внутри других слов
-      const makeRe = (tag) => new RegExp(`(^|[^A-ZА-Я0-9])${this._escape(tag)}(?=$|[^A-ZА-Я0-9])`, 'i');
+      cconst nd = (canonizer ? canonizer(name) : name);
+const res = [];
+const makeRe = (tag) => new RegExp(this._escape(tag), 'i'); // ← простое вхождение
+for (const [tag, items] of this._map.entries()) {
+  if (makeRe(tag).test(nd)) res.push(...items);
+}
 
-      for (const [tag, items] of this._map.entries()) {
-        if (makeRe(tag).test(nd)) res.push(...items);
-      }
 
       // Сортировка по алфавиту (название заметки)
       res.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ru', {sensitivity: 'base'}));

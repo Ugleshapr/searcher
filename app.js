@@ -559,12 +559,14 @@ if (row) {
   // --- существующий "портал" + позиционирование (оставляем, как есть) ---
   menu.dataset.portal = '1';
   document.body.appendChild(menu);
-
-  menu.style.position = 'fixed';               // было 'absolute'
+  menu.style.position = 'fixed';               
 // фиксируем Popper-побочки, чтобы не мешали ручному позиционированию
   menu.style.transform = 'none';
 menu.removeAttribute('data-popper-placement');
 menu.removeAttribute('data-bs-popper');
+menu.style.width = '560px';       // фикс ширина
+menu.style.maxWidth = '560px';
+menu.style.overflowX = 'hidden';
 
 const place = () => {
   const bcr = btn.getBoundingClientRect();
@@ -621,15 +623,13 @@ if (scroller) {
     // Получаем подсказки по тегам (лениво + кэш внутри Tips)
     (async () => {
       try {
-        const canon = this.canonKeepDelims
-          ? this.canonKeepDelims.bind(this)
-          : (s) => s;
-
-        const tips = await window.Tips.getForName(rawName, canon);
+        const tips = await window.Tips.getForName(rawName);
 
         // Рисуем основной экран через Tips (с двумя разделами)
         // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.
         menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+        place();
+setTimeout(place, 0);
 
         // Собираем HTML списка ссылок «как раньше» — с названиями
 const linksSection = (() => {
@@ -661,6 +661,8 @@ if (firstSection) {
 const openDetail = (tip) => {
   // 1) детальный экран
   menu.innerHTML = window.Tips.renderDetail(tip);
+  place();
+setTimeout(place, 0);
   window.Tips.bindDetail(menu);
 
   // 2) кнопка Назад → восстановить главный экран
@@ -668,6 +670,8 @@ const openDetail = (tip) => {
   if (back) {
     back.addEventListener('click', () => {
       menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+      place();                       
+setTimeout(place, 0);          
 
       // восстановить раздел «Ссылки» с заголовками
       const linksSection = (() => {

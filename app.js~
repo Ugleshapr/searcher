@@ -559,12 +559,14 @@ if (row) {
   // --- существующий "портал" + позиционирование (оставляем, как есть) ---
   menu.dataset.portal = '1';
   document.body.appendChild(menu);
-
-  menu.style.position = 'fixed';               // было 'absolute'
+  menu.style.position = 'fixed';               
 // фиксируем Popper-побочки, чтобы не мешали ручному позиционированию
   menu.style.transform = 'none';
 menu.removeAttribute('data-popper-placement');
 menu.removeAttribute('data-bs-popper');
+menu.style.width = '560px';       // фикс ширина
+menu.style.maxWidth = '560px';
+menu.style.overflowX = 'hidden';
 
 const place = () => {
   const bcr = btn.getBoundingClientRect();
@@ -630,6 +632,8 @@ if (scroller) {
         // Рисуем основной экран через Tips (с двумя разделами)
         // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.
         menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+        place();
+setTimeout(place, 0);
 
         // Собираем HTML списка ссылок «как раньше» — с названиями
 const linksSection = (() => {
@@ -661,6 +665,8 @@ if (firstSection) {
 const openDetail = (tip) => {
   // 1) детальный экран
   menu.innerHTML = window.Tips.renderDetail(tip);
+  place();
+setTimeout(place, 0);
   window.Tips.bindDetail(menu);
 
   // 2) кнопка Назад → восстановить главный экран
@@ -668,6 +674,8 @@ const openDetail = (tip) => {
   if (back) {
     back.addEventListener('click', () => {
       menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+      place();                       
+setTimeout(place, 0);          
 
       // восстановить раздел «Ссылки» с заголовками
       const linksSection = (() => {
@@ -728,19 +736,26 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
 
 
     document.addEventListener('hide.bs.dropdown', e => {
-      const dd = e.target.closest('.dropdown');
-      const scroller = document.querySelector('#resultsSection .table-responsive');
-if (scroller && menu._reposition) {
-  scroller.removeEventListener('scroll', menu._reposition);
-}
-      const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
-      if (!menu) return;
-      window.removeEventListener('scroll', menu._reposition, true);
-      window.removeEventListener('resize', menu._reposition);
-      menu.removeAttribute('style');
-      menu.removeAttribute('data-portal');
-      if (dd) dd.appendChild(menu);
-    });
+  const dd = e.target.closest('.dropdown');
+  const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+  if (!menu) return;
+
+  // снять слушатели скролла/ресайза именно тем же колбэком
+  window.removeEventListener('scroll', menu._reposition, true);
+  window.removeEventListener('resize', menu._reposition);
+
+  // снять слушатель скролла у контейнера таблицы
+  const scroller = document.querySelector('#resultsSection .table-responsive');
+  if (scroller && menu._reposition) {
+    scroller.removeEventListener('scroll', menu._reposition);
+  }
+
+  // вернуть меню внутрь dropdown и почистить стили/метки
+  menu.removeAttribute('style');
+  menu.removeAttribute('data-portal');
+  if (dd) dd.appendChild(menu);
+});
+
 
     // первичная подгонка
     this._fitResultsHeight();

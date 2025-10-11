@@ -437,7 +437,7 @@ td.copyable { cursor: copy; }
 #resultsSection .table-responsive { overflow-x: auto; overflow-y: auto !important; }
 
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
-.docs-menu { max-height: none; overflow: visible; }
+.docs-menu { max-height: 60vh; overflow: auto; }
 .dropdown-menu { z-index: 3000; }
 
 /* Центровка «Артикул» и «Цена» (и заголовков) */
