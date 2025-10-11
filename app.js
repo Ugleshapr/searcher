@@ -560,42 +560,50 @@ if (row) {
   menu.dataset.portal = '1';
   document.body.appendChild(menu);
 
-  const place = () => {
+  menu.style.position = 'fixed';               // было 'absolute'
+// фиксируем Popper-побочки, чтобы не мешали ручному позиционированию
+  menu.style.transform = 'none';
+menu.removeAttribute('data-popper-placement');
+menu.removeAttribute('data-bs-popper');
+
+const place = () => {
   const bcr = btn.getBoundingClientRect();
   const mw = menu.offsetWidth || 0;
   const mh = menu.offsetHeight || 0;
 
-  // базовая позиция — под кнопкой, по правому краю (как dropdown-menu-end)
-  let top = Math.round(window.scrollY + bcr.bottom + 6);
-  let left = Math.round(window.scrollX + bcr.right - mw);
+  // базовая позиция — под кнопкой, по правому краю вьюпорта
+  let left = Math.round(bcr.right - mw);
+  let top  = Math.round(bcr.bottom + 6);
 
-  // защита от выхода за экран
   const vw = document.documentElement.clientWidth;
   const vh = document.documentElement.clientHeight;
 
-  // если справа не влезло — прижать к правому краю вьюпорта
-  if (left + mw > window.scrollX + vw - 8) {
-    left = Math.max(window.scrollX + 8, window.scrollX + vw - mw - 8);
-  }
-  // если слева ушло за край — подвинуть вправо
-  if (left < window.scrollX + 8) left = window.scrollX + 8;
+  if (left + mw > vw - 8) left = Math.max(8, vw - mw - 8);
+  if (left < 8) left = 8;
 
-  // если снизу не влезает — попробовать открыть над кнопкой
-  if (top + mh > window.scrollY + vh - 8) {
-    const altTop = Math.round(window.scrollY + bcr.top - mh - 6);
-    if (altTop >= window.scrollY + 8) top = altTop;
+  // если снизу не влезает — открываем вверх
+  if (top + mh > vh - 8) {
+    const altTop = Math.round(bcr.top - mh - 6);
+    if (altTop >= 8) top = altTop;
   }
 
-  menu.style.position = 'absolute';
   menu.style.left = left + 'px';
-  menu.style.top = top + 'px';
-  menu.style.zIndex = 1080; // поверх таблицы
-  menu.style.maxWidth = '560px'; // под приятную ширину
+  menu.style.top  = top  + 'px';
+  menu.style.zIndex = 3000;
+  menu.style.maxWidth = '560px';
 };
-  place();
-  menu._reposition = place;
-  window.addEventListener('scroll', place, true);
-  window.addEventListener('resize', place);
+
+place();
+menu._reposition = place;
+
+// слушаем ВСЕ скроллы: окна и внутреннего скроллера таблицы
+window.addEventListener('scroll', place, true);
+window.addEventListener('resize', place);
+const scroller = document.querySelector('#resultsSection .table-responsive');
+if (scroller) {
+  scroller.addEventListener('scroll', place, { passive: true });
+}
+
 
   // ===  лениво отрисовываем окно "Документы" ===
   if (menu.classList.contains('docs-menu')) {
@@ -720,15 +728,26 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
 
 
     document.addEventListener('hide.bs.dropdown', e => {
-      const dd = e.target.closest('.dropdown');
-      const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
-      if (!menu) return;
-      window.removeEventListener('scroll', menu._reposition, true);
-      window.removeEventListener('resize', menu._reposition);
-      menu.removeAttribute('style');
-      menu.removeAttribute('data-portal');
-      if (dd) dd.appendChild(menu);
-    });
+  const dd = e.target.closest('.dropdown');
+  const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+  if (!menu) return;
+
+  // снять слушатели скролла/ресайза именно тем же колбэком
+  window.removeEventListener('scroll', menu._reposition, true);
+  window.removeEventListener('resize', menu._reposition);
+
+  // снять слушатель скролла у контейнера таблицы
+  const scroller = document.querySelector('#resultsSection .table-responsive');
+  if (scroller && menu._reposition) {
+    scroller.removeEventListener('scroll', menu._reposition);
+  }
+
+  // вернуть меню внутрь dropdown и почистить стили/метки
+  menu.removeAttribute('style');
+  menu.removeAttribute('data-portal');
+  if (dd) dd.appendChild(menu);
+});
+
 
     // первичная подгонка
     this._fitResultsHeight();
