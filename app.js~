@@ -623,11 +623,7 @@ if (scroller) {
     // Получаем подсказки по тегам (лениво + кэш внутри Tips)
     (async () => {
       try {
-        const canon = this.canonKeepDelims
-          ? this.canonKeepDelims.bind(this)
-          : (s) => s;
-
-        const tips = await window.Tips.getForName(rawName, canon);
+        const tips = await window.Tips.getForName(rawName);
 
         // Рисуем основной экран через Tips (с двумя разделами)
         // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.

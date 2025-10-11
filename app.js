@@ -655,6 +655,9 @@ if (firstSection) {
     ${linksSection}
   `;
 }
+place();
+setTimeout(place, 0);
+
 
 
         // --- детальный режим для подсказки ---
@@ -695,6 +698,8 @@ setTimeout(place, 0);
           ${linksSection}
         `;
       }
+place();
+setTimeout(place, 0);
 
       // скрыть «Назад» на главном и заново подключить клики по подсказкам
       const back2 = menu.querySelector('.dm-back');

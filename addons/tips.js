@@ -10,23 +10,23 @@
     _memo: new Map(),  // Map<nameHash -> [tip, ...]>
 
     // Публично: получить подсказки для конкретного "наименования"
-    async getForName(name, canonizer /* optional function */) {
-      await this._ensureLoaded();
-      const key = this._hash(name);
-      if (this._memo.has(key)) return this._memo.get(key);
+    async getForName(name) {
+  await this._ensureLoaded();
+  const key = this._hash(name);
+  if (this._memo.has(key)) return this._memo.get(key);
 
-      const nd = String(name); // никакой canonizer для тегов
-const res = [];
-const makeRe = (tag) => new RegExp(this._escape(tag), 'i');
-for (const [tag, items] of this._map.entries()) {
-  if (makeRe(tag).test(nd)) res.push(...items);
-}
+  const nd = String(name);
+  const res = [];
+  const makeRe = (tag) => new RegExp(this._escape(tag), 'i'); // нечувствительно к регистру
 
-      // Сортировка по алфавиту (название заметки)
-      res.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ru', {sensitivity: 'base'}));
-      this._memo.set(key, res);
-      return res;
-    },
+  for (const [tag, items] of this._map.entries()) {
+    if (makeRe(tag).test(nd)) res.push(...items);
+  }
+
+  res.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ru', { sensitivity: 'base' }));
+  this._memo.set(key, res);
+  return res;
+},
 
     // Публично: построить HTML содержимое "Документы" (главный экран)
     renderIndex({ links = [], tips = [] }) {
@@ -126,36 +126,53 @@ for (const [tag, items] of this._map.entries()) {
     /* ---------- внутренности ---------- */
 
     async _ensureLoaded() {
-      if (this._loaded) return;
-      await this._ensurePapa();
-      const resp = await fetch(CSV_URL, { cache: 'no-cache' });
-      const text = await resp.text();
-      const parsed = window.Papa.parse(text, { header: true, delimiter: DELIM, skipEmptyLines: true });
+  if (this._loaded) return;
+  await this._ensurePapa();
 
-      const map = new Map();
-      for (const row of parsed.data || []) {
-        const rawTags = (row['Укажите тэг продукции'] || '').trim();
-        if (!rawTags) continue;
+  const resp = await fetch(CSV_URL, { cache: 'no-cache' });
+  if (!resp.ok) throw new Error(`CSV fetch failed: ${resp.status}`);
+  const text = await resp.text();
 
-        const tags = rawTags.split(',')
-          .map(s => s.trim())
-          .filter(Boolean)
-          .map(s => s.toUpperCase());
+  const parsed = window.Papa.parse(text, {
+    header: true,
+    delimiter: DELIM,
+    skipEmptyLines: true,
+    transformHeader: h => String(h || '').trim(),      // ← трим заголовков
+  });
 
-        const urls = Tips._extractUrls(row['Приложите файл если это необходимо вам']);
-        const tip = {
-          title: (row['Укажите тему заметки'] || '').trim(),
-          note:  (row['Напишите саму заметку'] || '').trim(),
-          urls
-        };
-        for (const t of tags) {
-          if (!map.has(t)) map.set(t, []);
-          map.get(t).push(tip);
-        }
-      }
-      this._map = map;
-      this._loaded = true;
-    },
+  const map = new Map();
+  for (const row of parsed.data || []) {
+    // поддержка "тег" и "тэг", плюс запасные варианты с пробелами
+    const rawTags =
+      (row['Укажите тэг продукции'] ??
+       row['Укажите тег продукции'] ??
+       row['Укажите тег продукции '] ??
+       row['Укажите тэг продукции ']) || '';
+
+    const tags = String(rawTags)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    if (!tags.length) continue;
+
+    const urls = Tips._extractUrls(row['Приложите файл если это необходимо вам']);
+    const tip = {
+      title: (row['Укажите тему заметки'] || '').trim(),
+      note:  (row['Напишите саму заметку'] || '').trim(),
+      urls
+    };
+
+    for (const t of tags) {
+      const key = t; // регистр не важен, ниже 'i' в регэкспе
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(tip);
+    }
+  }
+
+  this._map = map;
+  this._loaded = true;
+},
 
     async _ensurePapa() {
       if (window.Papa) return;
