@@ -649,19 +649,22 @@ if (firstSection) {
 }
 
 
-        // --- детальный режим для подсказки ---
+        // Включаем обработчики для кликов по подсказкам (детальный режим)
+        window.Tips.bindIndex(menu, tips, {
+          // Собираем основной экран уже отрендерили выше ...
 const openDetail = (tip) => {
   // 1) детальный экран
   menu.innerHTML = window.Tips.renderDetail(tip);
   window.Tips.bindDetail(menu);
 
-  // 2) кнопка Назад → восстановить главный экран
+  // 2) кнопка Назад
   const back = menu.querySelector('.dm-back');
   if (back) {
     back.addEventListener('click', () => {
+      // вернуться к главному экрану
       menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
 
-      // восстановить раздел «Ссылки» с заголовками
+      // восстановить раздел «Ссылки» с заголовками (как раньше)
       const linksSection = (() => {
         if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
         const listHtml = `
@@ -684,22 +687,30 @@ const openDetail = (tip) => {
         `;
       }
 
-      // скрыть «Назад» на главном и заново подключить клики по подсказкам
+      // скрыть «Назад» на главном
       const back2 = menu.querySelector('.dm-back');
       if (back2) back2.hidden = true;
+
+      // заново подключить переход в деталь
       window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
 
+      // чуть поправить позицию после перерисовки
       if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
     }, { once: true });
   }
 
+  // в детальном режиме «Назад» видим
   const backBtn = menu.querySelector('.dm-back');
   if (backBtn) backBtn.hidden = false;
+
+  // поправить позицию после смены контента
   if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
 };
 
-// подключаем клики по подсказкам (первично)
+// Первичное подключение «списка подсказок»:
 window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+        });
 
         // На главном экране "Назад" скрываем
         const backInit = menu.querySelector('.dm-back');
