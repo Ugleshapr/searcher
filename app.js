@@ -550,43 +550,185 @@ if (row) {
 
     // 4) "Портал" для выпадашки "Документы"
     document.addEventListener('shown.bs.dropdown', e => {
-      const dd = e.target.closest('.dropdown');
-      if (!dd || !dd.closest('#resultsSection')) return;
-      const menu = dd.querySelector('.dropdown-menu');
-      const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
-      if (!menu || !btn) return;
+  const dd = e.target.closest('.dropdown');
+  if (!dd || !dd.closest('#resultsSection')) return;
+  const menu = dd.querySelector('.dropdown-menu');
+  const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
+  if (!menu || !btn) return;
 
-      menu.dataset.portal = '1';
-      document.body.appendChild(menu);
+  // --- существующий "портал" + позиционирование (оставляем, как есть) ---
+  menu.dataset.portal = '1';
+  document.body.appendChild(menu);
 
-      const place = () => {
-        const r = btn.getBoundingClientRect();
-        const prevVis = menu.style.visibility,
-          prevDisp = menu.style.display;
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        const mw = menu.offsetWidth,
-          mh = menu.offsetHeight;
-        menu.style.visibility = prevVis;
-        menu.style.display = prevDisp;
+  const place = () => {
+  const bcr = btn.getBoundingClientRect();
+  const mw = menu.offsetWidth || 0;
+  const mh = menu.offsetHeight || 0;
 
-        const spaceBelow = window.innerHeight - r.bottom;
-        const spaceAbove = r.top;
-        const openAbove = spaceBelow < mh && spaceAbove > spaceBelow;
+  // базовая позиция — под кнопкой, по правому краю (как dropdown-menu-end)
+  let top = Math.round(window.scrollY + bcr.bottom + 6);
+  let left = Math.round(window.scrollX + bcr.right - mw);
 
-        Object.assign(menu.style, {
-          position: 'fixed',
-          left: Math.round(r.right - mw) + 'px',
-          top: Math.round(openAbove ? r.top - mh : r.bottom) + 'px',
-          zIndex: 3000,
+  // защита от выхода за экран
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+
+  // если справа не влезло — прижать к правому краю вьюпорта
+  if (left + mw > window.scrollX + vw - 8) {
+    left = Math.max(window.scrollX + 8, window.scrollX + vw - mw - 8);
+  }
+  // если слева ушло за край — подвинуть вправо
+  if (left < window.scrollX + 8) left = window.scrollX + 8;
+
+  // если снизу не влезает — попробовать открыть над кнопкой
+  if (top + mh > window.scrollY + vh - 8) {
+    const altTop = Math.round(window.scrollY + bcr.top - mh - 6);
+    if (altTop >= window.scrollY + 8) top = altTop;
+  }
+
+  menu.style.position = 'absolute';
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+  menu.style.zIndex = 1080; // поверх таблицы
+  menu.style.maxWidth = '560px'; // под приятную ширину
+};
+  place();
+  menu._reposition = place;
+  window.addEventListener('scroll', place, true);
+  window.addEventListener('resize', place);
+
+  // ===  лениво отрисовываем окно "Документы" ===
+  if (menu.classList.contains('docs-menu')) {
+    // Если уже наполняли — не повторяем
+    if (menu._enhanced) return;
+    menu._enhanced = true;
+
+    // Достаём "наименование" для матчей подсказок и список документов
+    const rawName = (menu.dataset.name || '').trim();
+    let docs = [];
+    try {
+      docs = JSON.parse(decodeURIComponent(menu.dataset.docs || '[]'));
+    } catch { docs = []; }
+
+    // Получаем подсказки по тегам (лениво + кэш внутри Tips)
+    (async () => {
+      try {
+        const canon = this.canonKeepDelims
+          ? this.canonKeepDelims.bind(this)
+          : (s) => s;
+
+        const tips = await window.Tips.getForName(rawName, canon);
+
+        // Рисуем основной экран через Tips (с двумя разделами)
+        // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.
+        menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+
+        // Собираем HTML списка ссылок «как раньше» — с названиями
+const linksSection = (() => {
+  if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
+  const listHtml = `
+    <ul class="dm-links">
+      ${docs.map(d => `
+        <li>
+          <a class="dm-link" href="${this.escapeHTML(d.url)}"
+             target="_blank" rel="noopener">
+            ${this.escapeHTML(d.title || 'Документ')}
+          </a>
+        </li>`).join('')}
+    </ul>`;
+  return listHtml;
+})();
+
+// Находим ПЕРВУЮ секцию (это «Ссылки») и полностью подменяем её содержимое:
+const firstSection = menu.querySelector('.dm-section');
+if (firstSection) {
+  firstSection.innerHTML = `
+    <div class="dm-section-title">Ссылки</div>
+    ${linksSection}
+  `;
+}
+
+
+        // Включаем обработчики для кликов по подсказкам (детальный режим)
+        window.Tips.bindIndex(menu, tips, {
+          // Собираем основной экран уже отрендерили выше ...
+const openDetail = (tip) => {
+  // 1) детальный экран
+  menu.innerHTML = window.Tips.renderDetail(tip);
+  window.Tips.bindDetail(menu);
+
+  // 2) кнопка Назад
+  const back = menu.querySelector('.dm-back');
+  if (back) {
+    back.addEventListener('click', () => {
+      // вернуться к главному экрану
+      menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+
+      // восстановить раздел «Ссылки» с заголовками (как раньше)
+      const linksSection = (() => {
+        if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
+        const listHtml = `
+          <ul class="dm-links">
+            ${docs.map(d => `
+              <li>
+                <a class="dm-link" href="${this.escapeHTML(d.url)}"
+                   target="_blank" rel="noopener">
+                  ${this.escapeHTML(d.title || 'Документ')}
+                </a>
+              </li>`).join('')}
+          </ul>`;
+        return listHtml;
+      })();
+      const firstSection = menu.querySelector('.dm-section');
+      if (firstSection) {
+        firstSection.innerHTML = `
+          <div class="dm-section-title">Ссылки</div>
+          ${linksSection}
+        `;
+      }
+
+      // скрыть «Назад» на главном
+      const back2 = menu.querySelector('.dm-back');
+      if (back2) back2.hidden = true;
+
+      // заново подключить переход в деталь
+      window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+      // чуть поправить позицию после перерисовки
+      if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
+    }, { once: true });
+  }
+
+  // в детальном режиме «Назад» видим
+  const backBtn = menu.querySelector('.dm-back');
+  if (backBtn) backBtn.hidden = false;
+
+  // поправить позицию после смены контента
+  if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
+};
+
+// Первичное подключение «списка подсказок»:
+window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
         });
-      };
 
-      place();
-      menu._reposition = place;
-      window.addEventListener('scroll', place, true);
-      window.addEventListener('resize', place);
-    });
+        // На главном экране "Назад" скрываем
+        const backInit = menu.querySelector('.dm-back');
+        if (backInit) backInit.hidden = true;
+
+      } catch (err) {
+        console.warn('Docs/tips render error:', err);
+        menu.innerHTML = `<div class="px-3 py-2 text-danger">Не удалось загрузить материалы</div>`;
+      }
+
+      // Подправим позицию после смены контента
+      if (typeof menu._reposition === 'function') {
+        setTimeout(menu._reposition, 0);
+      }
+    })();
+  }
+});
+
 
     document.addEventListener('hide.bs.dropdown', e => {
       const dd = e.target.closest('.dropdown');
@@ -895,27 +1037,35 @@ if (row) {
             ? artSafe
             : this.highlightHomoglyphs(artSafe, highlightTokens);
         const docs = item.__docs || [];
-        let docsHtml = '—';
-        if (docs.length) {
-          const items = docs
-            .map(
-              d =>
-                `<li><a class="dropdown-item" href="${this.escapeHTML(d.url)}" target="_blank" rel="noopener">${this.escapeHTML(d.title)}</a></li>`
-            )
-            .join('');
-          docsHtml = `
+let docsHtml = '—';
+if (docs.length) {
+  // Упакуем документы в data-атрибут (безопасно кодируем)
+  const docsData = encodeURIComponent(JSON.stringify(docs));
+  // Имя для матчей подсказок (берём чистое наименование без бейджа)
+  const nameForTips = (item['Наименование'] || '').trim();
+
+  docsHtml = `
     <div class="dropdown">
-      <button type="button" class="btn btn--outline btn--sm" data-bs-toggle="dropdown" aria-expanded="false" title="Документы">
+      <button type="button"
+              class="btn btn--outline btn--sm docs-btn"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              title="Документы">
         <!-- inline SVG folder -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10 4l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h5z" fill="currentColor"/>
         </svg>
       </button>
-      <ul class="dropdown-menu dropdown-menu-end docs-menu">
-        ${items}
+      <ul class="dropdown-menu dropdown-menu-end docs-menu"
+          data-name="${this.escapeHTML(nameForTips)}"
+          data-docs="${docsData}">
+        <!-- наполним содержимым лениво при открытии -->
+        <li class="px-3 py-2 text-muted">Загрузка…</li>
       </ul>
     </div>`;
-        }
+}
+
      const artRaw = item['Артикул'] || '';
 const hasFeat = !!item.__featHtml;
 
