@@ -54,7 +54,7 @@
       return `
         <div class="docs-modal">
           <div class="dm-header">
-            <button class="dm-back" type="button" hidden title="Назад">⟵</button>
+            <button class="dm-back" type="button" hidden title="Назад">❮</button>
             <div class="dm-title">Документы</div>
           </div>
           <div class="dm-body">
@@ -97,7 +97,7 @@
       return `
         <div class="docs-modal">
           <div class="dm-header">
-            <button class="dm-back" type="button" title="Назад">⟵</button>
+            <button class="dm-back" type="button" title="Назад">❮</button>
             <div class="dm-title">${Tips._esc(tip.title || 'Подсказка')}</div>
           </div>
           <div class="dm-body">
