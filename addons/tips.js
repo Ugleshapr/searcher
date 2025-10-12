@@ -213,22 +213,30 @@
     },
 
     _fileShortLabel(href) {
-      try {
-        const u = new URL(href);
-        const sp = new URLSearchParams(u.search);
-        const path = sp.get('path');
-        if (path) {
-          const decoded = decodeURIComponent(path);
-          const name = decoded.split('/').filter(Boolean).pop();
-          if (name) return name;
-        }
-        // fallback — взять последнее из pathname
-        const tail = u.pathname.split('/').filter(Boolean).pop();
-        return tail || 'File';
-      } catch {
-        return 'File';
-      }
-    },
+  try {
+    const u = new URL(href);
+    const sp = new URLSearchParams(u.search);
+    const path = sp.get('path');
+    let name = '';
+
+    if (path) {
+      const decoded = decodeURIComponent(path);
+      name = decoded.split('/').filter(Boolean).pop() || '';
+    } else {
+      name = u.pathname.split('/').filter(Boolean).pop() || '';
+    }
+
+    // Убираем случайный префикс до первого символа "_", если он похож на хэш
+    // Например: "68dfd00ae010db6e28cf6c17_kmch_komplektatsiya.pdf" → "kmch_komplektatsiya.pdf"
+    if (/^[a-f0-9]{6,}_/i.test(name)) {
+      name = name.replace(/^[a-f0-9]{6,}_/, '');
+    }
+
+    return name || 'File';
+  } catch {
+    return 'File';
+  }
+},
 
     _esc(s) {
       return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
