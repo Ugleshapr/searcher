@@ -777,33 +777,31 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
 });
 
 
-    document.addEventListener('hide.bs.dropdown', e => {
+   document.addEventListener('hide.bs.dropdown', e => {
   const dd = e.target.closest('.dropdown');
   const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
   if (!menu) return;
 
-  // снять слушатели скролла/ресайза именно тем же колбэком
+  // снять слушатели окна
   window.removeEventListener('scroll', menu._reposition, true);
   window.removeEventListener('resize', menu._reposition);
 
-  // снять слушатель скролла у контейнера таблицы
+  // снять слушатель скролла у контейнера таблицы (именно тот, что закрывает меню)
   const scroller = document.querySelector('#resultsSection .table-responsive');
-  if (scroller && menu._reposition) {
-    scroller.removeEventListener('scroll', menu._reposition);
+  if (scroller && menu._closeOnScroll) {
+    scroller.removeEventListener('scroll', menu._closeOnScroll);
+    menu._closeOnScroll = null;
   }
 
   // вернуть меню внутрь dropdown и почистить стили/метки
   menu.removeAttribute('style');
   menu.removeAttribute('data-portal');
   if (dd) dd.appendChild(menu);
-  
-  const scroller = document.querySelector('#resultsSection .table-responsive');
-if (scroller && menu._closeOnScroll) {
-  scroller.removeEventListener('scroll', menu._closeOnScroll);
-  menu._closeOnScroll = null;
-}
 
+  // (если где-то добавлял ResizeObserver — тут его бы отключить)
+  // if (menu._resizeObserver) { menu._resizeObserver.disconnect(); menu._resizeObserver = null; }
 });
+
 
 
     // первичная подгонка
