@@ -551,7 +551,6 @@ if (row) {
     // 4) "Портал" для выпадашки "Документы"
     document.addEventListener('shown.bs.dropdown', e => {
   const dd = e.target.closest('.dropdown');
-  dd.setAttribute('data-bs-auto-close', 'outside');
   if (!dd || !dd.closest('#resultsSection')) return;
   const menu = dd.querySelector('.dropdown-menu');
   const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
@@ -636,13 +635,7 @@ if (scroller) {
         // Рисуем основной экран через Tips (с двумя разделами)
         // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.
         menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
-
-// СБРОС Popper-позиций при смене контента
-menu.style.transform = 'none';
-menu.style.inset = 'auto';
-menu.removeAttribute('data-popper-placement');
-
-place();
+        place();
 setTimeout(place, 0);
 
         // Собираем HTML списка ссылок «как раньше» — с названиями
@@ -669,9 +662,6 @@ if (firstSection) {
     ${linksSection}
   `;
 }
-menu.style.transform = 'none';
-menu.style.inset = 'auto';
-menu.removeAttribute('data-popper-placement');
 place();
 setTimeout(place, 0);
 
@@ -681,9 +671,6 @@ setTimeout(place, 0);
 const openDetail = (tip) => {
   // 1) детальный экран
   menu.innerHTML = window.Tips.renderDetail(tip);
-  menu.style.transform = 'none';
-menu.style.inset = 'auto';
-menu.removeAttribute('data-popper-placement');
   place();
 setTimeout(place, 0);
   window.Tips.bindDetail(menu);
@@ -693,9 +680,6 @@ setTimeout(place, 0);
   if (back) {
     back.addEventListener('click', () => {
       menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
-      menu.style.transform = 'none';
-menu.style.inset = 'auto';
-menu.removeAttribute('data-popper-placement');
       place();                       
 setTimeout(place, 0);          
 
@@ -721,9 +705,6 @@ setTimeout(place, 0);
           ${linksSection}
         `;
       }
-      menu.style.transform = 'none';
-menu.style.inset = 'auto';
-menu.removeAttribute('data-popper-placement');
 place();
 setTimeout(place, 0);
 
