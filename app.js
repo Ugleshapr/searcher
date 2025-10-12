@@ -550,54 +550,257 @@ if (row) {
 
     // 4) "Портал" для выпадашки "Документы"
     document.addEventListener('shown.bs.dropdown', e => {
-      const dd = e.target.closest('.dropdown');
-      if (!dd || !dd.closest('#resultsSection')) return;
-      const menu = dd.querySelector('.dropdown-menu');
-      const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
-      if (!menu || !btn) return;
+  const dd = e.target.closest('.dropdown');
+  dd.setAttribute('data-bs-auto-close', 'outside');
+  if (!dd || !dd.closest('#resultsSection')) return;
+  const menu = dd.querySelector('.dropdown-menu');
+  const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
+  if (!menu || !btn) return;
 
-      menu.dataset.portal = '1';
-      document.body.appendChild(menu);
+  // --- существующий "портал" + позиционирование (оставляем, как есть) ---
+  menu.dataset.portal = '1';
+  document.body.appendChild(menu);
+  menu.style.position = 'fixed';               
+// фиксируем Popper-побочки, чтобы не мешали ручному позиционированию
+  menu.style.transform = 'none';
+menu.removeAttribute('data-popper-placement');
+menu.removeAttribute('data-bs-popper');
 
-      const place = () => {
-        const r = btn.getBoundingClientRect();
-        const prevVis = menu.style.visibility,
-          prevDisp = menu.style.display;
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        const mw = menu.offsetWidth,
-          mh = menu.offsetHeight;
-        menu.style.visibility = prevVis;
-        menu.style.display = prevDisp;
 
-        const spaceBelow = window.innerHeight - r.bottom;
-        const spaceAbove = r.top;
-        const openAbove = spaceBelow < mh && spaceAbove > spaceBelow;
+if (menu.classList.contains('docs-menu')) {
+  // клики внутри — не считаем «вне меню»
+  menu.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+}
 
-        Object.assign(menu.style, {
-          position: 'fixed',
-          left: Math.round(r.right - mw) + 'px',
-          top: Math.round(openAbove ? r.top - mh : r.bottom) + 'px',
-          zIndex: 3000,
-        });
-      };
+const place = () => {
+  const bcr = btn.getBoundingClientRect();
+  const mw = menu.offsetWidth || 0;
+  const mh = menu.offsetHeight || 0;
 
-      place();
-      menu._reposition = place;
-      window.addEventListener('scroll', place, true);
-      window.addEventListener('resize', place);
-    });
+  // базовая позиция — под кнопкой, по правому краю вьюпорта
+  let left = Math.round(bcr.right - mw);
+  let top  = Math.round(bcr.bottom + 6);
 
-    document.addEventListener('hide.bs.dropdown', e => {
-      const dd = e.target.closest('.dropdown');
-      const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
-      if (!menu) return;
-      window.removeEventListener('scroll', menu._reposition, true);
-      window.removeEventListener('resize', menu._reposition);
-      menu.removeAttribute('style');
-      menu.removeAttribute('data-portal');
-      if (dd) dd.appendChild(menu);
-    });
+  const vw = document.documentElement.clientWidth;
+  const vh = document.documentElement.clientHeight;
+
+  if (left + mw > vw - 8) left = Math.max(8, vw - mw - 8);
+  if (left < 8) left = 8;
+
+  // если снизу не влезает — открываем вверх
+  if (top + mh > vh - 8) {
+    const altTop = Math.round(bcr.top - mh - 6);
+    if (altTop >= 8) top = altTop;
+  }
+
+  menu.style.left = left + 'px';
+  menu.style.top  = top  + 'px';
+  menu.style.zIndex = 3000;
+  menu.style.maxWidth = 'initial'
+  };
+
+place();
+menu._reposition = place;
+
+// слушаем ВСЕ скроллы: окна и внутреннего скроллера таблицы
+window.addEventListener('scroll', place, true);
+window.addEventListener('resize', place);
+const scroller = document.querySelector('#resultsSection .table-responsive');
+if (scroller) {
+  const closeOnScroll = () => {
+    // закрываем текущий dropdown «по правилам» Bootstrap
+    const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
+    try {
+      const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
+      ddInst?.hide();
+    } catch {
+      // запасной путь, если bootstrap namespace недоступен
+      menu.dispatchEvent(new Event('hide.bs.dropdown'));
+      menu.classList.remove('show');
+      dd.appendChild(menu);
+    }
+  };
+  scroller.addEventListener('scroll', closeOnScroll, { passive: true });
+  menu._closeOnScroll = closeOnScroll; // чтобы снять в hide
+}
+
+
+
+  // ===  лениво отрисовываем окно "Документы" ===
+  if (menu.classList.contains('docs-menu')) {
+    // Если уже наполняли — не повторяем
+    if (menu._enhanced) return;
+    menu._enhanced = true;
+
+    // Достаём "наименование" для матчей подсказок и список документов
+    const rawName = (menu.dataset.name || '').trim();
+    let docs = [];
+    try {
+      docs = JSON.parse(decodeURIComponent(menu.dataset.docs || '[]'));
+    } catch { docs = []; }
+
+    // Получаем подсказки по тегам (лениво + кэш внутри Tips)
+    (async () => {
+      try {
+        const tips = await window.Tips.getForName(rawName);
+
+        // Рисуем основной экран через Tips (с двумя разделами)
+        // Передадим пустые "links", а потом подменим секцию ссылок на нашу с тайтлами.
+        menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+
+// СБРОС Popper-позиций при смене контента
+menu.style.transform = 'none';
+menu.style.inset = 'auto';
+menu.removeAttribute('data-popper-placement');
+
+place();
+setTimeout(place, 0);
+
+        // Собираем HTML списка ссылок «как раньше» — с названиями
+const linksSection = (() => {
+  if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
+  const listHtml = `
+    <ul class="dm-links">
+      ${docs.map(d => `
+        <li>
+          <a class="dm-link" href="${this.escapeHTML(d.url)}"
+             target="_blank" rel="noopener">
+            ${this.escapeHTML(d.title || 'Документ')}
+          </a>
+        </li>`).join('')}
+    </ul>`;
+  return listHtml;
+})();
+
+// Находим ПЕРВУЮ секцию (это «Ссылки») и полностью подменяем её содержимое:
+const firstSection = menu.querySelector('.dm-section');
+if (firstSection) {
+  firstSection.innerHTML = `
+    <div class="dm-section-title">Ссылки</div>
+    ${linksSection}
+  `;
+}
+menu.style.transform = 'none';
+menu.style.inset = 'auto';
+menu.removeAttribute('data-popper-placement');
+place();
+setTimeout(place, 0);
+
+
+
+        // --- детальный режим для подсказки ---
+const openDetail = (tip) => {
+  // 1) детальный экран
+  menu.innerHTML = window.Tips.renderDetail(tip);
+  menu.style.transform = 'none';
+menu.style.inset = 'auto';
+menu.removeAttribute('data-popper-placement');
+  place();
+setTimeout(place, 0);
+  window.Tips.bindDetail(menu);
+
+  // 2) кнопка Назад → восстановить главный экран
+  const back = menu.querySelector('.dm-back');
+  if (back) {
+    back.addEventListener('click', () => {
+      menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+      menu.style.transform = 'none';
+menu.style.inset = 'auto';
+menu.removeAttribute('data-popper-placement');
+      place();                       
+setTimeout(place, 0);          
+
+      // восстановить раздел «Ссылки» с заголовками
+      const linksSection = (() => {
+        if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
+        const listHtml = `
+          <ul class="dm-links">
+            ${docs.map(d => `
+              <li>
+                <a class="dm-link" href="${this.escapeHTML(d.url)}"
+                   target="_blank" rel="noopener">
+                  ${this.escapeHTML(d.title || 'Документ')}
+                </a>
+              </li>`).join('')}
+          </ul>`;
+        return listHtml;
+      })();
+      const firstSection = menu.querySelector('.dm-section');
+      if (firstSection) {
+        firstSection.innerHTML = `
+          <div class="dm-section-title">Ссылки</div>
+          ${linksSection}
+        `;
+      }
+      menu.style.transform = 'none';
+menu.style.inset = 'auto';
+menu.removeAttribute('data-popper-placement');
+place();
+setTimeout(place, 0);
+
+      // скрыть «Назад» на главном и заново подключить клики по подсказкам
+      const back2 = menu.querySelector('.dm-back');
+      if (back2) back2.hidden = true;
+      window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+      if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
+    }, { once: true });
+  }
+
+  const backBtn = menu.querySelector('.dm-back');
+  if (backBtn) backBtn.hidden = false;
+  if (typeof menu._reposition === 'function') setTimeout(menu._reposition, 0);
+};
+
+// подключаем клики по подсказкам (первично)
+window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+        // На главном экране "Назад" скрываем
+        const backInit = menu.querySelector('.dm-back');
+        if (backInit) backInit.hidden = true;
+
+      } catch (err) {
+        console.warn('Docs/tips render error:', err);
+        menu.innerHTML = `<div class="px-3 py-2 text-danger">Не удалось загрузить материалы</div>`;
+      }
+
+      // Подправим позицию после смены контента
+      if (typeof menu._reposition === 'function') {
+        setTimeout(menu._reposition, 0);
+      }
+    })();
+  }
+});
+
+
+   document.addEventListener('hide.bs.dropdown', e => {
+  const dd = e.target.closest('.dropdown');
+  const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+  if (!menu) return;
+
+  // снять слушатели окна
+  window.removeEventListener('scroll', menu._reposition, true);
+  window.removeEventListener('resize', menu._reposition);
+
+  // снять слушатель скролла у контейнера таблицы (именно тот, что закрывает меню)
+  const scroller = document.querySelector('#resultsSection .table-responsive');
+  if (scroller && menu._closeOnScroll) {
+    scroller.removeEventListener('scroll', menu._closeOnScroll);
+    menu._closeOnScroll = null;
+  }
+
+  // вернуть меню внутрь dropdown и почистить стили/метки
+  menu.removeAttribute('style');
+  menu.removeAttribute('data-portal');
+  if (dd) dd.appendChild(menu);
+
+  // (если где-то добавлял ResizeObserver — тут его бы отключить)
+  // if (menu._resizeObserver) { menu._resizeObserver.disconnect(); menu._resizeObserver = null; }
+});
+
+
 
     // первичная подгонка
     this._fitResultsHeight();
@@ -895,27 +1098,36 @@ if (row) {
             ? artSafe
             : this.highlightHomoglyphs(artSafe, highlightTokens);
         const docs = item.__docs || [];
-        let docsHtml = '—';
-        if (docs.length) {
-          const items = docs
-            .map(
-              d =>
-                `<li><a class="dropdown-item" href="${this.escapeHTML(d.url)}" target="_blank" rel="noopener">${this.escapeHTML(d.title)}</a></li>`
-            )
-            .join('');
-          docsHtml = `
+let docsHtml = '—';
+if (docs.length) {
+  // Упакуем документы в data-атрибут (безопасно кодируем)
+  const docsData = encodeURIComponent(JSON.stringify(docs));
+  // Имя для матчей подсказок (берём чистое наименование без бейджа)
+  const nameForTips = (item['Наименование'] || '').trim();
+
+  docsHtml = `
     <div class="dropdown">
-      <button type="button" class="btn btn--outline btn--sm" data-bs-toggle="dropdown" aria-expanded="false" title="Документы">
+      <button type="button"
+              class="btn btn--outline btn--sm docs-btn"
+              data-bs-toggle="dropdown"
+              data-bs-auto-close="outside"
+              aria-expanded="false"
+              title="Документы">
         <!-- inline SVG folder -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+             viewBox="0 0 24 24" aria-hidden="true">
           <path d="M10 4l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2h5z" fill="currentColor"/>
         </svg>
       </button>
-      <ul class="dropdown-menu dropdown-menu-end docs-menu">
-        ${items}
+      <ul class="dropdown-menu dropdown-menu-end docs-menu"
+          data-name="${this.escapeHTML(nameForTips)}"
+          data-docs="${docsData}">
+        <!-- наполним содержимым лениво при открытии -->
+        <li class="px-3 py-2 text-muted">Загрузка…</li>
       </ul>
     </div>`;
-        }
+}
+
      const artRaw = item['Артикул'] || '';
 const hasFeat = !!item.__featHtml;
 
