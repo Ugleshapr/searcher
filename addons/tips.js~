@@ -111,16 +111,16 @@
     bindDetail(container) {
       // Копирование текста заметки
       container.addEventListener('click', async (e) => {
-  const el = e.target.closest('.js-copy-on-click');
-  if (!el) return;
-  const plain = el.innerText.replace(/\s+\n/g, '\n').trim();
-  try {
-    await navigator.clipboard.writeText(plain);
-    // без всплывашки
-  } catch {
-    // тоже молчим — по желанию можно кратко мигнуть outline, но просили без «Скопировано»
-  }
-}, { once: false });
+        const el = e.target.closest('.js-copy-on-click');
+        if (!el) return;
+        const plain = el.innerText.replace(/\s+\n/g, '\n').trim();
+        try {
+          await navigator.clipboard.writeText(plain);
+          Tips._flash(el, 'Скопировано');
+        } catch {
+          Tips._flash(el, 'Не удалось скопировать');
+        }
+      }, { once: false });
     },
 
     /* ---------- внутренности ---------- */

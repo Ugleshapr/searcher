@@ -611,8 +611,23 @@ window.addEventListener('scroll', place, true);
 window.addEventListener('resize', place);
 const scroller = document.querySelector('#resultsSection .table-responsive');
 if (scroller) {
-  scroller.addEventListener('scroll', place, { passive: true });
+  const closeOnScroll = () => {
+    // закрываем текущий dropdown «по правилам» Bootstrap
+    const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
+    try {
+      const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
+      ddInst?.hide();
+    } catch {
+      // запасной путь, если bootstrap namespace недоступен
+      menu.dispatchEvent(new Event('hide.bs.dropdown'));
+      menu.classList.remove('show');
+      dd.appendChild(menu);
+    }
+  };
+  scroller.addEventListener('scroll', closeOnScroll, { passive: true });
+  menu._closeOnScroll = closeOnScroll; // чтобы снять в hide
 }
+
 
 
   // ===  лениво отрисовываем окно "Документы" ===
@@ -781,6 +796,13 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
   menu.removeAttribute('style');
   menu.removeAttribute('data-portal');
   if (dd) dd.appendChild(menu);
+  
+  const scroller = document.querySelector('#resultsSection .table-responsive');
+if (scroller && menu._closeOnScroll) {
+  scroller.removeEventListener('scroll', menu._closeOnScroll);
+  menu._closeOnScroll = null;
+}
+
 });
 
 

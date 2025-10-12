@@ -809,23 +809,9 @@ td.copyable .copy-badge {
   overflow-wrap: anywhere;
 }
 .dm-header { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border-bottom: 1px solid var(--color-border); }
-.dm-title { font-weight: 700; font-size: 18px; } 
-
-.dm-back {
-  border: 1px solid var(--color-border);
-  background: var(--color-bg);
-  padding: 4px 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  opacity: 1;
-}
-.dm-back:hover {
-  background: var(--color-bg-soft, #f6f6f6);
-}
+.dm-title { font-weight: 600; }
+.dm-back { border: 0; background: transparent; font-size: 16px; line-height: 1; cursor: pointer; opacity: .7; }
 .dm-back[hidden] { display: none; }
-
 
 .dm-body { padding: .5rem .75rem .75rem; }
 .dm-section { margin-top: .5rem; }
