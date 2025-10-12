@@ -802,7 +802,19 @@ td.copyable .copy-badge {
 }
 
 /* ===== Документы/Подсказки ===== */
-.docs-modal { width: 460px; max-width: 560px; min-width: 360px; }
+/* само меню без внутренних отступов, чтобы не было "пустоты" вокруг */
+.docs-menu { 
+  padding: 0; 
+  overflow: visible; 
+}
+
+/* ширину фиксируем на контенте, не на меню */
+.docs-modal { 
+  width: 460px;      
+  max-width: 460px;
+  min-width: 360px;
+  box-sizing: border-box;
+}
 .dropdown-menu { overflow-x: hidden; }            /* на всякий случай */
 .dm-link, .dm-file, .dm-note {
   word-break: break-word;
@@ -847,6 +859,8 @@ td.copyable .copy-badge {
 
 .dm-toast { position: absolute; transform: translateY(-6px); background: #000; color: #fff; font-size: 12px; padding: 4px 6px; border-radius: 4px; opacity: 0; pointer-events: none; }
 .dm-toast.show { opacity: .9; transition: opacity .15s; }
+
+
 
 
 

@@ -565,9 +565,7 @@ if (row) {
   menu.style.transform = 'none';
 menu.removeAttribute('data-popper-placement');
 menu.removeAttribute('data-bs-popper');
-menu.style.width = '560px';       // фикс ширина
-menu.style.maxWidth = '560px';
-menu.style.overflowX = 'hidden';
+
 
 if (menu.classList.contains('docs-menu')) {
   // клики внутри — не считаем «вне меню»
@@ -600,8 +598,8 @@ const place = () => {
   menu.style.left = left + 'px';
   menu.style.top  = top  + 'px';
   menu.style.zIndex = 3000;
-  menu.style.maxWidth = '560px';
-};
+  menu.style.maxWidth = 'initial'
+  };
 
 place();
 menu._reposition = place;
