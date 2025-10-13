@@ -943,8 +943,14 @@ body.is-filter-mode #resultsFlex #stateBanner {
 body.is-filter-mode #resultsTable .table-empty-row td{
   padding: 28px 16px;
   text-align: center;
-  color: var(--color-text-secondary);
-  background: var(--color-surface);
+  background: var(--color-bg-4); 
+  color: #fff;
+  font-weight: 600;
+}
+
+.fp-pill.is-disabled {
+  opacity: .5;
+  pointer-events: none;
 }
 
 

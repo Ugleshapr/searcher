@@ -1034,6 +1034,14 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
     ).trim();
 
     const total = this.filteredData.length;
+    
+    // блокируем/разблокируем кнопку "Фильтр"
+    const filterBtn = document.getElementById('filterToggle');
+    if (filterBtn) {
+    filterBtn.disabled = total === 0;
+    filterBtn.title = total === 0 ? 'Нет результатов для фильтрации' : '';
+    }
+
 
     if (total === 0) {
   // очищаем таблицу
@@ -1319,6 +1327,11 @@ function setupFilterAddon() {
 
   if (!filterBtn) return;
 
+    filterBtn.addEventListener('click', (e) => {
+    if (filterBtn.disabled) return; // защита от клика по disabled
+    });
+  
+
   function isFilterMode() {
     return document.body.classList.contains('is-filter-mode');
   }
@@ -1354,7 +1367,7 @@ function setupFilterAddon() {
     if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
 
     // отдаём панели первые 400 артикулов текущей выдачи
-    const slice = window.App._preFilterData.slice(0, Math.min(400, window.App._preFilterData.length));
+    const slice = window.App._preFilterData.slice(0, Math.min(1000, window.App._preFilterData.length));
     const arts  = slice.map(it => String(it['Артикул'] || '').trim()).filter(Boolean);
 
     window.FilterPanel?.open({ articles: arts });

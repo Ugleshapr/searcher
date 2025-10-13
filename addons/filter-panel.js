@@ -32,7 +32,7 @@
     });
   }
 
-  // Кэш словарей и инвертированный индекс внутри текущего «среза 400»
+  // Кэш словарей и инвертированный индекс внутри текущего «среза 1000»
   let _specMap = null;                    // spec_id -> {title,value_type,group_id,group_name}
   let _index = null;                      // spec_id -> value -> Set<article>
   let _articlesSet = null;                // Set<article> из текущего среза
@@ -40,6 +40,8 @@
   let _container = null;
   let _searchInput = null;
   let _prebuiltGroups = null;             // подготовленные группы для рендера
+  let _lastCountSig = null; // сигнатура выбора; null чтобы сработал 1-й пересчёт
+  let _lastArtsNow = null;  // кэш: Set<string> артикулов текущей отображаемой выдачи
 
   function resetState() {
     _index = null;
@@ -144,6 +146,7 @@
       app.filteredData = app._preFilterData.slice();
       app._page = 1;
       app.displayResults();
+      updatePillsCounts();
       return;
     }
 
@@ -172,6 +175,52 @@
     app._page = 1;
     app.displayResults();
   }
+  
+  // Подсчитать и обновить числа совпадений на "пилюлях"
+function updatePillsCounts() {
+  const app = window.App;
+  if (!app) return;
+
+  const sig = selectionSignature();
+  if (sig !== _lastCountSig || !_lastArtsNow) {
+    // выбор поменялся — пересоберём Set артикулов текущей выдачи и обновим кэш
+    _lastArtsNow = new Set(app.filteredData.map(it => String(it['Артикул'] || '').trim()));
+    _lastCountSig = sig;
+  }
+  const artsNow = _lastArtsNow;
+
+  qsa('.fp-pill', _container).forEach(btn => {
+    const sid = btn.dataset.sid;
+    const val = btn.dataset.val;
+    const vmap = _index.get(sid);
+    const aset = vmap ? vmap.get(val) : null;
+
+    let n = 0;
+    if (aset) for (const a of aset) if (artsNow.has(a)) n++;
+
+    const base = val || '—';
+    btn.textContent = n > 0 ? `${base} (${n})` : base;
+    btn.title = `Совпадений: ${n}`;
+    btn.disabled = n === 0 && !btn.classList.contains('is-active');
+    btn.classList.toggle('is-disabled', btn.disabled);
+  });
+}
+
+
+function selectionSignature() {
+  const parts = [];
+  _selected.forEach((vals, sid) => {
+    parts.push(`${sid}=${[...vals].sort().join('|')}`);
+  });
+  return parts.sort().join('&');
+}
+
+
+// Обновлять счётчики после каждой перерисовки результатов
+document.addEventListener('results:rendered', () => {
+  if (document.body.classList.contains('is-filter-mode')) updatePillsCounts();
+});
+
 
   // Рендер панели
   function renderPanel() {
@@ -276,11 +325,14 @@
     resetState();
 
     await buildIndex(ctx.articles || []);
+    updatePillsCounts();
     renderPanel();
   }
 
   function close() {
     if (_container) _container.innerHTML = '';
+    _lastCountSig = '';
+    _lastArtsNow = null;
     resetState();
   }
 
