@@ -174,6 +174,7 @@
     app.filteredData = app._preFilterData.filter(it => keep.has(String(it['Артикул'] || '').trim()));
     app._page = 1;
     app.displayResults();
+    updatePillsCounts();
   }
   
   // Подсчитать и обновить числа совпадений на "пилюлях"
@@ -325,13 +326,14 @@ document.addEventListener('results:rendered', () => {
     resetState();
 
     await buildIndex(ctx.articles || []);
-    updatePillsCounts();
     renderPanel();
+    updatePillsCounts();
+    
   }
 
   function close() {
     if (_container) _container.innerHTML = '';
-    _lastCountSig = '';
+    _lastCountSig = null;
     _lastArtsNow = null;
     resetState();
   }
