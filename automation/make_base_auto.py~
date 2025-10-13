@@ -228,8 +228,8 @@ def build_docs_map_from_csv(csv_path: Path) -> dict:
 # ───────────────────────── «Сайт ссылка» из products.csv ──────────────────────
 def build_site_link_map_from_products(search_dir: Path) -> dict:
     """
-    Читает products.csv (без заголовков) и возвращает art -> URL (берём только 0 и 13 колонки).
-    0-й столбец — артикул/ID, 13-й — URL сайта.
+    Читает products.csv (без заголовков) и возвращает art -> URL из 14-го столбца (1-based).
+    Ожидается: столбец 1 = Артикул, столбец 14 = URL сайта.
     """
     prod_path = _find_products_file(search_dir)
     if not prod_path:
@@ -237,54 +237,56 @@ def build_site_link_map_from_products(search_dir: Path) -> dict:
         return {}
 
     try:
-        pr = pd.read_csv(
-            prod_path,
-            sep=';',
-            header=None,
-            dtype=str,
-            encoding='utf-8',
-            engine='python',
-            usecols=[0, 13],
-            on_bad_lines='skip',           # pandas>=1.3
-            quotechar='"',
-            quoting=csv.QUOTE_MINIMAL,
-            escapechar='\\',
-            keep_default_na=False
-        )
+    pr = pd.read_csv(
+        prod_path,
+        sep=';',
+        header=None,
+        dtype=str,
+        encoding='utf-8',
+        engine='python',
+        usecols=[0, 13],
+        on_bad_lines='skip',           # pandas>=1.3: пропустить кривые строки
+        quotechar='"',
+        quoting=csv.QUOTE_MINIMAL,
+        escapechar='\\',
+        keep_default_na=False
+    )
     except TypeError:
-        # для старых pandas
-        pr = pd.read_csv(
-            prod_path,
-            sep=';',
-            header=None,
-            dtype=str,
-            encoding='utf-8',
-            engine='python',
-            usecols=[0, 13],
-            error_bad_lines=False,         # устаревшее, но работает
-            warn_bad_lines=True,
-            quotechar='"',
-            quoting=csv.QUOTE_MINIMAL,
-            escapechar='\\',
-            keep_default_na=False
-        )
+    # совместимость с более старыми pandas
+    pr = pd.read_csv(
+        prod_path,
+        sep=';',
+        header=None,
+        dtype=str,
+        encoding='utf-8',
+        engine='python',
+        usecols=[0, 13],
+        error_bad_lines=False,         # устаревший флаг, но работает на старых версиях
+        warn_bad_lines=True,
+        quotechar='"',
+        quoting=csv.QUOTE_MINIMAL,
+        escapechar='\\',
+        keep_default_na=False
+    )
     except Exception as e:
         print(f"[!] Не удалось прочитать {prod_path.name}: {e}")
         return {}
 
-    if pr.empty:
-        print(f"[i] В {prod_path.name} нет данных — «Сайт ссылка» пропущена.")
+    if pr.shape[1] < 14:
+        print(f"[i] В {prod_path.name} меньше 14 столбцов — «Сайт ссылка» пропущена.")
         return {}
 
-    pr.columns = ["Артикул", "URL"]
-    pr["Артикул"] = pr["Артикул"].map(clean_article)
-    pr["URL"] = pr["URL"].astype(str).str.strip()
+    # 0-й столбец — артикул, 13-й — URL
+    tmp = pr.iloc[:, [0, 13]].copy()
+    tmp.columns = ["Артикул", "URL"]
+    tmp["Артикул"] = tmp["Артикул"].map(clean_article)
+    tmp["URL"] = tmp["URL"].astype(str).str.strip()
 
-    pr = pr[(pr["Артикул"] != "") & pr["URL"].str.match(r"^https?://", na=False)]
-    m = dict(zip(pr["Артикул"], pr["URL"]))
+    # Оставляем валидные http(s) ссылки
+    tmp = tmp[(tmp["Артикул"] != "") & tmp["URL"].str.match(r"^https?://", na=False)]
+    m = dict(zip(tmp["Артикул"], tmp["URL"]))
     print(f"[i] «Сайт ссылка» из products: артикулами покрыто {len(m)}")
     return m
-
 
 def _parse_qty_or_zero(s: str) -> int:
     if s is None:
@@ -468,8 +470,8 @@ def attach_specs_from_enriched(base_df: pd.DataFrame, search_dir: Path) -> pd.Da
 
 def enrich_names_with_products(base_df: pd.DataFrame, search_dir: Path) -> pd.DataFrame:
     """
-    base_df: 'Наименование','Артикул','Цена'
-    products.csv: без заголовков; 0 = Артикул/ID, 2 = Наименование (в одинарных кавычках)
+    base_df: колонки 'Наименование','Артикул','Цена'
+    products.csv: БЕЗ заголовков; столбец 1 = Артикул, столбец 3 = Наименование (в одинарных кавычках)
     """
     prod_path = _find_products_file(search_dir)
     if not prod_path:
@@ -477,50 +479,53 @@ def enrich_names_with_products(base_df: pd.DataFrame, search_dir: Path) -> pd.Da
         return base_df
 
     try:
-        pr = pd.read_csv(
-            prod_path,
-            sep=';',
-            header=None,
-            dtype=str,
-            encoding='utf-8',
-            engine='python',
-            usecols=[0, 2],
-            on_bad_lines='skip',
-            quotechar='"',
-            quoting=csv.QUOTE_MINIMAL,
-            escapechar='\\',
-            keep_default_na=False
-        )
+    pr = pd.read_csv(
+        prod_path,
+        sep=';',
+        header=None,
+        dtype=str,
+        encoding='utf-8',
+        engine='python',
+        usecols=[0, 2],
+        on_bad_lines='skip',
+        quotechar='"',
+        quoting=csv.QUOTE_MINIMAL,
+        escapechar='\\',
+        keep_default_na=False
+    )
     except TypeError:
-        pr = pd.read_csv(
-            prod_path,
-            sep=';',
-            header=None,
-            dtype=str,
-            encoding='utf-8',
-            engine='python',
-            usecols=[0, 2],
-            error_bad_lines=False,
-            warn_bad_lines=True,
-            quotechar='"',
-            quoting=csv.QUOTE_MINIMAL,
-            escapechar='\\',
-            keep_default_na=False
-        )
+    pr = pd.read_csv(
+        prod_path,
+        sep=';',
+        header=None,
+        dtype=str,
+        encoding='utf-8',
+        engine='python',
+        usecols=[0, 2],
+        error_bad_lines=False,
+        warn_bad_lines=True,
+        quotechar='"',
+        quoting=csv.QUOTE_MINIMAL,
+        escapechar='\\',
+        keep_default_na=False
+    )
     except Exception as e:
         print(f"[!] Не удалось прочитать {prod_path.name}: {e}")
         return base_df
 
-    if pr.empty:
-        print(f"[i] В {prod_path.name} нет данных — обогащение пропущено.")
+    if pr.shape[1] < 3:
+        print(f"[!] В {prod_path.name} меньше 3 столбцов — обогащение пропущено.")
         return base_df
 
-    pr.columns = ["Артикул", "НовоеИмя"]
-    pr["Артикул"] = pr["Артикул"].map(clean_article)
-    pr["НовоеИмя"] = pr["НовоеИмя"].map(strip_outer_single_quotes)
+    # Берём только нужные колонки
+    prod = pr.iloc[:, [0, 2]].copy()
+    prod.columns = ["Артикул", "НовоеИмя"]
+    prod["Артикул"] = prod["Артикул"].map(clean_article)
+    prod["НовоеИмя"] = prod["НовоеИмя"].map(strip_outer_single_quotes)
 
-    prod = pr[(pr["Артикул"] != "") & pr["НовоеИмя"].astype(str).str.strip().ne("")] \
-            .drop_duplicates(subset=["Артикул"], keep="first")
+    # Выкинуть пустые, оставить по одному имени на артикул
+    prod = prod[(prod["Артикул"] != "") & prod["НовоеИмя"].astype(str).str.strip().ne("")]\
+             .drop_duplicates(subset=["Артикул"], keep="first")
 
     out = base_df.copy()
     out["__art"] = out["Артикул"].map(clean_article)
@@ -536,7 +541,6 @@ def enrich_names_with_products(base_df: pd.DataFrame, search_dir: Path) -> pd.Da
         print("[i] Совпадений артикулов не найдено — замен нет.")
 
     return out.drop(columns=["__art"], errors="ignore")
-
 
 def main():
     script_dir = Path(__file__).resolve().parent
