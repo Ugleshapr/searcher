@@ -200,11 +200,25 @@ function updatePillsCounts() {
     if (aset) for (const a of aset) if (artsNow.has(a)) n++;
 
     const base = val || '—';
-    btn.textContent = n > 0 ? `${base} (${n})` : base;
+    btn.textContent = base;  
     btn.title = `Совпадений: ${n}`;
     btn.disabled = n === 0 && !btn.classList.contains('is-active');
     btn.classList.toggle('is-disabled', btn.disabled);
+    btn.dataset.count = String(n); 
   });
+  
+  qsa('.fp-param', _container).forEach(paramEl => {
+  const pills = qsa('.fp-pill', paramEl);
+  const hasActive = pills.some(p => p.classList.contains('is-active'));
+  const hasAnyPositive = pills.some(p => (parseInt(p.dataset.count || '0', 10) > 0));
+  const hide = !hasActive && !hasAnyPositive;
+  paramEl.classList.toggle('is-hidden', hide);
+});
+
+qsa('.fp-group', _container).forEach(groupEl => {
+  const visibleParams = qsa(':scope > .fp-param', groupEl).filter(el => !el.classList.contains('is-hidden'));
+  groupEl.classList.toggle('is-hidden', visibleParams.length === 0);
+});
 }
 
 

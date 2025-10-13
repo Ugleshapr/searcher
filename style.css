@@ -953,4 +953,30 @@ body.is-filter-mode #resultsTable .table-empty-row td{
   pointer-events: none;
 }
 
+/* Скрытие параметров/групп в панели фильтров */
+.fp-param.is-hidden { display: none; }
+.fp-group.is-hidden { display: none; }
+
+/* Липкая шапка в панели фильтров */
+#filterPanel .fp-header {
+  position: sticky;
+  top: 0;                 /* прилипает к верху панели */
+  z-index: 2;
+  background: var(--color-surface);
+  padding-top: 8px;       /* чтобы не «липло» к границе */
+  padding-bottom: 8px;
+  margin-bottom: 8px;     /* отступ от контента ниже */
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* чтобы инпут и кнопка выглядели плотнее в «закрепе» */
+#filterPanel .fp-header input[type="search"] {
+  height: 34px;
+}
+#filterPanel .fp-header .btn {
+  height: 34px;
+  line-height: 32px;
+}
+#filterPanel .fp-header { box-shadow: 0 1px 0 rgba(0,0,0,.06); }
+
 
