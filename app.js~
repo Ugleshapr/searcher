@@ -1239,9 +1239,6 @@ if (window.bootstrap?.Tooltip) {
   _renderShowMore(show) {
     const footer = document.getElementById('resultsShowMore');
     if (!footer) return;
-     if (document.body.classList.contains('is-filter-mode')) {
-    show = false;
-  }
     if (!show) {
       footer.innerHTML = '';
       return;
