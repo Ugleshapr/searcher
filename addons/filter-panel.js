@@ -272,6 +272,7 @@ document.addEventListener('results:rendered', () => {
         return { ...g, items: [...top, ...rest] };
       }).filter(g => g.items.length);
       fillList(boosted);
+      if (_container) _container.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     header.querySelector('#fpClear')?.addEventListener('click', () => {
@@ -342,7 +343,7 @@ document.addEventListener('results:rendered', () => {
     await buildIndex(ctx.articles || []);
     renderPanel();
     updatePillsCounts();
-    
+    if (_container) _container.scrollTop = 0;    
   }
 
   function close() {
