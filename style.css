@@ -980,3 +980,14 @@ body.is-filter-mode #resultsTable .table-empty-row td{
 #filterPanel .fp-header { box-shadow: 0 1px 0 rgba(0,0,0,.06); }
 
 
+/* Прячем системную кнопку очистки (×) у основного поля поиска,
+   но только когда включён режим Фильтр */
+body.is-filter-mode #searchInput::-webkit-search-cancel-button { 
+  -webkit-appearance: none;
+  display: none;
+}
+body.is-filter-mode #searchInput::-ms-clear { display: none; width: 0; height: 0; }  /* старый Edge/IE */
+body.is-filter-mode #searchInput::-ms-reveal { display: none; }                      /* старый Edge */
+
+body.is-filter-mode #searchInput { pointer-events: none; }  /* поле и так disabled, но это уберёт любые клики */
+
