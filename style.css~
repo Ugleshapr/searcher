@@ -862,14 +862,11 @@ td.copyable .copy-badge {
 
 
 /* === Filter mode =================================================== */
-body.is-filter-mode #resultsSection .card__body {
-  display: flex;
-  gap: 16px;
-}
+body.is-filter-mode #resultsFlex { display:flex; gap:16px; }
 
 /* 70% таблица / 30% фильтр */
-body.is-filter-mode #resultsSection .table-responsive { flex: 1 1 70%; min-width: 0; }
-body.is-filter-mode #filterPanel { display: block !important; flex: 0 0 30%; max-width: 460px; }
+body.is-filter-mode #resultsFlex .table-responsive { flex: 1 1 70%; min-width: 0; }
+body.is-filter-mode #resultsFlex #filterPanel { display:block !important; flex:0 0 30%; max-width:460px; }
 
 /* Прячет столбцы Цена и Документы в режиме фильтра */
 body.is-filter-mode #resultsTable thead th:nth-child(3),

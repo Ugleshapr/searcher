@@ -934,5 +934,8 @@ body.is-filter-mode #resultsTable tbody td:nth-child(4) {
 /* Блокируем тумблер COPY визуально, когда фильтр включён */
 body.is-filter-mode #copyModeSwitch { pointer-events: none; opacity: .4; }
 
-
+body.is-filter-mode #resultsFlex #stateBanner {
+  margin-top: 8px;   /* небольшой отступ после таблицы */
+  margin-bottom: 0;  /* в колонке низ не нужен */
+}
 

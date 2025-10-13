@@ -1270,6 +1270,30 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFilterAddon();                    // навесим кнопку, Esc и пр.
 });
 
+
+function relocateStateBannerForFilterMode() {
+  const banner = document.getElementById('stateBanner');
+  if (!banner) return;
+
+  const resultsFlex = document.getElementById('resultsFlex');
+  const tableWrap   = resultsFlex?.querySelector('.table-responsive');
+  const panel       = document.getElementById('filterPanel');
+  const cardBody    = document.querySelector('#resultsSection .card__body');
+
+  if (document.body.classList.contains('is-filter-mode')) {
+    // поместить баннер внутрь левой колонки, строго ПЕРЕД панелью фильтров
+    if (resultsFlex && panel && banner.parentElement !== resultsFlex) {
+      resultsFlex.insertBefore(banner, panel);
+    }
+  } else {
+    // вернуть баннер обратно в базовый контейнер страницы
+    if (cardBody && banner.parentElement !== cardBody) {
+      cardBody.appendChild(banner);
+    }
+  }
+}
+
+
 // === Фильтр (аддон) — кнопка, Esc, интеграция с COPY и панелью ===
 function setupFilterAddon() {
   const filterBtn   = document.getElementById('filterToggle');
@@ -1306,6 +1330,7 @@ function setupFilterAddon() {
 
     // включаем режим
     document.body.classList.add('is-filter-mode');
+    relocateStateBannerForFilterMode();
     filterBtn.classList.add('is-active');
     if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
 
@@ -1329,7 +1354,7 @@ function setupFilterAddon() {
       window.App._page = 1;
       window.App.displayResults();
     }
-
+    relocateStateBannerForFilterMode();
     window.FilterPanel?.close();
   }
 
