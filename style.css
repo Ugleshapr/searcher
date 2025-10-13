@@ -939,3 +939,12 @@ body.is-filter-mode #resultsFlex #stateBanner {
   margin-bottom: 0;  /* в колонке низ не нужен */
 }
 
+/* "Ничего не найдено" как строка таблицы в режиме фильтра */
+body.is-filter-mode #resultsTable .table-empty-row td{
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+}
+
+

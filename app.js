@@ -1036,33 +1036,44 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
     const total = this.filteredData.length;
 
     if (total === 0) {
-      // очищаем таблицу
-      resultsBody.innerHTML = '';
+  // очищаем таблицу
+  resultsBody.innerHTML = '';
 
-      // что введено в поле поиска?
-      const isEmptyQuery = rawQuery.length === 0;
+  // В РЕЖИМЕ ФИЛЬТРА — показываем строку внутри таблицы, без общего баннера
+  if (document.body.classList.contains('is-filter-mode')) {
+    renderFilterEmptyRow();
+    if (banner) banner.style.display = 'none';
+    resultsCount.textContent = 'Найдено: 0 результатов';
+    this._renderShowMore(false);
+    this._fitResultsHeight();
+    relocateStateBannerForFilterMode?.();
+    return;
+  }
 
-      if (banner && titleEl && hintEl) {
-        if (isEmptyQuery) {
-          // Пустое поле: зелёный баннер
-          banner.className = 'no-results no-results--empty text-center py-4';
-          titleEl.textContent = 'Введите текст для поиска';
-          hintEl.textContent = '';
-        } else {
-          // Запрос есть, но ничего не нашли: красный баннер
-          banner.className = 'no-results text-center py-4';
-          titleEl.textContent = 'По вашему запросу ничего не найдено';
-          hintEl.textContent =
-            'Попробуйте изменить условия поиска или проверьте правописание';
-        }
-        banner.style.display = 'block';
-      }
-
-      resultsCount.textContent = 'Найдено: 0 результатов';
-      this._renderShowMore(false);
-      this._fitResultsHeight();
-      return;
+  // Обычный режим — показываем штатный (розовый) баннер
+  const isEmptyQuery = rawQuery.length === 0;
+  if (banner && titleEl && hintEl) {
+    if (isEmptyQuery) {
+      banner.className = 'no-results no-results--empty text-center py-4';
+      titleEl.textContent = 'Введите текст для поиска';
+      hintEl.textContent = '';
     } else {
+      banner.className = 'no-results text-center py-4';
+      titleEl.textContent = 'По вашему запросу ничего не найдено';
+      hintEl.textContent =
+        'Попробуйте изменить условия поиска или проверьте правописание';
+    }
+    banner.style.display = 'block';
+  }
+
+  resultsCount.textContent = 'Найдено: 0 результатов';
+  this._renderShowMore(false);
+  this._fitResultsHeight();
+  relocateStateBannerForFilterMode();
+  return;
+}
+
+    else {
       // есть результаты — скрываем баннер
       if (banner) banner.style.display = 'none';
     }
@@ -1293,6 +1304,12 @@ function relocateStateBannerForFilterMode() {
   }
 }
 
+function renderFilterEmptyRow() {
+  const tbody = document.querySelector('#resultsTable tbody');
+  if (!tbody) return;
+  const cols = document.body.classList.contains('is-filter-mode') ? 2 : 4; // в фильтре прячем 3 и 4 колонки
+  tbody.innerHTML = `<tr class="table-empty-row"><td colspan="${cols}">По выбранным фильтрам ничего не найдено</td></tr>`;
+}
 
 // === Фильтр (аддон) — кнопка, Esc, интеграция с COPY и панелью ===
 function setupFilterAddon() {
@@ -1331,6 +1348,8 @@ function setupFilterAddon() {
     // включаем режим
     document.body.classList.add('is-filter-mode');
     relocateStateBannerForFilterMode();
+    const banner = document.getElementById('stateBanner');
+    if (banner) banner.style.display = 'none';
     filterBtn.classList.add('is-active');
     if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
 
@@ -1354,6 +1373,8 @@ function setupFilterAddon() {
       window.App._page = 1;
       window.App.displayResults();
     }
+    const banner = document.getElementById('stateBanner');
+    if (banner) banner.style.display = '';
     relocateStateBannerForFilterMode();
     window.FilterPanel?.close();
   }
