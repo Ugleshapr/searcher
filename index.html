@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-app-version="V6" data-color-scheme="light">
+<html lang="ru" data-app-version="V7_FilterUpdate" data-color-scheme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -94,9 +94,13 @@
       <div class="card__body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h3 class="mb-0">Результаты поиска</h3>
-          <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+          <div class="results-actions d-flex align-items-center gap-2">
+            <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+                <button type="button" id="filterToggle" class="btn btn--ghost btn--sm" title="Включить фильтр">Фильтр</button>
+        </div>
         </div>
 
+        <div id="resultsFlex">
         <div class="table-responsive">
           <table class="table table-striped table-hover" id="resultsTable">
             <thead class="table-dark">
@@ -109,6 +113,8 @@
             </thead>
             <tbody id="resultsBody"></tbody>
           </table>
+        </div>
+        <aside id="filterPanel" style="display:none;"></aside>
         </div>
 
         <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
@@ -145,6 +151,7 @@
   <script src="app.js?v=prod-20250818"></script>
   <script src="addons/tips.js"></script>
   <script src="addons/copy-mode.js"></script>
+  <script src="addons/filter-panel.js"></script>
 </body>
 </html>
 

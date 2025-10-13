@@ -1034,35 +1034,54 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
     ).trim();
 
     const total = this.filteredData.length;
+    
+    // блокируем/разблокируем кнопку "Фильтр"
+    const filterBtn = document.getElementById('filterToggle');
+    if (filterBtn) {
+    filterBtn.disabled = total === 0;
+    filterBtn.title = total === 0 ? 'Нет результатов для фильтрации' : '';
+    }
+
 
     if (total === 0) {
-      // очищаем таблицу
-      resultsBody.innerHTML = '';
+  // очищаем таблицу
+  resultsBody.innerHTML = '';
 
-      // что введено в поле поиска?
-      const isEmptyQuery = rawQuery.length === 0;
+  // В РЕЖИМЕ ФИЛЬТРА — показываем строку внутри таблицы, без общего баннера
+  if (document.body.classList.contains('is-filter-mode')) {
+    renderFilterEmptyRow();
+    if (banner) banner.style.display = 'none';
+    resultsCount.textContent = 'Найдено: 0 результатов';
+    this._renderShowMore(false);
+    this._fitResultsHeight();
+    relocateStateBannerForFilterMode?.();
+    return;
+  }
 
-      if (banner && titleEl && hintEl) {
-        if (isEmptyQuery) {
-          // Пустое поле: зелёный баннер
-          banner.className = 'no-results no-results--empty text-center py-4';
-          titleEl.textContent = 'Введите текст для поиска';
-          hintEl.textContent = '';
-        } else {
-          // Запрос есть, но ничего не нашли: красный баннер
-          banner.className = 'no-results text-center py-4';
-          titleEl.textContent = 'По вашему запросу ничего не найдено';
-          hintEl.textContent =
-            'Попробуйте изменить условия поиска или проверьте правописание';
-        }
-        banner.style.display = 'block';
-      }
-
-      resultsCount.textContent = 'Найдено: 0 результатов';
-      this._renderShowMore(false);
-      this._fitResultsHeight();
-      return;
+  // Обычный режим — показываем штатный (розовый) баннер
+  const isEmptyQuery = rawQuery.length === 0;
+  if (banner && titleEl && hintEl) {
+    if (isEmptyQuery) {
+      banner.className = 'no-results no-results--empty text-center py-4';
+      titleEl.textContent = 'Введите текст для поиска';
+      hintEl.textContent = '';
     } else {
+      banner.className = 'no-results text-center py-4';
+      titleEl.textContent = 'По вашему запросу ничего не найдено';
+      hintEl.textContent =
+        'Попробуйте изменить условия поиска или проверьте правописание';
+    }
+    banner.style.display = 'block';
+  }
+
+  resultsCount.textContent = 'Найдено: 0 результатов';
+  this._renderShowMore(false);
+  this._fitResultsHeight();
+  relocateStateBannerForFilterMode();
+  return;
+}
+
+    else {
       // есть результаты — скрываем баннер
       if (banner) banner.style.display = 'none';
     }
@@ -1239,6 +1258,9 @@ if (window.bootstrap?.Tooltip) {
   _renderShowMore(show) {
     const footer = document.getElementById('resultsShowMore');
     if (!footer) return;
+     if (document.body.classList.contains('is-filter-mode')) {
+    show = false;
+  }
     if (!show) {
       footer.innerHTML = '';
       return;
@@ -1263,5 +1285,125 @@ if (window.bootstrap?.Tooltip) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  new PriceListSearchApp();
+  window.App = new PriceListSearchApp(); // даём глобальный доступ панели
+  setupFilterAddon();                    // навесим кнопку, Esc и пр.
 });
+
+
+function relocateStateBannerForFilterMode() {
+  const banner = document.getElementById('stateBanner');
+  if (!banner) return;
+
+  const resultsFlex = document.getElementById('resultsFlex');
+  const tableWrap   = resultsFlex?.querySelector('.table-responsive');
+  const panel       = document.getElementById('filterPanel');
+  const cardBody    = document.querySelector('#resultsSection .card__body');
+
+  if (document.body.classList.contains('is-filter-mode')) {
+    // поместить баннер внутрь левой колонки, строго ПЕРЕД панелью фильтров
+    if (resultsFlex && panel && banner.parentElement !== resultsFlex) {
+      resultsFlex.insertBefore(banner, panel);
+    }
+  } else {
+    // вернуть баннер обратно в базовый контейнер страницы
+    if (cardBody && banner.parentElement !== cardBody) {
+      cardBody.appendChild(banner);
+    }
+  }
+}
+
+function renderFilterEmptyRow() {
+  const tbody = document.querySelector('#resultsTable tbody');
+  if (!tbody) return;
+  const cols = document.body.classList.contains('is-filter-mode') ? 2 : 4; // в фильтре прячем 3 и 4 колонки
+  tbody.innerHTML = `<tr class="table-empty-row"><td colspan="${cols}">По выбранным фильтрам ничего не найдено</td></tr>`;
+}
+
+// === Фильтр (аддон) — кнопка, Esc, интеграция с COPY и панелью ===
+function setupFilterAddon() {
+  const filterBtn   = document.getElementById('filterToggle');
+  const searchInput = document.getElementById('searchInput');
+  const copySwitch  = document.getElementById('copyModeSwitch');
+
+  if (!filterBtn) return;
+
+    filterBtn.addEventListener('click', (e) => {
+    if (filterBtn.disabled) return; // защита от клика по disabled
+    });
+  
+
+  function isFilterMode() {
+    return document.body.classList.contains('is-filter-mode');
+  }
+
+  function openFilterMode() {
+    // запрещаем включение при пустой строке поиска
+    const q = (searchInput?.value || '').trim();
+    if (!q) {
+      alert('Введите поисковый запрос');
+      return;
+    }
+
+    // снимок текущей выдачи (до фильтра)
+    if (!window.App._preFilterData) {
+      window.App._preFilterData = window.App.filteredData.slice();
+    }
+
+    // COPY: если включён — выключим, затем блокируем тумблер до выхода из фильтра
+    if (window.CopyMode?.isOn && window.CopyMode.isOn()) {
+      if (copySwitch) {
+        copySwitch.checked = false;
+        copySwitch.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    if (copySwitch) copySwitch.setAttribute('disabled', 'disabled');
+
+    // включаем режим
+    document.body.classList.add('is-filter-mode');
+    relocateStateBannerForFilterMode();
+    const banner = document.getElementById('stateBanner');
+    if (banner) banner.style.display = 'none';
+    filterBtn.classList.add('is-active');
+    if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
+
+    // отдаём панели первые 400 артикулов текущей выдачи
+    const slice = window.App._preFilterData.slice(0, Math.min(1000, window.App._preFilterData.length));
+    const arts  = slice.map(it => String(it['Артикул'] || '').trim()).filter(Boolean);
+
+    window.FilterPanel?.open({ articles: arts });
+  }
+
+  function closeFilterMode() {
+    document.body.classList.remove('is-filter-mode');
+    filterBtn.classList.remove('is-active');
+    if (searchInput) searchInput.removeAttribute('disabled');
+    if (copySwitch)  copySwitch.removeAttribute('disabled');
+
+    // вернуть исходную выдачу (как была до включения фильтра)
+    if (window.App._preFilterData) {
+      window.App.filteredData = window.App._preFilterData;
+      window.App._preFilterData = null;
+      window.App._page = 1;
+      window.App.displayResults();
+    }
+    const banner = document.getElementById('stateBanner');
+    if (banner) banner.style.display = '';
+    relocateStateBannerForFilterMode();
+    window.FilterPanel?.close();
+  }
+
+  // клик по кнопке
+  filterBtn.addEventListener('click', () => {
+    if (isFilterMode()) closeFilterMode(); else openFilterMode();
+  });
+
+  // Esc закрывает фильтр (строку поиска НЕ чистим)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFilterMode()) {
+  e.preventDefault();
+  e.stopImmediatePropagation(); // ← чтобы базовый Esc не сработал
+  closeFilterMode();
+}
+  });
+}
+
