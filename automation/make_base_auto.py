@@ -9,12 +9,12 @@ from urllib.error import URLError, HTTPError
 import pandas as pd
 
 # ──────────────────────────────────────────────────────────────────────────────
-SOURCE_URL = "https://files.keaz.ru/ftp/keaz.xls?1755595229"   
+SOURCE_URL = "https://files.keaz.ru/ftp/keaz.xls?1755595229"
 YML_URL   = "https://files.keaz.ru/uploads/products-electro-msk.yml"
 SHEET      = 0                             # номер/имя листа (0 — первый)
 TMP_NAME   = "_source_download"            # базовое имя временного файла
 # Если products-файл называется иначе — можно переопределить; иначе ищется автоматически
-PRODUCTS_FILE = ""                         # например: "products.xlsx"
+PRODUCTS_FILE = ""                         # например: "products.csv"
 # ──────────────────────────────────────────────────────────────────────────────
 
 NAME_SYNS = ["наименование","номенклатура","название","товар","позиция","product","item","name","наим","описание","model"]
@@ -26,7 +26,7 @@ PRICE_VAT_PATTERNS = [
 ]
 
 def _engine_for_path(path: Path):
-    """Выбрать движок чтения excel по расширению."""
+    """Выбрать движок чтения excel по расширению (нужно для SOURCE_URL .xls)."""
     return "xlrd" if path.suffix.lower() == ".xls" else None  # None → openpyxl/auto
 
 def find_header_row(src_path: Path, max_rows=120, sheet=0) -> int:
@@ -137,18 +137,14 @@ def download_to_script_dir(url: str) -> Path:
     return tmp_path
 
 def _find_products_file(search_dir: Path) -> Path | None:
-    """Найти products-файл рядом со скриптом (или взять явный PRODUCTS_FILE)."""
+    """Найти products.csv рядом со скриптом."""
     if PRODUCTS_FILE:
         p = (search_dir / PRODUCTS_FILE).resolve()
-        if p.exists():
-            return p
-    for name in ("products.xlsx", "product.xlsx", "products.xls", "product.xls"):
-        p = (search_dir / name).resolve()
-        if p.exists():
-            return p
-    return None
+        return p if p.exists() else None
+    p = (search_dir / "products.csv").resolve()
+    return p if p.exists() else None
 
-# ───────────────────────── ДОБАВЛЕНО: поиск CSV с файлами ─────────────────────
+# ───────────────────────── поиск CSV с файлами документов ─────────────────────
 def _find_products_files_csv(search_dir: Path) -> Path | None:
     for name in ("products_files.csv", "products.csv", "product.csv"):
         p = (search_dir / name).resolve()
@@ -179,7 +175,7 @@ def _is_wanted_doc(category: str, title: str) -> bool:
     has_re_full = re.search(r"руководств[оа]\s*по\s*эксплуатац", s, flags=re.IGNORECASE) is not None
     has_re_abbr = re.search(r"(?<![А-Яа-яA-Za-z])РЭ(?![А-Яа-яA-Za-z])", s) is not None
     has_passport = re.search(r"паспорт", s, flags=re.IGNORECASE) is not None
-    has_oprosny   = re.search(r"опросн", s, flags=re.IGNORECASE) is not None   
+    has_oprosny   = re.search(r"опросн", s, flags=re.IGNORECASE) is not None
     return bool(has_catalog or has_re_full or has_re_abbr or has_passport or has_oprosny)
 
 def build_docs_map_from_csv(csv_path: Path) -> dict:
@@ -227,24 +223,19 @@ def build_docs_map_from_csv(csv_path: Path) -> dict:
     print(f"[i] Документы из {csv_path.name}: артикулами покрыто {len(docs_map)}")
     return docs_map
 
-# ───────────────────────── ДОБАВЛЕНО: «Сайт ссылка» из products ───────────────
+# ───────────────────────── «Сайт ссылка» из products.csv ──────────────────────
 def build_site_link_map_from_products(search_dir: Path) -> dict:
     """
-    Читает products.xlsx/.xls (без заголовков) и возвращает art -> URL из 14-го столбца (1-based).
+    Читает products.csv (без заголовков) и возвращает art -> URL из 14-го столбца (1-based).
     Ожидается: столбец 1 = Артикул, столбец 14 = URL сайта.
     """
     prod_path = _find_products_file(search_dir)
     if not prod_path:
-        print("[i] products-файл не найден — «Сайт ссылка» пропущена.")
+        print("[i] products.csv не найден — «Сайт ссылка» пропущена.")
         return {}
 
-    engine = _engine_for_path(prod_path)
     try:
-        pr = pd.read_excel(prod_path, header=None, dtype=str, engine=engine)
-    except ImportError as e:
-        if "xlrd" in str(e).lower():
-            raise SystemExit("[ОШИБКА] Для чтения .xls установи: pip install xlrd")
-        raise
+        pr = pd.read_csv(prod_path, sep=';', header=None, dtype=str, encoding='utf-8', engine='python')
     except Exception as e:
         print(f"[!] Не удалось прочитать {prod_path.name}: {e}")
         return {}
@@ -272,7 +263,6 @@ def _parse_qty_or_zero(s: str) -> int:
     # только целые неотрицательные числа; всё остальное -> 0
     return int(s) if re.fullmatch(r"\d+", s) else 0
 
-
 def parse_yml_quantities(yml_path: Path) -> dict:
     """
     Читает YML (Yandex Market XML) и строит карту: очищенный vendorCode -> quantity (int >=0).
@@ -293,8 +283,6 @@ def parse_yml_quantities(yml_path: Path) -> dict:
                     elif ctag == "param" and (child.attrib.get("name", "").strip().lower() == "quantity"):
                         qty = _parse_qty_or_zero(child.text)
                 if art:
-                    # если нескольких офферов с одним артикулом нет — нормально;
-                    # если есть — последнее значение перезапишет предыдущее.
                     qmap[art] = qty if qty > 0 else 0
                 elem.clear()
     except Exception as e:
@@ -302,7 +290,6 @@ def parse_yml_quantities(yml_path: Path) -> dict:
         return {}
     print(f"[i] Из YML считано количеств: {len(qmap)}")
     return qmap
-
 
 def attach_quantity_from_yml(base_df: pd.DataFrame, script_dir: Path) -> pd.DataFrame:
     """
@@ -336,7 +323,6 @@ def attach_quantity_from_yml(base_df: pd.DataFrame, script_dir: Path) -> pd.Data
     out.insert(5, "Количество", qty_series)
     print(f"[i] Колонка «Количество»: >0 найдено для {int((qty_series > 0).sum())} позиций.")
     return out
-
 
 def _extract_last_url(text: str) -> str:
     """Вытащить URL из конца строки '… https://…'. Нужен для дедупликации по URL."""
@@ -375,7 +361,6 @@ def attach_documents_column(base_df: pd.DataFrame, search_dir: Path, site_link_m
         # 2) Остальные документы из CSV
         for item in docs_map.get(a, []):
             url = _extract_last_url(item)
-            # если url не распознан — добавляем как есть (на всякий)
             if url and url in seen_urls:
                 continue
             if url:
@@ -386,7 +371,7 @@ def attach_documents_column(base_df: pd.DataFrame, search_dir: Path, site_link_m
 
     out.insert(3, "Документы", pd.Series(docs_col, index=out.index).fillna(""))  # 4-я колонка
     return out
-# ───────────────────────── КОНЕЦ ДОБАВЛЕННОГО ────────────────────────────────
+
 def _find_enriched_file(search_dir: Path) -> Path | None:
     """Ищет enriched.csv рядом со скриптом."""
     p = (search_dir / "enriched.csv").resolve()
@@ -399,14 +384,11 @@ def _normalize_specs(text: str) -> str:
     """
     if text is None or (isinstance(text, float) and pd.isna(text)):
         return ""
-    # приводим к str и нормализуем переносы
     s = str(text).replace("\r\n", "\n").replace("\r", "\n")
     lines = [ln for ln in s.split("\n")]
     out_lines = []
     for ln in lines:
-        # срезать "числа |" в начале строки
         ln2 = re.sub(r"^\s*\d+\s*\|\s*", "", ln).strip()
-        # иногда встречаются пустые строки — оставим только значимые
         if ln2:
             out_lines.append(ln2)
     return "\n".join(out_lines)
@@ -454,24 +436,18 @@ def attach_specs_from_enriched(base_df: pd.DataFrame, search_dir: Path) -> pd.Da
     print(f"[i] Перенесены характеристики из enriched.csv для {int(col.astype(bool).sum())} позиций.")
     return out
 
-
 def enrich_names_with_products(base_df: pd.DataFrame, search_dir: Path) -> pd.DataFrame:
     """
     base_df: колонки 'Наименование','Артикул','Цена'
-    products: БЕЗ заголовков; столбец 1 = Артикул, столбец 3 = Наименование (в одинарных кавычках)
+    products.csv: БЕЗ заголовков; столбец 1 = Артикул, столбец 3 = Наименование (в одинарных кавычках)
     """
     prod_path = _find_products_file(search_dir)
     if not prod_path:
-        print("[i] products-файл не найден — обогащение пропущено.")
+        print("[i] products.csv не найден — обогащение пропущено.")
         return base_df
 
-    engine = _engine_for_path(prod_path)
     try:
-        pr = pd.read_excel(prod_path, header=None, dtype=str, engine=engine)
-    except ImportError as e:
-        if "xlrd" in str(e).lower():
-            raise SystemExit("[ОШИБКА] Для чтения .xls установи: pip install xlrd")
-        raise
+        pr = pd.read_csv(prod_path, sep=';', header=None, dtype=str, encoding='utf-8', engine='python')
     except Exception as e:
         print(f"[!] Не удалось прочитать {prod_path.name}: {e}")
         return base_df
@@ -561,21 +537,20 @@ def main():
     base = pd.DataFrame({"Наименование": name, "Артикул": art, "Цена": price})
     base = base[(base["Наименование"] != "") | (base["Артикул"] != "")].copy()
 
-    # 5) Обогащение наименований из products*.xlsx (если есть)
+    # 5) Обогащение наименований из products.csv (если есть)
     base = enrich_names_with_products(base, script_dir)
 
-    # 5.0) Построить карту «Сайт ссылка» из products (если есть)
+    # 5.0) Построить карту «Сайт ссылка» из products.csv (если есть)
     site_link_map = build_site_link_map_from_products(script_dir)
 
     # 5.1) Колонка «Документы»: сначала «Сайт ссылка», затем документы из CSV (если есть)
     base = attach_documents_column(base, script_dir, site_link_map=site_link_map)
 
-    # 5.2) Колонка 5: «Характеристики» из enriched.xlsx (если есть)
+    # 5.2) Колонка 5: «Характеристики» из enriched.csv (если есть)
     base = attach_specs_from_enriched(base, script_dir)
-    
+
     # 5.3) Колонка 6: «Количество» из YML по vendorCode
     base = attach_quantity_from_yml(base, script_dir)
-
 
     # 6) Сохранение base.csv в ПАПКЕ СКРИПТА
     csv_path = script_dir / "base.csv"
@@ -583,7 +558,6 @@ def main():
         .to_csv(csv_path, index=False, sep=';', encoding='utf-8-sig')
     print(f"[✓] Готово: {len(base)} строк")
     print(f"[→] {csv_path}")
-
 
     # 7) Удаляем исходный временный файл
     try:
@@ -594,3 +568,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
