@@ -94,7 +94,10 @@
       <div class="card__body">
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h3 class="mb-0">Результаты поиска</h3>
-          <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+          <div class="results-actions d-flex align-items-center gap-2">
+            <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+                <button type="button" id="filterToggle" class="btn btn--ghost btn--sm" title="Включить фильтр">Фильтр</button>
+        </div>
         </div>
 
         <div class="table-responsive">
@@ -110,6 +113,8 @@
             <tbody id="resultsBody"></tbody>
           </table>
         </div>
+        <aside id="filterPanel" style="display:none;"></aside>
+
 
         <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
 <div class="state-banner text-center py-4" id="stateBanner" style="display:none;">
@@ -145,6 +150,7 @@
   <script src="app.js?v=prod-20250818"></script>
   <script src="addons/tips.js"></script>
   <script src="addons/copy-mode.js"></script>
+  <script src="addons/filter-panel.js"></script>
 </body>
 </html>
 

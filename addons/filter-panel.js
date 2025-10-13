@@ -1,0 +1,289 @@
+/* addons/filter-panel.js — правая панель фильтрации по параметрам из CSV */
+(function () {
+  'use strict';
+
+  // Простые помощники
+  const qs  = (sel, root = document) => root.querySelector(sel);
+  const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+  const unquote = s => String(s ?? '').replace(/^'(.*)'$/, '$1').trim();
+
+  // Ленивая загрузка PapaParse и текста
+  async function fetchText(url) {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+    return await res.text();
+  }
+  async function parseCSV(url, header = true) {
+    if (!window.Papa) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+        s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
+      });
+    }
+    const text = await fetchText(url);
+    return new Promise((resolve, reject) => {
+      Papa.parse(text, {
+        header, delimiter: ';', skipEmptyLines: true,
+        transformHeader: h => h.trim(),
+        complete: r => resolve(r.data),
+        error: reject
+      });
+    });
+  }
+
+  // Кэш словарей и инвертированный индекс внутри текущего «среза 400»
+  let _specMap = null;                    // spec_id -> {title,value_type,group_id,group_name}
+  let _index = null;                      // spec_id -> value -> Set<article>
+  let _articlesSet = null;                // Set<article> из текущего среза
+  let _selected = new Map();              // spec_id -> Set<value>
+  let _container = null;
+  let _searchInput = null;
+  let _prebuiltGroups = null;             // подготовленные группы для рендера
+
+  function resetState() {
+    _index = null;
+    _articlesSet = null;
+    _selected.clear();
+    _prebuiltGroups = null;
+  }
+
+  async function ensureSpecsLoaded() {
+    if (_specMap) return;
+    const specs = await parseCSV('addons/products_spec.csv', true);
+    _specMap = new Map();
+    for (const s of specs) {
+      const id = String(s['spec_id'] ?? s['specId'] ?? s['id']).trim();
+      if (!id) continue;
+      _specMap.set(id, {
+        title: unquote(s['title']),
+        value_type: String(s['value_type'] ?? '').trim(),
+        group_id: Number(s['group_id'] ?? 0) || 0,
+        group_name: unquote(s['group_name'] || '')
+      });
+    }
+  }
+
+  // Построение индекса по текущим 400 артикулам
+  async function buildIndex(articles) {
+    await ensureSpecsLoaded();
+    const values = await parseCSV('addons/products_spec_values.csv', true);
+    const want = new Set(articles);
+
+    const perArt = new Map(); // art -> array of {spec_id, value}
+    for (const row of values) {
+      const art = String(row['product_id'] ?? '').trim();
+      if (!want.has(art)) continue;
+      const sid = String(row['spec_id'] ?? '').trim();
+      if (!sid) continue;
+
+      const dict = _specMap.get(sid) || {};
+      const value = unquote(row['value']);
+      (perArt.get(art) || perArt.set(art, []).get(art)).push({ spec_id: sid, value, dict });
+    }
+
+    // Инвертированный индекс: spec_id -> value -> Set(articles)
+    const index = new Map();
+    const groups = new Map(); // group_id -> {group_name, params: Map(spec_id -> {title, values:Set})}
+
+    for (const art of want) {
+      const rows = perArt.get(art) || [];
+      for (const { spec_id, value, dict } of rows) {
+        // index
+        let vmap = index.get(spec_id);
+        if (!vmap) index.set(spec_id, (vmap = new Map()));
+        let aset = vmap.get(value);
+        if (!aset) vmap.set(value, (aset = new Set()));
+        aset.add(art);
+
+        // группировка для UI (даже если только у 1 товара есть параметр — он попадёт в UI)
+        const gid = dict.group_id ?? 0;
+        const gname = dict.group_name || '';
+        let g = groups.get(gid);
+        if (!g) groups.set(gid, (g = { group_id: gid, group_name: gname, params: new Map() }));
+        let p = g.params.get(spec_id);
+        if (!p) g.params.set(spec_id, (p = { spec_id, title: dict.title || spec_id, values: new Map() }));
+        let cnt = p.values.get(value) || 0;
+        p.values.set(value, cnt + 1);
+      }
+    }
+
+    // Схлопываем группы/параметры в массивы, фильтруем бесполезные (1 вариант на всю выборку) и "Классификация"
+    let grouped = Array.from(groups.values())
+      .sort((a, b) => (a.group_id || 0) - (b.group_id || 0))
+      .map(g => {
+        const params = Array.from(g.params.values()).map(p => {
+          const variants = Array.from(p.values.entries())
+            .sort((a, b) => a[0].localeCompare(b[0], 'ru'))   // сортировка значений
+            .map(([val, count]) => ({ value: val, count }));
+          return { spec_id: p.spec_id, title: p.title, variants };
+        })
+        // убираем параметры с единственным вариантом
+        .filter(p => p.variants.length > 1)
+        // сортировка параметров по title
+        .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+
+        return { group_id: g.group_id, group_name: g.group_name, items: params };
+      })
+      // убираем пустые группы и «Классификация»
+      .filter(g => g.items.length > 0)
+      .filter(g => String(g.group_name).toLowerCase() !== 'классификация');
+
+    _index = index;
+    _prebuiltGroups = grouped;
+    _articlesSet = want;
+  }
+
+  // Применить выбранные фильтры к выдаче
+  function applySelection() {
+    const app = window.App;
+    if (!app || !app._preFilterData) return;
+
+    // без выбора — показываем весь «срез до фильтра»
+    if (_selected.size === 0) {
+      app.filteredData = app._preFilterData.slice();
+      app._page = 1;
+      app.displayResults();
+      return;
+    }
+
+    // AND по параметрам, OR по значениям одного параметра
+    let acc = null; // Set<article>
+    for (const [sid, values] of _selected) {
+      const vmap = _index.get(sid);
+      if (!vmap) continue;
+      let union = new Set();
+      for (const val of values) {
+        const aset = vmap.get(val);
+        if (aset) for (const a of aset) union.add(a);
+      }
+      if (acc == null) acc = union;
+      else {
+        // пересечение
+        const next = new Set();
+        for (const a of acc) if (union.has(a)) next.add(a);
+        acc = next;
+      }
+    }
+    acc = acc || new Set();
+
+    const keep = acc;
+    app.filteredData = app._preFilterData.filter(it => keep.has(String(it['Артикул'] || '').trim()));
+    app._page = 1;
+    app.displayResults();
+  }
+
+  // Рендер панели
+  function renderPanel() {
+    if (!_container) return;
+    _container.innerHTML = '';
+
+    // header с поиском по параметрам (ранжируем: подходящие наверх)
+    const header = document.createElement('div');
+    header.className = 'fp-header';
+    header.innerHTML = `
+      <input type="search" class="form-control" placeholder="Поиск параметра..." aria-label="Поиск параметра"/>
+      <button type="button" class="btn btn--secondary btn--sm" id="fpClear">Сбросить</button>
+    `;
+    _container.appendChild(header);
+    _searchInput = header.querySelector('input[type="search"]');
+
+    const list = document.createElement('div');
+    list.id = 'fpList';
+    _container.appendChild(list);
+
+    const grouped = _prebuiltGroups || [];
+    fillList(grouped);
+
+    // поиск по названию параметра
+    _searchInput.addEventListener('input', () => {
+      const q = _searchInput.value.trim().toLowerCase();
+      if (!q) { fillList(grouped); return; }
+
+      // «поднимаем» параметры, где title включает q
+      const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      const boosted = grouped.map(g => {
+        const top = [], rest = [];
+        for (const p of g.items) (re.test(p.title) ? top : rest).push(p);
+        return { ...g, items: [...top, ...rest] };
+      }).filter(g => g.items.length);
+      fillList(boosted);
+    });
+
+    header.querySelector('#fpClear')?.addEventListener('click', () => {
+      _selected.clear();
+      qsa('.fp-pill.is-active', _container).forEach(el => el.classList.remove('is-active'));
+      applySelection();
+    });
+  }
+
+  function fillList(grouped) {
+    const list = qs('#fpList', _container);
+    list.innerHTML = '';
+
+    for (const g of grouped) {
+      const gEl = document.createElement('div');
+      gEl.className = 'fp-group';
+      gEl.innerHTML = `<div class="fp-group__title">${g.group_name || 'Без группы'}</div>`;
+      list.appendChild(gEl);
+
+      for (const p of g.items) {
+        const pEl = document.createElement('div');
+        pEl.className = 'fp-param';
+        pEl.innerHTML = `<div class="fp-param__name">${p.title}</div><div class="fp-values"></div>`;
+        gEl.appendChild(pEl);
+
+        const wrap = qs('.fp-values', pEl);
+        for (const v of p.variants) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'fp-pill';
+          btn.textContent = v.value || '—';
+          btn.title = `Совпадений: ${v.count}`;
+          btn.dataset.sid = p.spec_id;
+          btn.dataset.val = v.value;
+
+          // активное состояние, если выбрано
+          if (_selected.get(p.spec_id)?.has(v.value)) btn.classList.add('is-active');
+
+          btn.addEventListener('click', () => {
+            const sid = btn.dataset.sid;
+            const val = btn.dataset.val;
+            let set = _selected.get(sid);
+            if (!set) _selected.set(sid, (set = new Set()));
+            if (set.has(val)) {
+              set.delete(val);
+              btn.classList.remove('is-active');
+              if (set.size === 0) _selected.delete(sid);
+            } else {
+              set.add(val);
+              btn.classList.add('is-active');
+            }
+            applySelection();
+          });
+
+          wrap.appendChild(btn);
+        }
+      }
+    }
+  }
+
+  // Публичный API
+  async function open(ctx) {
+    const host = document.getElementById('filterPanel');
+    if (!host) return;
+    _container = host;
+    resetState();
+
+    await buildIndex(ctx.articles || []);
+    renderPanel();
+  }
+
+  function close() {
+    if (_container) _container.innerHTML = '';
+    resetState();
+  }
+
+  window.FilterPanel = { open, close };
+})();
+

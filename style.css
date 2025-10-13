@@ -861,6 +861,81 @@ td.copyable .copy-badge {
 .dm-toast.show { opacity: .9; transition: opacity .15s; }
 
 
+/* === Filter mode =================================================== */
+body.is-filter-mode #resultsSection .card__body {
+  display: flex;
+  gap: 16px;
+}
+
+/* 70% таблица / 30% фильтр */
+body.is-filter-mode #resultsSection .table-responsive { flex: 1 1 70%; min-width: 0; }
+body.is-filter-mode #filterPanel { display: block !important; flex: 0 0 30%; max-width: 460px; }
+
+/* Прячет столбцы Цена и Документы в режиме фильтра */
+body.is-filter-mode #resultsTable thead th:nth-child(3),
+body.is-filter-mode #resultsTable thead th:nth-child(4),
+body.is-filter-mode #resultsTable tbody td:nth-child(3),
+body.is-filter-mode #resultsTable tbody td:nth-child(4) {
+  display: none;
+}
+
+/* Кнопка "Фильтр" — визуально как «прозрачная», с активной обводкой при on */
+.btn.btn--ghost.btn--sm {
+  padding: 4px 10px; font-size: 14px; border-radius: 8px;
+  border: 1px solid var(--color-border); background: transparent; color: var(--color-text-secondary);
+}
+.btn.btn--ghost.btn--sm:is(:hover, :focus) { color: var(--color-text); }
+.btn.btn--ghost.btn--sm.is-active {
+  border-color: var(--color-primary); color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 50, 184, 198), .15);
+}
+
+/* Панель фильтров */
+#filterPanel {
+  border: 1px dashed var(--color-border);
+  border-radius: 12px;
+  padding: 12px;
+  align-self: flex-start;
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  background: var(--color-surface);
+}
+
+/* Хедер панели */
+.fp-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.fp-header input[type="search"] { width: 100%; }
+
+/* Группа */
+.fp-group { border: 1px solid var(--color-border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+.fp-group__title { font-weight: 600; margin-bottom: 6px; }
+
+/* Параметр */
+.fp-param { margin-bottom: 8px; }
+.fp-param__name { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 6px; }
+
+/* Кнопки-значения (пилюли) с переносом строк */
+.fp-values { display: flex; flex-wrap: wrap; gap: 6px; }
+.fp-pill {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: var(--color-surface);
+  cursor: pointer;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fp-pill:is(:hover, :focus) { border-color: var(--color-primary); }
+.fp-pill.is-active {
+  background: rgba(var(--color-primary-rgb, 50,184,198), .12);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Блокируем тумблер COPY визуально, когда фильтр включён */
+body.is-filter-mode #copyModeSwitch { pointer-events: none; opacity: .4; }
 
 
 

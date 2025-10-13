@@ -1263,5 +1263,85 @@ if (window.bootstrap?.Tooltip) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  new PriceListSearchApp();
+  window.App = new PriceListSearchApp(); // даём глобальный доступ панели
+  setupFilterAddon();                    // навесим кнопку, Esc и пр.
 });
+
+// === Фильтр (аддон) — кнопка, Esc, интеграция с COPY и панелью ===
+function setupFilterAddon() {
+  const filterBtn   = document.getElementById('filterToggle');
+  const searchInput = document.getElementById('searchInput');
+  const copySwitch  = document.getElementById('copyModeSwitch');
+
+  if (!filterBtn) return;
+
+  function isFilterMode() {
+    return document.body.classList.contains('is-filter-mode');
+  }
+
+  function openFilterMode() {
+    // запрещаем включение при пустой строке поиска
+    const q = (searchInput?.value || '').trim();
+    if (!q) {
+      alert('Введите поисковый запрос');
+      return;
+    }
+
+    // снимок текущей выдачи (до фильтра)
+    if (!window.App._preFilterData) {
+      window.App._preFilterData = window.App.filteredData.slice();
+    }
+
+    // COPY: если включён — выключим, затем блокируем тумблер до выхода из фильтра
+    if (window.CopyMode?.isOn && window.CopyMode.isOn()) {
+      if (copySwitch) {
+        copySwitch.checked = false;
+        copySwitch.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    if (copySwitch) copySwitch.setAttribute('disabled', 'disabled');
+
+    // включаем режим
+    document.body.classList.add('is-filter-mode');
+    filterBtn.classList.add('is-active');
+    if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
+
+    // отдаём панели первые 400 артикулов текущей выдачи
+    const slice = window.App._preFilterData.slice(0, Math.min(400, window.App._preFilterData.length));
+    const arts  = slice.map(it => String(it['Артикул'] || '').trim()).filter(Boolean);
+
+    window.FilterPanel?.open({ articles: arts });
+  }
+
+  function closeFilterMode() {
+    document.body.classList.remove('is-filter-mode');
+    filterBtn.classList.remove('is-active');
+    if (searchInput) searchInput.removeAttribute('disabled');
+    if (copySwitch)  copySwitch.removeAttribute('disabled');
+
+    // вернуть исходную выдачу (как была до включения фильтра)
+    if (window.App._preFilterData) {
+      window.App.filteredData = window.App._preFilterData;
+      window.App._preFilterData = null;
+      window.App._page = 1;
+      window.App.displayResults();
+    }
+
+    window.FilterPanel?.close();
+  }
+
+  // клик по кнопке
+  filterBtn.addEventListener('click', () => {
+    if (isFilterMode()) closeFilterMode(); else openFilterMode();
+  });
+
+  // Esc закрывает фильтр (строку поиска НЕ чистим)
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isFilterMode()) {
+  e.preventDefault();
+  e.stopImmediatePropagation(); // ← чтобы базовый Esc не сработал
+  closeFilterMode();
+}
+  });
+}
+
