@@ -875,17 +875,12 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
         : performance.navigation && performance.navigation.type === 1; // старый API для старых браузеров
 
       if (isReload) {
-  const input = document.getElementById('searchInput');
-  if (input) input.value = '';
-  this.filteredData = [];
-  this._page = 1;
-  this.displayResults();
-} else {
-  // «Тихий» старт: результатов ещё нет, но данные уже загружены —
-  // дёрнем событие, чтобы показать "Что нового".
-  document.dispatchEvent(new CustomEvent('results:rendered'));
-}
-
+        const input = document.getElementById('searchInput');
+        if (input) input.value = '';
+        this.filteredData = [];
+        this._page = 1;
+        this.displayResults();
+      }
     } catch (e) {
       console.error('Загрузка base.csv не удалась:', e);
       this.showError(`Не удалось загрузить base.csv\n${e.message}`);
