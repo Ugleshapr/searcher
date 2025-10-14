@@ -43,14 +43,6 @@
   let _lastCountSig = null; // сигнатура выбора; null чтобы сработал 1-й пересчёт
   let _lastArtsNow = null;  // кэш: Set<string> артикулов текущей отображаемой выдачи
 
-// --- Спец-фасет "Наличие" ---
-const STOCK_SID = '__stock__';
-const STOCK_GROUP = { group_id: -1, group_name: 'Наличие' };
-const STOCK_PARAM_TITLE = 'Наличие';
-const STOCK_VAL_IN   = 'В наличии';
-const STOCK_VAL_OUT  = 'Под заказ';
-
-
   function resetState() {
     _index = null;
     _articlesSet = null;
