@@ -1587,23 +1587,28 @@ document.addEventListener('results:rendered', () => {
 
 // === Soft refresh on version change (once) ================================
 (function () {
-  const cur = document.documentElement.getAttribute('data-app-version') || '';
-  const KEY = 'app:lastVersion';
+  const cur  = document.documentElement.getAttribute('data-app-version') || '';
+  const KEY  = 'app:lastVersion';
+  const FLAG = `reloaded-for:${cur}`;
+
   try {
-    const prev = localStorage.getItem(KEY) || '';
-    if (cur && prev && prev !== cur) {
-      // СНАЧАЛА фиксируем новую версию...
-      localStorage.setItem(KEY, cur);
-      // ...ЗАТЕМ один раз мягко перезагружаем страницу
-      location.reload();
+    const prev    = localStorage.getItem(KEY) || '';
+    const already = sessionStorage.getItem(FLAG) === '1';
+
+    // 1) Версия сменилась и ещё не перезагружали вкладку для неё → делаем один reload
+    if (cur && prev && prev !== cur && !already) {
+      sessionStorage.setItem(FLAG, '1'); // помечаем, что уже перезагрузили для этой версии
+      location.reload();                 // обычный reload; ассеты обновятся благодаря ?v=
       return;
     }
-    // Первая загрузка или уже актуальная версия — просто зафиксировать
-    if (cur && !prev) localStorage.setItem(KEY, cur);
-  } catch {
-    // Если localStorage недоступен — тихо игнорируем
-  }
+
+    // 2) После reload (или на первом визите) фиксируем текущую версию
+    if (cur && (!prev || prev !== cur)) {
+      localStorage.setItem(KEY, cur);
+    }
+  } catch {}
 })();
+
 
 
 
