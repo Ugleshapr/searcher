@@ -487,6 +487,7 @@ if (row) {
     // Единая функция очистки поиска
     const doClear = () => {
       if (!inputEl) return;
+      if (document.body.classList.contains('is-filter-mode')) return;
       if (!inputEl.value) return; // уже пусто — выходим
       inputEl.value = '';
       toggleClear();
@@ -539,7 +540,7 @@ if (row) {
           ae.tagName === 'TEXTAREA' ||
           ae.isContentEditable);
       if (isOtherTextField) return;
-
+      if (document.body.classList.contains('is-filter-mode')) return;
       e.preventDefault();
       doClear();
     });
@@ -1315,7 +1316,7 @@ function relocateStateBannerForFilterMode() {
 function renderFilterEmptyRow() {
   const tbody = document.querySelector('#resultsTable tbody');
   if (!tbody) return;
-  const cols = document.body.classList.contains('is-filter-mode') ? 2 : 4; // в фильтре прячем 3 и 4 колонки
+  const cols = document.body.classList.contains('is-filter-mode') ? 3 : 4;
   tbody.innerHTML = `<tr class="table-empty-row"><td colspan="${cols}">По выбранным фильтрам ничего не найдено</td></tr>`;
 }
 
@@ -1323,13 +1324,22 @@ function renderFilterEmptyRow() {
 function setupFilterAddon() {
   const filterBtn   = document.getElementById('filterToggle');
   const searchInput = document.getElementById('searchInput');
+  searchInput?.addEventListener('input', () => {
+  if (document.body.classList.contains('is-filter-mode')) {
+    searchInput.value = window.App?._preFilterQuery ?? searchInput.value;
+  }
+});
   const copySwitch  = document.getElementById('copyModeSwitch');
 
   if (!filterBtn) return;
 
-    filterBtn.addEventListener('click', (e) => {
-    if (filterBtn.disabled) return; // защита от клика по disabled
-    });
+    // клик по кнопке
+filterBtn.addEventListener('click', () => {
+  if (filterBtn.disabled) return;              // защита от клика по disabled
+  if (isFilterMode()) closeFilterMode(); 
+  else openFilterMode();
+});
+
   
 
   function isFilterMode() {
@@ -1364,6 +1374,18 @@ function setupFilterAddon() {
     const banner = document.getElementById('stateBanner');
     if (banner) banner.style.display = 'none';
     filterBtn.classList.add('is-active');
+    // Замораживаем строку запроса так, чтобы крестик «х» не работал и текст не менялся
+if (searchInput) {
+  // запомним текущий текст и тип
+  window.App._preFilterQuery = searchInput.value;
+  window.App._searchOriginalType = searchInput.type;
+
+  // меняем тип на text, чтобы пропал нативный крестик, и делаем только для чтения
+  try { searchInput.type = 'text'; } catch(e) {} // на всякий случай
+  searchInput.readOnly = true;                   // курсор можно ставить, но менять нельзя
+  searchInput.classList.add('is-frozen');        // (если захочешь подсветить стилем)
+}
+
     if (searchInput) { searchInput.setAttribute('disabled', 'disabled'); searchInput.blur(); }
 
     // отдаём панели первые 400 артикулов текущей выдачи
@@ -1376,7 +1398,18 @@ function setupFilterAddon() {
   function closeFilterMode() {
     document.body.classList.remove('is-filter-mode');
     filterBtn.classList.remove('is-active');
-    if (searchInput) searchInput.removeAttribute('disabled');
+   if (searchInput) {
+   searchInput.removeAttribute('disabled');
+   // разморозим и вернём исходный тип/значение
+   searchInput.readOnly = false;
+   if (window.App?._searchOriginalType) {
+     try { searchInput.type = window.App._searchOriginalType; } catch(e) {}
+   }
+   if (typeof window.App?._preFilterQuery === 'string') {
+     searchInput.value = window.App._preFilterQuery;
+   }
+   searchInput.classList.remove('is-frozen');
+ }
     if (copySwitch)  copySwitch.removeAttribute('disabled');
 
     // вернуть исходную выдачу (как была до включения фильтра)
@@ -1392,18 +1425,16 @@ function setupFilterAddon() {
     window.FilterPanel?.close();
   }
 
-  // клик по кнопке
-  filterBtn.addEventListener('click', () => {
-    if (isFilterMode()) closeFilterMode(); else openFilterMode();
-  });
+  
+
 
   // Esc закрывает фильтр (строку поиска НЕ чистим)
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isFilterMode()) {
-  e.preventDefault();
-  e.stopImmediatePropagation(); // ← чтобы базовый Esc не сработал
-  closeFilterMode();
-}
-  });
+  if (e.key === 'Escape' && isFilterMode()) {
+    e.preventDefault();
+    e.stopImmediatePropagation(); // ← критично
+    closeFilterMode();
+  }
+});
 }
 

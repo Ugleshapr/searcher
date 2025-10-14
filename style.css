@@ -868,10 +868,8 @@ body.is-filter-mode #resultsFlex { display:flex; gap:16px; }
 body.is-filter-mode #resultsFlex .table-responsive { flex: 1 1 70%; min-width: 0; }
 body.is-filter-mode #resultsFlex #filterPanel { display:block !important; flex:0 0 30%; max-width:460px; }
 
-/* Прячет столбцы Цена и Документы в режиме фильтра */
-body.is-filter-mode #resultsTable thead th:nth-child(3),
+/* Прячет столбец Документы в режиме фильтра */
 body.is-filter-mode #resultsTable thead th:nth-child(4),
-body.is-filter-mode #resultsTable tbody td:nth-child(3),
 body.is-filter-mode #resultsTable tbody td:nth-child(4) {
   display: none;
 }
@@ -980,14 +978,17 @@ body.is-filter-mode #resultsTable .table-empty-row td{
 #filterPanel .fp-header { box-shadow: 0 1px 0 rgba(0,0,0,.06); }
 
 
-/* Прячем системную кнопку очистки (×) у основного поля поиска,
-   но только когда включён режим Фильтр */
+/* Прячем системную кнопку очистки строки поиска только в режиме фильтра */
 body.is-filter-mode #searchInput::-webkit-search-cancel-button { 
   -webkit-appearance: none;
   display: none;
 }
-body.is-filter-mode #searchInput::-ms-clear { display: none; width: 0; height: 0; }  /* старый Edge/IE */
-body.is-filter-mode #searchInput::-ms-reveal { display: none; }                      /* старый Edge */
+body.is-filter-mode #searchInput::-ms-clear { display: none; width: 0; height: 0; }
+body.is-filter-mode #searchInput::-ms-reveal { display: none; }
+/* Визуальный намёк, что поле «заморожено» (опционально) */
+#searchInput.is-frozen { opacity: .9; }
 
-body.is-filter-mode #searchInput { pointer-events: none; }  /* поле и так disabled, но это уберёт любые клики */
+/* В режиме фильтра кастомную кнопку очистки тоже скрываем */
+body.is-filter-mode .search-clear-btn { display: none !important; }
+
 

@@ -43,6 +43,14 @@
   let _lastCountSig = null; // сигнатура выбора; null чтобы сработал 1-й пересчёт
   let _lastArtsNow = null;  // кэш: Set<string> артикулов текущей отображаемой выдачи
 
+// --- Спец-фасет "Наличие" ---
+const STOCK_SID = '__stock__';
+const STOCK_GROUP = { group_id: -1, group_name: 'Наличие' };
+const STOCK_PARAM_TITLE = 'Наличие';
+const STOCK_VAL_IN   = 'В наличии';
+const STOCK_VAL_OUT  = 'Под заказ';
+
+
   function resetState() {
     _index = null;
     _articlesSet = null;
@@ -71,6 +79,17 @@
     await ensureSpecsLoaded();
     const values = await parseCSV('addons/products_spec_values.csv', true);
     const want = new Set(articles);
+    // Индекс "наличия" по текущему срезу выдачи
+const appData = (window.App && window.App._preFilterData) ? window.App._preFilterData : [];
+const art2qty = new Map();
+for (const row of appData) {
+  const art = String(row['Артикул'] || '').trim();
+  if (!want.has(art)) continue;
+  const qtyRaw = row['Количество'];
+  const qty = (typeof qtyRaw === 'number') ? qtyRaw : parseInt(String(qtyRaw || '0').replace(/\s+/g,'').replace(',', '.'), 10) || 0;
+  art2qty.set(art, qty);
+}
+
 
     const perArt = new Map(); // art -> array of {spec_id, value}
     for (const row of values) {
@@ -87,6 +106,28 @@
     // Инвертированный индекс: spec_id -> value -> Set(articles)
     const index = new Map();
     const groups = new Map(); // group_id -> {group_name, params: Map(spec_id -> {title, values:Set})}
+
+(function addStockFacet(){
+  const vmap = new Map();
+  vmap.set(STOCK_VAL_IN,  new Set());
+  vmap.set(STOCK_VAL_OUT, new Set());
+  for (const art of want) {
+    const qty = art2qty.get(art) || 0;
+    (qty > 0 ? vmap.get(STOCK_VAL_IN) : vmap.get(STOCK_VAL_OUT)).add(art);
+  }
+  index.set(STOCK_SID, vmap);
+
+  const g = { group_id: STOCK_GROUP.group_id, group_name: STOCK_GROUP.group_name, params: new Map() };
+  g.params.set(STOCK_SID, {
+    spec_id: STOCK_SID,
+    title: STOCK_PARAM_TITLE,
+    values: new Map([
+      [STOCK_VAL_IN,  vmap.get(STOCK_VAL_IN).size],
+      [STOCK_VAL_OUT, vmap.get(STOCK_VAL_OUT).size],
+    ])
+  });
+  groups.set(g.group_id, g);
+})();
 
     for (const art of want) {
       const rows = perArt.get(art) || [];
