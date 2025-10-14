@@ -992,3 +992,27 @@ body.is-filter-mode #searchInput::-ms-reveal { display: none; }
 body.is-filter-mode .search-clear-btn { display: none !important; }
 
 
+/* --- Filter panel: clear button in search --- */
+.fp-search { position: relative; }
+.fp-search .form-control { padding-right: 36px; }
+.fp-clear-btn{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  border: 0;
+  background: transparent;
+  padding: 0 6px;
+  line-height: 1;
+  font-size: 18px;
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.fp-clear-btn:hover{ color: var(--color-primary); background: var(--color-secondary); }
+.fp-search.has-value .fp-clear-btn{ display: inline-block; }
+
+/* WhatsNew modal cosmetics */
+#whatsnewBody ul { margin-left: 1.25rem; }
+#whatsnewBody li { margin: .25rem 0; }

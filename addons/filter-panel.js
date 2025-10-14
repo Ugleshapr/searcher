@@ -287,11 +287,34 @@ document.addEventListener('results:rendered', () => {
     const header = document.createElement('div');
     header.className = 'fp-header';
     header.innerHTML = `
-      <input type="search" class="form-control" placeholder="Поиск параметра..." aria-label="Поиск параметра"/>
-      <button type="button" class="btn btn--secondary btn--sm" id="fpClear">Сбросить</button>
-    `;
+  <div class="fp-search">
+    <input type="search" class="form-control" placeholder="Поиск параметра..." aria-label="Поиск параметра"/>
+    <button type="button" class="fp-clear-btn" title="Очистить">×</button>
+  </div>
+  <button type="button" class="btn btn--secondary btn--sm" id="fpClear">Сбросить</button>
+`;
+
     _container.appendChild(header);
     _searchInput = header.querySelector('input[type="search"]');
+    const fpSearchBox = header.querySelector('.fp-search');
+const fpClearBtn  = header.querySelector('.fp-clear-btn');
+
+const toggleFpClear = () => {
+  if (!fpSearchBox || !_searchInput) return;
+  fpSearchBox.classList.toggle('has-value', !!_searchInput.value.trim());
+};
+toggleFpClear();
+
+_searchInput.addEventListener('input', toggleFpClear);
+
+fpClearBtn?.addEventListener('click', () => {
+  if (!_searchInput) return;
+  _searchInput.value = '';
+  toggleFpClear();
+  fillList(grouped);             // вернуть исходный порядок
+  if (_container) _container.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
 
     const list = document.createElement('div');
     list.id = 'fpList';

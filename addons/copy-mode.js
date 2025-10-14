@@ -11,6 +11,7 @@
     clearBtn: null,
     list: null,
     panelLeft: null,
+    selectAllBtn: null,
   };
 
   function keyOf(sku, name) {
@@ -23,6 +24,11 @@
   function setOn(on) {
   if (!els.switch) return;
   els.switch.checked = !!on;
+
+// WHATSNEW: маяк состояния на <body>
+if (on) document.body.classList.add('copy-mode');
+else    document.body.classList.remove('copy-mode');
+
 
   if (!on) {
     // при отключении — полностью очистить выбор и убрать бейджи/панель
@@ -142,17 +148,19 @@ function updatePanel() {
 
 
   function clearAll(forceDom = false) {
-   selected.clear();
-   if (forceDom) {
-     // убрать бейджи и подсветку, не трогая applyHighlights()
-     document.querySelectorAll('td.copyable .copy-badge').forEach(b => b.style.display = 'none');
-     document.querySelectorAll('tr.copy-selected').forEach(tr => tr.classList.remove('copy-selected'));
-   } else {
-     applyHighlights();
-   }
-   renderList(); // если список открыт — очистится
-   hideList();
- }
+  selected.clear();
+  if (forceDom) {
+    document.querySelectorAll('td.copyable .copy-badge').forEach(b => b.style.display = 'none');
+    document.querySelectorAll('tr.copy-selected').forEach(tr => tr.classList.remove('copy-selected'));
+  } else {
+    applyHighlights();
+  }
+  renderList();  // очистить выпадающий список, если открыт
+  hideList();
+  // гарантированно обновить счётчик и текст кнопки
+  updatePanel();
+}
+
 
   // ---------- выпадающий список ----------
   function isListHidden() {
@@ -241,6 +249,21 @@ function updatePanel() {
   return many;                            // 0, 5–9, 10–20, 25–30...
 }
 
+function selectAllVisible(max = 200) {
+  // Берём только то, что реально отрисовано в таблице сейчас
+  const cells = Array.from(document.querySelectorAll('#resultsBody td.copyable[data-sku][data-name]')).slice(0, max);
+  for (const cell of cells) {
+    const sku  = (cell.getAttribute('data-sku')  || '').trim();
+    const name = (cell.getAttribute('data-name') || '').trim();
+    if (!sku || !name) continue;
+    selected.set(keyOf(sku, name), { sku, name });
+    markCell(cell);
+  }
+  updatePanel();
+  if (!isListHidden()) renderList();
+}
+
+
   function cssEscape(s) {
     // минимальный эскейп для селектора атрибута
     return String(s).replace(/(["\\])/g, '\\$1');
@@ -255,6 +278,13 @@ function updatePanel() {
     els.clearBtn  = document.getElementById('copyClear');
     els.list      = document.getElementById('copyList');
     els.panelLeft = document.querySelector('.copy-panel-left');
+    els.selectAllBtn = document.getElementById('copySelectAll');
+els.selectAllBtn && els.selectAllBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  if (!isOn()) return;      // доступно только когда COPY включён
+  selectAllVisible(200);    // как просил — не более 200
+});
+
 
     if (els.switch) {
       // по умолчанию режим выключен на каждой загрузке
@@ -297,6 +327,7 @@ function updatePanel() {
 
     updatePanel();
     applyHighlights();
+   document.body.classList.remove('copy-mode');
   }
 
   function init() {
