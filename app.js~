@@ -1525,10 +1525,8 @@ if (searchInput) {
     let title, html;
     try {
       const md = await loadMarkdown(APP_VERSION);
-title = parseTitle(md);
-// Удаляем первую строку (# Заголовок), чтобы не дублировалась в теле
-const cleaned = md.replace(/^#\s+.+(?:\r?\n)+/, '');
-html = mdToHtml(cleaned);
+      title = parseTitle(md);
+      html  = mdToHtml(md);
     } catch {
       title = 'Что нового';
       html  = '<p>Описание обновления будет добавлено позже.</p>';
