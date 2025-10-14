@@ -1438,3 +1438,173 @@ if (searchInput) {
 });
 }
 
+// === WHAT'S NEW (changelog) ===============================================
+(function () {
+  const APP_VERSION = document.documentElement.getAttribute('data-app-version') || '';
+  const STORAGE_KEY = v => `whatsnew:${v}`;
+  const INFO_BTN_SELECTOR = '#dataInfo';
+
+  // --- Проверки активных режимов (используем то, что есть; плюс класс-маркеры как фолбэк)
+  function isCopyActive() {
+  try {
+    if (window.CopyMode && typeof window.CopyMode.isOn === 'function') {
+      return !!window.CopyMode.isOn();
+    }
+  } catch {}
+  return document.body.classList.contains('copy-mode');
+}
+
+  function isFilterActive() {
+    try {
+      if (window.FilterPanel && typeof window.FilterPanel.isActive === 'function') return !!window.FilterPanel.isActive();
+    } catch {}
+    return document.body.classList.contains('is-filter-mode');
+  }
+
+  // --- Простой безопасный Markdown → HTML
+  function mdToHtml(md) {
+    const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    // ссылки [text](https://…)
+    md = md.replace(/\[([^\]]+?)\]\((https?:\/\/[^\s)]+)\)/g, (_m, t, u) =>
+      `<a href="${u}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`);
+
+    // жирный/курсив
+    md = md.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    md = md.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+    // заголовки
+    md = md.replace(/^#\s+(.+)$/gm, '<h3 class="mt-1 mb-3">$1</h3>');
+    md = md.replace(/^##\s+(.+)$/gm, '<h5 class="mt-3 mb-2">$1</h5>');
+
+    // списки/параграфы
+    const lines = md.split(/\r?\n/);
+    let out = [], inList = false;
+    for (const line of lines) {
+      const m = line.match(/^\s*[-*]\s+(.*)$/);
+      if (m) {
+        if (!inList) { out.push('<ul class="mb-0">'); inList = true; }
+        out.push(`<li>${m[1]}</li>`);
+      } else {
+        if (inList) { out.push('</ul>'); inList = false; }
+        if (line.trim() === '') out.push('');
+        else out.push(`<p class="mb-2">${line}</p>`);
+      }
+    }
+    if (inList) out.push('</ul>');
+    return out.join('\n');
+  }
+
+  async function loadMarkdown(version) {
+  const url = `addons/whatsnew/Release.md?v=${encodeURIComponent(APP_VERSION)}`;
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`Release notes not found: ${url}`);
+  return res.text();
+}
+
+
+  function parseTitle(md) {
+    const m = md.match(/^#\s+(.+)$/m);
+    return m ? m[1].trim() : 'Что нового';
+  }
+
+  function setModalContent({ version, title, html }) {
+    const v = document.getElementById('whatsnewVersionBadge');
+    const t = document.getElementById('whatsnewTitle');
+    const b = document.getElementById('whatsnewBody');
+    if (v) v.textContent = version || '';
+    if (t) t.textContent = title || 'Что нового';
+    if (b) b.innerHTML = html || '';
+  }
+
+  let triedAutoShow = false;
+  async function openWhatsNew(auto = false) {
+    if (!APP_VERSION) return;
+    if (isFilterActive() || isCopyActive()) return; // запрещено в этих режимах
+
+    let title, html;
+    try {
+      const md = await loadMarkdown(APP_VERSION);
+      title = parseTitle(md);
+      html  = mdToHtml(md);
+    } catch {
+      title = 'Что нового';
+      html  = '<p>Описание обновления будет добавлено позже.</p>';
+    }
+    setModalContent({ version: APP_VERSION, title, html });
+
+    const modalEl = document.getElementById('whatsnewModal');
+    if (!modalEl) return;
+    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
+    modal.show();
+
+    const done = () => {
+      modal.hide();
+      if (auto) {
+        try { localStorage.setItem(STORAGE_KEY(APP_VERSION), '1'); } catch {}
+      }
+    };
+    const ok  = document.getElementById('whatsnewOkBtn');
+    const x   = document.getElementById('whatsnewCloseX');
+    if (ok) ok.onclick = done;
+    if (x)  x.onclick  = done;
+
+    // ставим флаг сразу при автопоказе — чтобы при F5 не мигало второй раз
+    if (auto) {
+      try { localStorage.setItem(STORAGE_KEY(APP_VERSION), '1'); } catch {}
+    }
+  }
+
+  function maybeAutoShow() {
+    if (triedAutoShow) return;
+    triedAutoShow = true;
+    if (!APP_VERSION) return;
+    try {
+      if (localStorage.getItem(STORAGE_KEY(APP_VERSION))) return; // уже показывали
+    } catch {}
+    if (isFilterActive() || isCopyActive()) return;
+    openWhatsNew(true);
+  }
+
+  // Показываем "Что нового" один раз после первой реальной отрисовки результатов
+document.addEventListener('results:rendered', () => {
+  if (triedAutoShow) return;
+  triedAutoShow = true;
+  maybeAutoShow();
+}, { once: true });
+
+  // --- Клик по уже существующей кнопке "i" (datasetInfo)
+  document.addEventListener('click', (e) => {
+    const infoBtn = e.target.closest(INFO_BTN_SELECTOR);
+    if (!infoBtn) return;
+    if (isFilterActive() || isCopyActive()) return; // запрещаем в этих режимах
+    openWhatsNew(false);
+  });
+
+  
+})();
+
+
+// === Soft refresh on version change (once) ================================
+(function () {
+  const cur = document.documentElement.getAttribute('data-app-version') || '';
+  const KEY = 'app:lastVersion';
+  try {
+    const prev = localStorage.getItem(KEY) || '';
+    if (cur && prev && prev !== cur) {
+      // СНАЧАЛА фиксируем новую версию...
+      localStorage.setItem(KEY, cur);
+      // ...ЗАТЕМ один раз мягко перезагружаем страницу
+      location.reload();
+      return;
+    }
+    // Первая загрузка или уже актуальная версия — просто зафиксировать
+    if (cur && !prev) localStorage.setItem(KEY, cur);
+  } catch {
+    // Если localStorage недоступен — тихо игнорируем
+  }
+})();
+
+
+
+

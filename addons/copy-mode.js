@@ -25,6 +25,11 @@
   if (!els.switch) return;
   els.switch.checked = !!on;
 
+// WHATSNEW: маяк состояния на <body>
+if (on) document.body.classList.add('copy-mode');
+else    document.body.classList.remove('copy-mode');
+
+
   if (!on) {
     // при отключении — полностью очистить выбор и убрать бейджи/панель
     clearAll(true);           // сброс selected, снятие бейджей, скрыть список
@@ -322,6 +327,7 @@ els.selectAllBtn && els.selectAllBtn.addEventListener('click', (e) => {
 
     updatePanel();
     applyHighlights();
+   document.body.classList.remove('copy-mode');
   }
 
   function init() {
