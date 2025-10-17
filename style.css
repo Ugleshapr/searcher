@@ -1025,7 +1025,7 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   z-index: 4000;
 
   /* прячем весь блок за край, оставляем «ушко» 24px */
-  transform: translateX(calc(100% - 13px));
+  transform: translateX(calc(100% - 1px));
   transition:
     transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 400ms ease;
