@@ -1017,20 +1017,12 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
 #whatsnewBody ul { margin-left: 1.25rem; }
 #whatsnewBody li { margin: .25rem 0; }
 
-/* ===== AUTH floating tab ===== */
+/* ===== AUTH floating tab (reworked) ===== */
 .auth-tab{
   position: fixed;
   top: 12px;
   right: 0;
   z-index: 4000;
-  /* Прячем почти целиком, оставляем «ушки» в 24px */
-  transform: translateX(calc(100% - 24px));
-  transition: transform var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard);
-}
-.auth-tab:hover,
-.auth-tab:focus-within,
-.auth-tab.auth-tab--open{
-  transform: translateX(0);
 }
 .auth-tab__peek{
   width: 24px; height: 48px;
@@ -1040,7 +1032,12 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   box-shadow: -8px 0 14px rgba(0,0,0,.12);
   cursor: pointer;
 }
+
+/* Панель теперь абсолютная и спрятана за ушком по умолчанию */
 .auth-tab__content{
+  position: absolute;
+  top: 0;
+  right: 24px;                 /* панель появляется слева от ушка */
   width: 320px;
   max-width: 90vw;
   background: var(--color-surface);
@@ -1050,7 +1047,21 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   border-bottom-left-radius: var(--radius-lg);
   box-shadow: -12px 8px 22px rgba(0,0,0,.12);
   padding: 12px;
+
+  opacity: 0;
+  transform: translateX(12px);
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-standard),
+              transform var(--duration-normal) var(--ease-standard);
 }
+.auth-tab:hover .auth-tab__content,
+.auth-tab:focus-within .auth-tab__content,
+.auth-tab.auth-tab--open .auth-tab__content{
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
 .auth-tab__header{
   display:flex; align-items:center; justify-content:space-between;
   margin-bottom: 8px;
@@ -1062,6 +1073,30 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   width: 28px; height: 28px;
   line-height: 26px; font-size: 18px; cursor: pointer;
 }
+
+/* Inline-статус под заголовком */
+.auth-status{
+  font-size: 13px;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+}
+.auth-status.is-success{ color: var(--color-success); }
+.auth-status.is-error{ color: var(--color-error); }
+
+/* Кнопки: состояние загрузки со спиннером */
+.btn.is-loading { opacity: .8; pointer-events: none; }
+.btn.is-loading::after{
+  content:"";
+  margin-left: 8px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  display: inline-block;
+  animation: authspin .8s linear infinite;
+}
+@keyframes authspin { to { transform: rotate(360deg); } }
+
 .auth-field{ margin-bottom: 8px; }
 .auth-hint{ display:block; margin-top: 8px; color: var(--color-text-secondary); }
 

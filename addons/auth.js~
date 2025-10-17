@@ -35,10 +35,6 @@ function withLoading(btn, fn){
   const btnLoginGoogle = $('#btnLoginGoogle');
   
 
-  function toast(msg){ alert(msg); }
-  function setLoading(on){
-    [btnLogin, btnRegister, btnLogout, btnLoginGoogle].forEach(b => b && (b.disabled = !!on));
-  }
   function showLogged(user){
     if (!vOut || !vIn) return;
     if (user){
@@ -54,11 +50,25 @@ function withLoading(btn, fn){
     }
   }
 
-  // выезд панели
-  tab?.classList.remove('auth-tab--open');
-  peek?.addEventListener('mouseenter', () => tab.classList.add('auth-tab--open'));
-  peek?.addEventListener('click',      () => tab.classList.add('auth-tab--open'));
-  closeBtn?.addEventListener('click',  () => tab.classList.remove('auth-tab--open'));
+  // --- выезд/скрытие панели с задержкой ---
+let hideTmr = null;
+function openTab(){ tab?.classList.add('auth-tab--open'); }
+function closeTab(){ tab?.classList.remove('auth-tab--open'); }
+function scheduleHide(ms=2000){
+  clearTimeout(hideTmr);
+  hideTmr = setTimeout(closeTab, ms);
+}
+function cancelHide(){ clearTimeout(hideTmr); }
+
+// показывать при наведении на ушко/фокус
+peek?.addEventListener('mouseenter', openTab);
+peek?.addEventListener('click',      openTab);
+
+// если курсор зашёл в область панели — отменяем автоскрытие
+tab?.addEventListener('mouseenter',  cancelHide);
+// как только вышли мышью с панели или ушка — прячем через 2с
+tab?.addEventListener('mouseleave',  () => scheduleHide(2000));
+
   
   // закрыть по клику вне панели
 document.addEventListener('click', (e) => {
@@ -155,7 +165,8 @@ btnLoginGoogle?.addEventListener('click', withLoading(btnLoginGoogle, async () =
       el?.addEventListener('focus',       ensureFirebase, { once: true });
     });
 
-  // Гость по умолчанию
-  showLogged(null);
+  document.addEventListener('DOMContentLoaded', () => {
+  ensureFirebase().catch(console.error);
+});
 })();
 

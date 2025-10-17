@@ -1054,7 +1054,6 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   transition: opacity var(--duration-normal) var(--ease-standard),
               transform var(--duration-normal) var(--ease-standard);
 }
-.auth-tab:hover .auth-tab__content,
 .auth-tab:focus-within .auth-tab__content,
 .auth-tab.auth-tab--open .auth-tab__content{
   opacity: 1;
