@@ -1,6 +1,25 @@
 // addons/auth.js
 (() => {
   const $ = sel => document.querySelector(sel);
+const statusBox = document.getElementById('authStatus');
+
+function setStatus(msg = '', type = 'info'){
+  if (!statusBox) return;
+  statusBox.textContent = msg;
+  statusBox.classList.remove('is-success','is-error');
+  if (type === 'success') statusBox.classList.add('is-success');
+  if (type === 'error')   statusBox.classList.add('is-error');
+}
+
+function withLoading(btn, fn){
+  return async (...args) => {
+    if (!btn) return;
+    btn.classList.add('is-loading');
+    try { return await fn(...args); }
+    finally { btn.classList.remove('is-loading'); }
+  }
+}
+
   const tab = $('#authTab');
   const peek = tab?.querySelector('.auth-tab__peek');
   const closeBtn = $('#authClose');
@@ -14,11 +33,8 @@
   const btnRegister = $('#btnRegister');
   const btnLogout = $('#btnLogout');
   const btnLoginGoogle = $('#btnLoginGoogle');
+  
 
-  function toast(msg){ alert(msg); }
-  function setLoading(on){
-    [btnLogin, btnRegister, btnLogout, btnLoginGoogle].forEach(b => b && (b.disabled = !!on));
-  }
   function showLogged(user){
     if (!vOut || !vIn) return;
     if (user){
@@ -39,6 +55,19 @@
   peek?.addEventListener('mouseenter', () => tab.classList.add('auth-tab--open'));
   peek?.addEventListener('click',      () => tab.classList.add('auth-tab--open'));
   closeBtn?.addEventListener('click',  () => tab.classList.remove('auth-tab--open'));
+  
+  // закрыть по клику вне панели
+document.addEventListener('click', (e) => {
+  if (!tab) return;
+  const within = tab.contains(e.target);
+  if (!within) tab.classList.remove('auth-tab--open');
+});
+
+// закрыть по Esc
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') tab?.classList.remove('auth-tab--open');
+});
+
 
   // ---- Firebase (лениво) ----
   let auth, app, _mods;
@@ -64,58 +93,53 @@
 
     app = initializeApp(firebaseConfig);
     auth = getAuth(app);
+    const { setPersistence, browserLocalPersistence } = _mods;
+await setPersistence(auth, browserLocalPersistence);
+
 
     // Слушатель состояния
-    onAuthStateChanged(auth, (user) => showLogged(user));
+    onAuthStateChanged(auth, (user) => {
+  showLogged(user);
+  if (user) setStatus('Вы авторизованы', 'success'); else setStatus('');
+});
+
 
     // Email/Password
-    btnLogin?.addEventListener('click', async () => {
-      const email = inEmail?.value?.trim(), pass = inPass?.value || '';
-      if (!email || !pass) return toast('Введите email и пароль');
-      try{
-        setLoading(true);
-        await signInWithEmailAndPassword(auth, email, pass);
-        toast('Готово: вы вошли.');
-        inPass.value = '';
-      }catch(e){ toast('Ошибка входа: ' + (e?.message || e)); }
-      finally{ setLoading(false); }
-    });
+    
+btnLogin?.addEventListener('click', withLoading(btnLogin, async () => {
+  const email = inEmail?.value?.trim(), pass = inPass?.value || '';
+  if (!email || !pass) { setStatus('Введите email и пароль', 'error'); return; }
+  await _mods.signInWithEmailAndPassword(auth, email, pass);
+  inPass.value = '';
+  setStatus('Вход выполнен ✅', 'success');
+}));
 
-    btnRegister?.addEventListener('click', async () => {
-      const email = inEmail?.value?.trim(), pass = inPass?.value || '';
-      if (!email || !pass) return toast('Введите email и пароль');
-      try{
-        setLoading(true);
-        await createUserWithEmailAndPassword(auth, email, pass);
-        toast('Аккаунт создан и вы вошли.');
-        inPass.value = '';
-      }catch(e){ toast('Ошибка регистрации: ' + (e?.message || e)); }
-      finally{ setLoading(false); }
-    });
+btnRegister?.addEventListener('click', withLoading(btnRegister, async () => {
+  const email = inEmail?.value?.trim(), pass = inPass?.value || '';
+  if (!email || !pass) { setStatus('Введите email и пароль', 'error'); return; }
+  await _mods.createUserWithEmailAndPassword(auth, email, pass);
+  inPass.value = '';
+  setStatus('Аккаунт создан и вход выполнен ✅', 'success');
+}));
 
-    btnLogout?.addEventListener('click', async () => {
-      try{
-        setLoading(true);
-        await signOut(auth);
-        toast('Вы вышли.');
-      }catch(e){ toast('Ошибка выхода: ' + (e?.message || e)); }
-      finally{ setLoading(false); }
-    });
+btnLogout?.addEventListener('click', withLoading(btnLogout, async () => {
+  await _mods.signOut(auth);
+  setStatus('Вы вышли', 'info');
+}));
 
-    // Google Sign-In (popup)
-    btnLoginGoogle?.addEventListener('click', async () => {
-      try{
-        setLoading(true);
-        const provider = new _mods.GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        await _mods.signInWithPopup(auth, provider);
-        toast('Вход через Google выполнен.');
-      }catch(e){
-        // Пользователь мог закрыть окно — это ок
-        if (String(e?.message || e).includes('popup-closed-by-user')) return;
-        toast('Ошибка Google-входа: ' + (e?.message || e));
-      }finally{ setLoading(false); }
-    });
+// Google
+btnLoginGoogle?.addEventListener('click', withLoading(btnLoginGoogle, async () => {
+  try{
+    const provider = new _mods.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await _mods.signInWithPopup(auth, provider);
+    setStatus('Вход через Google выполнен ✅', 'success');
+  }catch(e){
+    if (String(e?.message || e).includes('popup-closed-by-user')) return;
+    setStatus('Ошибка Google-входа: ' + (e?.message || e), 'error');
+  }
+}));
+
 
     return auth;
   }
