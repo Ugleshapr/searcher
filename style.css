@@ -1037,13 +1037,19 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
 }
 
 .auth-tab__peek{
-  width: 24px; height: 48px;
+  position: absolute;
+  left: -24px;          /* ушко торчит слева от карточки ровно на свою ширину */
+  top: 12px;            /* прижимаем к верхнему внутреннему отступу карточки */
+  width: 24px;
+  height: 48px;
   background: var(--color-primary);
   border-top-left-radius: var(--radius-base);
   border-bottom-left-radius: var(--radius-base);
   box-shadow: -8px 0 14px rgba(0,0,0,.12);
   cursor: pointer;
+  z-index: 1;           /* ушко поверх рамки карточки */
 }
+
 
 /* панель без собственной «приезжей» анимации — едет вместе с контейнером */
 .auth-tab__content{

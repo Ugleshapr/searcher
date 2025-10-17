@@ -1026,11 +1026,14 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
 
   /* прячем весь блок за край, оставляем «ушко» 24px */
   transform: translateX(calc(100% - 24px));
-  transition: transform var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard);
+  transition:
+    transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 400ms ease;
 }
 .auth-tab.auth-tab--open,
 .auth-tab:focus-within{
   transform: translateX(0);
+  box-shadow: -12px 0 28px rgba(0,0,0,.15);
 }
 
 .auth-tab__peek{
@@ -1068,7 +1071,7 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   pointer-events: auto;
 }
 
-..auth-tab__header{
+.auth-tab__header{
   display:flex; align-items:center; justify-content:space-between;
   margin-bottom: 8px;
 }
