@@ -71,10 +71,19 @@
 
     <div id="authLoggedIn" class="auth-view" style="display:none;">
       <p class="mb-8" id="authUserEmail"></p>
+       <!-- Показывается, если у пользователя ещё нет username -->
+<div id="usernameBox" class="auth-view" style="display:none; margin-top:8px;">
+  <div class="auth-field">
+    <input type="text" id="usernameInput" class="form-control" placeholder="Выбери логин: a-z, 0-9, _ (3–20)">
+  </div>
+  <button id="btnClaimUsername" class="btn btn--outline btn--full-width">Забронировать логин</button>
+</div>
       <button id="btnLogout" class="btn btn--outline btn--full-width">Выйти</button>
+     
+
     </div>
 
-    <small class="auth-hint">Авторизация по желанию. Без входа всё работает.</small>
+    <small class="auth-hint">Авторизация по желанию. Пока что...</small>
   </div>
 </div>
 
