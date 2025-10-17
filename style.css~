@@ -1023,7 +1023,16 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   top: 12px;
   right: 0;
   z-index: 4000;
+
+  /* прячем весь блок за край, оставляем «ушко» 24px */
+  transform: translateX(calc(100% - 24px));
+  transition: transform var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard);
 }
+.auth-tab.auth-tab--open,
+.auth-tab:focus-within{
+  transform: translateX(0);
+}
+
 .auth-tab__peek{
   width: 24px; height: 48px;
   background: var(--color-primary);
@@ -1033,11 +1042,9 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   cursor: pointer;
 }
 
-/* Панель теперь абсолютная и спрятана за ушком по умолчанию */
+/* панель без собственной «приезжей» анимации — едет вместе с контейнером */
 .auth-tab__content{
-  position: absolute;
-  top: 0;
-  right: 24px;                 /* панель появляется слева от ушка */
+  position: relative;
   width: 320px;
   max-width: 90vw;
   background: var(--color-surface);
@@ -1048,13 +1055,12 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   box-shadow: -12px 8px 22px rgba(0,0,0,.12);
   padding: 12px;
 
-  opacity: 0;
-  transform: translateX(12px);
-  pointer-events: none;
-  transition: opacity var(--duration-normal) var(--ease-standard),
-              transform var(--duration-normal) var(--ease-standard);
+  /* убираем старую анимацию прозрачности/сдвига */
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
-.auth-tab:hover .auth-tab__content,
+
 .auth-tab:focus-within .auth-tab__content,
 .auth-tab.auth-tab--open .auth-tab__content{
   opacity: 1;
@@ -1062,10 +1068,11 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   pointer-events: auto;
 }
 
-.auth-tab__header{
+..auth-tab__header{
   display:flex; align-items:center; justify-content:space-between;
   margin-bottom: 8px;
 }
+
 .auth-x{
   border: 1px solid var(--color-border);
   background: transparent;

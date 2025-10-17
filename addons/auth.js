@@ -53,7 +53,7 @@ function withLoading(btn, fn){
 let hideTmr = null;
 function openTab(){ tab?.classList.add('auth-tab--open'); }
 function closeTab(){ tab?.classList.remove('auth-tab--open'); }
-function scheduleHide(ms=2000){
+function scheduleHide(ms=1000){
   clearTimeout(hideTmr);
   hideTmr = setTimeout(closeTab, ms);
 }
@@ -66,7 +66,7 @@ peek?.addEventListener('click',      openTab);
 // если курсор зашёл в область панели — отменяем автоскрытие
 tab?.addEventListener('mouseenter',  cancelHide);
 // как только вышли мышью с панели или ушка — прячем через 2с
-tab?.addEventListener('mouseleave',  () => scheduleHide(2000));
+tab?.addEventListener('mouseleave',  () => scheduleHide(1000));
 
   
   // закрыть по клику вне панели
