@@ -1045,6 +1045,8 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   background: var(--color-primary);
   border-top-left-radius: var(--radius-base);
   border-bottom-left-radius: var(--radius-base);
+  border: 1px solid var(--color-card-border);
+  border-right: none;       /* чтобы не было стыка со стенкой карточки */
   box-shadow: -8px 0 14px rgba(0,0,0,.12);
   cursor: pointer;
   z-index: 1;           /* ушко поверх рамки карточки */
