@@ -1025,7 +1025,7 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   z-index: 4000;
 
   /* прячем весь блок за край, оставляем «ушко» 24px */
-  transform: translateX(calc(100% - 24px));
+  transform: translateX(calc(100% - 18px));
   transition:
     transform 400ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 400ms ease;
@@ -1038,18 +1038,19 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
 
 .auth-tab__peek{
   position: absolute;
-  right: -24px;      /* ← ключ: выступает вправо на 24px */
-  top: 12px;
+  left: -24px;          /* ушко торчит слева от карточки ровно на свою ширину */
+  top: 12px;            /* прижимаем к верхнему внутреннему отступу карточки */
   width: 24px;
   height: 48px;
   background: var(--color-primary);
   border-top-left-radius: var(--radius-base);
   border-bottom-left-radius: var(--radius-base);
+  border: 1px solid var(--color-card-border);
+  border-right: none;       /* чтобы не было стыка со стенкой карточки */
   box-shadow: -8px 0 14px rgba(0,0,0,.12);
   cursor: pointer;
-  z-index: 1;
-  border-left: none;       /* чтобы не было стыка со стенкой карточки */
-  }
+  z-index: 1;           /* ушко поверх рамки карточки */
+}
 
 
 /* панель без собственной «приезжей» анимации — едет вместе с контейнером */
