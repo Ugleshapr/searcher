@@ -63,9 +63,6 @@
         <input type="password" id="authPass" class="form-control" placeholder="Пароль">
       </div>
       <button id="btnLogin" class="btn btn--primary btn--full-width">Войти</button>
-      <button id="btnLoginGoogle" class="btn btn--outline btn--full-width" style="margin-top:8px;">
-  Войти через Google
-</button>
       <button id="btnRegister" class="btn btn--secondary btn--full-width" style="margin-top:8px;">Регистрация</button>
     </div>
 

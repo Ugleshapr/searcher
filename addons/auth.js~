@@ -1,0 +1,115 @@
+// addons/auth.js
+(() => {
+  // ---- UI refs ----
+  const $ = sel => document.querySelector(sel);
+  const tab = $('#authTab');
+  const peek = tab?.querySelector('.auth-tab__peek');
+  const closeBtn = $('#authClose');
+  const vOut = $('#authLoggedOut');
+  const vIn  = $('#authLoggedIn');
+  const title = $('#authTitle');
+  const emailEl = $('#authUserEmail');
+  const inEmail = $('#authEmail');
+  const inPass  = $('#authPass');
+  const btnLogin = $('#btnLogin');
+  const btnRegister = $('#btnRegister');
+  const btnLogout = $('#btnLogout');
+
+  // ---- minimal helpers ----
+  function toast(msg){
+    alert(msg); // простой алерт; при желании заменишь на свой модал/toast
+  }
+  function setLoading(on){
+    [btnLogin, btnRegister, btnLogout].forEach(b => b && (b.disabled = !!on));
+  }
+  function showLogged(user){
+    if (!vOut || !vIn) return;
+    if (user){
+      vOut.style.display = 'none';
+      vIn.style.display = '';
+      title.textContent = 'Аккаунт';
+      emailEl.textContent = user.email || '';
+    }else{
+      vOut.style.display = '';
+      vIn.style.display = 'none';
+      title.textContent = 'Гость';
+      emailEl.textContent = '';
+    }
+  }
+
+  // ---- sliding behavior ----
+  peek?.addEventListener('mouseenter', () => tab.classList.add('auth-tab--open'));
+  peek?.addEventListener('click', () => tab.classList.add('auth-tab--open'));
+  closeBtn?.addEventListener('click', () => tab.classList.remove('auth-tab--open'));
+
+  // ---- Firebase init (lazy via dynamic import) ----
+  let auth = null, app = null;
+  async function ensureFirebase(){
+    if (auth) return auth;
+    // Cвои ключи проекта:
+    const firebaseConfig = {
+      apiKey: "AIzaSyBxENxmzeWCU-pRdig5YG74PK3aL15XunA",
+      authDomain: "searcher-589d2.firebaseapp.com",
+      projectId: "searcher-589d2",
+    };
+    // Модули Firebase через gstatic (нужны домены в CSP)
+    const [{ initializeApp }] = await Promise.all([
+      import('https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js'),
+    ]);
+    const { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } =
+      await import('https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js');
+
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+
+    // state
+    onAuthStateChanged(auth, (user) => {
+      showLogged(user);
+    });
+
+    // actions
+    btnLogin?.addEventListener('click', async () => {
+      const email = inEmail?.value?.trim(), pass = inPass?.value || '';
+      if (!email || !pass) return toast('Введите email и пароль');
+      try{
+        setLoading(true);
+        await signInWithEmailAndPassword(auth, email, pass);
+        toast('Готово: вы вошли.');
+        inPass.value = '';
+      }catch(e){ toast('Ошибка входа: ' + (e?.message || e)); }
+      finally{ setLoading(false); }
+    });
+
+    btnRegister?.addEventListener('click', async () => {
+      const email = inEmail?.value?.trim(), pass = inPass?.value || '';
+      if (!email || !pass) return toast('Введите email и пароль');
+      try{
+        setLoading(true);
+        await createUserWithEmailAndPassword(auth, email, pass);
+        toast('Аккаунт создан и вы вошли.');
+        inPass.value = '';
+      }catch(e){ toast('Ошибка регистрации: ' + (e?.message || e)); }
+      finally{ setLoading(false); }
+    });
+
+    btnLogout?.addEventListener('click', async () => {
+      try{
+        setLoading(true);
+        await signOut(auth);
+        toast('Вы вышли.');
+      }catch(e){ toast('Ошибка выхода: ' + (e?.message || e)); }
+      finally{ setLoading(false); }
+    });
+
+    return auth;
+  }
+
+  // Ленивая подгрузка Firebase: только при фокусе/клике в полях или на кнопках
+  const lazyEls = [inEmail, inPass, btnLogin, btnRegister, btnLogout, peek];
+  lazyEls.forEach(el => el && el.addEventListener('pointerdown', ensureFirebase, { once: true }));
+  lazyEls.forEach(el => el && el.addEventListener('focus', ensureFirebase, { once: true }));
+
+  // Без авторизации интерфейс работает как обычно
+  showLogged(null);
+})();
+
