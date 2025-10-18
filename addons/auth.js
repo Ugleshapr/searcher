@@ -215,29 +215,71 @@ btnClaim?.addEventListener('click', withLoading(btnClaim, async () => {
     auth = getAuth(app);
     const { setPersistence, browserLocalPersistence } = _mods;
 await setPersistence(auth, browserLocalPersistence);
-db = getFirestore(app); // ← теперь app уже есть
+db = getFirestore(app); 
+
+// создать/поддержать профиль юзера (approved:false по умолчанию)
+async function ensureUserDoc(user) {
+  const ref = doc(db, 'users', user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      email: user.email || null,
+      displayName: user.displayName || null,
+      approved: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } else {
+    // на всякий случай держим updatedAt в актуальном состоянии
+    await setDoc(ref, { updatedAt: serverTimestamp() }, { merge: true });
+  }
+}
+
+async function isApproved(uid){
+  const ref = doc(db, 'users', uid);
+  const s = await getDoc(ref);
+  return s.exists() && s.data().approved === true;
+}
+
+// мягкая «разморозка» UI для гостей
+function blockAsPending(){
+  setStatus('Аккаунт на модерации. Мы уведомим, когда активируем.', 'error');
+}
+
 
 
     // Слушатель состояния
-    onAuthStateChanged(auth, async (user) => {
+  onAuthStateChanged(auth, async (user) => {
   showLogged(user);
-  if (user) {
-    setStatus('Вы авторизованы', 'success');
-    // сразу попробуем кэш → если нет — подтянем из Firestore
-    const cached = getCachedUsername();
-    if (cached) {
-      title.textContent = '@' + cached;
-      // бокс скрыть и на всякий случай асинхронно синхронизировать
-      const box = document.getElementById('usernameBox'); if (box) box.style.display = 'none';
-      getUserProfile(user.uid).then(()=>{}).catch(()=>{});
-    } else {
-      await showOrHideUsernameBox(user);
-    }
-  } else {
+
+  if (!user) {
     setStatus('');
     title.textContent = 'Гость';
     cacheUsername('');
     const box = document.getElementById('usernameBox'); if (box) box.style.display = 'none';
+    return;
+  }
+
+  // гарантируем, что профиль создан (approved:false по умолчанию)
+  await ensureUserDoc(user);
+
+  // если пока не одобрен — выходим и показываем статус
+  const ok = await isApproved(user.uid);
+  if (!ok) {
+    blockAsPending();
+    await _mods.signOut(auth);
+    return;
+  }
+
+  
+  setStatus('Вы авторизованы', 'success');
+  const cached = getCachedUsername();
+  if (cached) {
+    title.textContent = '@' + cached;
+    const box = document.getElementById('usernameBox'); if (box) box.style.display = 'none';
+    getUserProfile(user.uid).then(()=>{}).catch(()=>{});
+  } else {
+    await showOrHideUsernameBox(user);
   }
 });
 
@@ -256,10 +298,14 @@ btnLogin?.addEventListener('click', withLoading(btnLogin, async () => {
 btnRegister?.addEventListener('click', withLoading(btnRegister, async () => {
   const email = inEmail?.value?.trim(), pass = inPass?.value || '';
   if (!email || !pass) { setStatus('Введите email и пароль', 'error'); return; }
-  await _mods.createUserWithEmailAndPassword(auth, email, pass);
-  inPass.value = '';
-  setStatus('Аккаунт создан и вход выполнен ✅', 'success');
+
+  const cred = await _mods.createUserWithEmailAndPassword(auth, email, pass);
+
+  await ensureUserDoc(cred.user);
+  blockAsPending();
+  await _mods.signOut(auth);
 }));
+
 
 btnLogout?.addEventListener('click', withLoading(btnLogout, async () => {
   await _mods.signOut(auth);
@@ -272,6 +318,13 @@ btnLoginGoogle?.addEventListener('click', withLoading(btnLoginGoogle, async () =
     const provider = new _mods.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     await _mods.signInWithPopup(auth, provider);
+    await ensureUserDoc(auth.currentUser);
+if (!(await isApproved(auth.currentUser.uid))) {
+  blockAsPending();
+  await _mods.signOut(auth);
+  return;
+}
+setStatus('Вход через Google выполнен ✅', 'success');
     setStatus('Вход через Google выполнен ✅', 'success');
   }catch(e){
     if (String(e?.message || e).includes('popup-closed-by-user')) return;
