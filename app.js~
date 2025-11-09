@@ -956,7 +956,7 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
     return t !== q ? [q, t] : [q];
   }
 
-  async performSearch() {
+  performSearch() {
     const query = (document.getElementById('searchInput')?.value || '').trim();
     if (!query) {
       this.filteredData = [];
