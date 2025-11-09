@@ -1040,24 +1040,6 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
 }
 
 
-
-      // сортируем как ввели
-      this.filteredData.sort(
-        (a, b) => order.get(a.__article) - order.get(b.__article)
-      );
-
-      this._page = 1;
-      // если идёт поиск по артикулам — лениво подгружаем список выведенных
-await this._ensureWithdrawnLoaded().catch(() => { /* молча, не критично */ });
-
-// помечаем выведенные
-for (const it of this.filteredData) {
-  it.__withdrawn = this._withdrawnSet?.has(it.__article) || false;
-}
-
-      this.displayResults();
-      return; // важно: не запускаем обычную логику every()/скоринга ниже
-    }
     // Фильтрация: если есть буквы — ищем только по названию
     this.filteredData = this.data.filter(item =>
   parts.every(

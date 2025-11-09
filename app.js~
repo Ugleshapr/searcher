@@ -992,77 +992,54 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
       parts.length >= 2 && parts.every(p => /^\d{6}$/.test(p));
 
     if (isMultiArticle) {
-      // уникальные коды в порядке ввода
-      const uniq = [...new Set(parts)];
-      const order = new Map(uniq.map((a, i) => [a, i]));
+  // уникальные коды в порядке ввода
+  const uniq = [...new Set(parts)];
+  const order = new Map(uniq.map((a, i) => [a, i]));
 
-      // фильтруем строго по __article (он у тебя уже нормализован)
-      this.filteredData = this.data.filter(it => order.has(it.__article));
-      
-      await this._ensureWithdrawnLoaded().catch(() => {});
+  // базовая выборка из base.csv
+  this.filteredData = this.data.filter(it => order.has(it.__article));
 
-const uniq = [...new Set(parts)];
-const order = new Map(uniq.map((a, i) => [a, i]));
+  // добиваем «чисто выведенные»
+  await this._ensureWithdrawnLoaded().catch(() => {});
+  const have = new Set(this.filteredData.map(it => it.__article));
+  for (const code of uniq) {
+    if (have.has(code)) continue;
+    const meta = this._withdrawnIndex?.get(code);
+    if (!meta) continue;
+    this.filteredData.push({
+      'Наименование': meta.name || '',
+      'Артикул': meta.art || code,
+      'Цена': '',
+      'Документы': '',
+      'Характеристики': '',
+      'Количество': '0',
+      __name: this.normalizeForFuzzySearch(meta.name || ''),
+      __article: code,
+      __name_delim: this.canonKeepDelims(meta.name || ''),
+      __article_delim: this.canonKeepDelims(meta.art || code),
+      __price: '',
+      __docs: [],
+      __featHtml: '',
+      __qty: 0,
+      __qtyHint: null,
+      __withdrawn: true
+    });
+  }
 
-// уже найденные артикулы из base.csv (нормализованные)
-const have = new Set(this.filteredData.map(it => it.__article));
+  // порядок как вводили
+  this.filteredData.sort((a, b) => order.get(a.__article) - order.get(b.__article));
 
-// добиваем отсутствующие — чисто «выведенные»
-for (const code of uniq) {
-  if (have.has(code)) continue;
-  const meta = this._withdrawnIndex?.get(code);
-  if (!meta) continue;
+  // на всякий случай проставим флаг и для «base.csv»-строк
+  for (const it of this.filteredData) {
+    it.__withdrawn = it.__withdrawn || this._withdrawnSet?.has(it.__article) || false;
+  }
 
-  this.filteredData.push({
-    'Наименование': meta.name || '',
-    'Артикул': meta.art || code,
-    'Цена': '',
-    'Документы': '',
-    'Характеристики': '',
-    'Количество': '0',
-
-    __name: this.normalizeForFuzzySearch(meta.name || ''),
-    __article: code,
-    __name_delim: this.canonKeepDelims(meta.name || ''),
-    __article_delim: this.canonKeepDelims(meta.art || code),
-    __price: '',
-    __docs: [],
-    __featHtml: '',
-    __qty: 0,
-    __qtyHint: null,
-    __withdrawn: true
-  });
+  this._page = 1;
+  this.displayResults();
+  return;
 }
 
-// итоговая сортировка по порядку ввода
-this.filteredData.sort((a, b) => order.get(a.__article) - order.get(b.__article));
 
-// помечаем выведенные для всех
-for (const it of this.filteredData) {
-  it.__withdrawn = it.__withdrawn || this._withdrawnSet?.has(it.__article) || false;
-}
-
-this.displayResults();
-return;
-
-
-      // сортируем как ввели
-      this.filteredData.sort(
-        (a, b) => order.get(a.__article) - order.get(b.__article)
-      );
-
-      this._page = 1;
-      // если идёт поиск по артикулам — лениво подгружаем список выведенных
-await this._ensureWithdrawnLoaded().catch(() => { /* молча, не критично */ });
-
-// помечаем выведенные
-for (const it of this.filteredData) {
-  it.__withdrawn = this._withdrawnSet?.has(it.__article) || false;
-}
-
-      this.displayResults();
-      return; // важно: не запускаем обычную логику every()/скоринга ниже
-    }
     // Фильтрация: если есть буквы — ищем только по названию
     this.filteredData = this.data.filter(item =>
   parts.every(
