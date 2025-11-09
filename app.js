@@ -19,6 +19,7 @@
 
 class PriceListSearchApp {
   constructor() {
+    this._withdrawnSet = null; // Set нормализованных артикулов из keaz-old-products.csv
     this.data = [];
     this.filteredData = [];
     this._page = 1;
@@ -910,6 +911,43 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
       this.showError(`Не удалось загрузить base.csv\n${e.message}`);
     }
   }
+  
+  async _ensureWithdrawnLoaded() {
+  if (this._withdrawnSet) return;
+
+  // Убедимся, что PapaParse загружен (обычно подхватывается при загрузке base.csv)
+  if (!window.Papa) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+
+  const resp = await fetch('keaz-old-products.csv', { cache: 'no-cache' });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+  const text = await resp.text();
+
+  const parsed = Papa.parse(text, {
+    header: true,
+    delimiter: ';',
+    skipEmptyLines: true,
+    transformHeader: (h) => String(h).trim()
+  });
+
+  const rows = Array.isArray(parsed.data) ? parsed.data : [];
+  const set = new Set();
+
+  for (const r of rows) {
+    const art = (r && (r['Артикул'] ?? r['артикул'])) ?? '';
+    const norm = this.normalizeForFuzzySearch(String(art || ''));
+    if (norm) set.add(norm);
+  }
+  this._withdrawnSet = set;
+}
+
 
   // ---------- Поиск ----------
   createSearchVariants(query) {
@@ -964,6 +1002,14 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
       );
 
       this._page = 1;
+      // если идёт поиск по артикулам — лениво подгружаем список выведенных
+await this._ensureWithdrawnLoaded().catch(() => { /* молча, не критично */ });
+
+// помечаем выведенные
+for (const it of this.filteredData) {
+  it.__withdrawn = this._withdrawnSet?.has(it.__article) || false;
+}
+
       this.displayResults();
       return; // важно: не запускаем обычную логику every()/скоринга ниже
     }
@@ -980,6 +1026,17 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
       document.getElementById('searchInput')?.value || ''
     ).trim();
     const qn = this.normalizeForFuzzySearch(this._applyUZAliases(rawQuery));
+if (permitArticle) {
+  await this._ensureWithdrawnLoaded().catch(() => { /* не критично */ });
+  for (const it of this.filteredData) {
+    it.__withdrawn = this._withdrawnSet?.has(it.__article) || false;
+  }
+} else {
+  // текстовый поиск — не трогаем флаг, чтобы не было лишней нагрузки
+  for (const it of this.filteredData) it.__withdrawn = false;
+}
+
+
 
     for (const it of this.filteredData) {
   it.__score = 0;
@@ -1200,18 +1257,26 @@ const infoBtn = hasFeat
     <td>${artHtml}</td>
 ${(() => {
   const q = this._parseQty(item.__qty);
-  const inStock = q > 0;
-  const hint = inStock
-    ? `В наличии ${q} ${this._pluralRu(q, ['штука','штуки','штук'])}`
-    : 'Нет в наличии';
+const inStock = q > 0;
+const isWithdrawn = item.__withdrawn === true;
 
-  const price = `
-  <span class="price-tag ${inStock ? 'is-stock' : 'is-empty'}"
+const hint = isWithdrawn
+  ? 'Выведен из ассортимента'
+  : (inStock
+      ? `В наличии ${q} ${this._pluralRu(q, ['штука','штуки','штук'])}`
+      : 'Нет в наличии');
+
+const priceText = isWithdrawn ? 'Выведен' : item.__price;
+const priceClass = isWithdrawn ? 'is-withdrawn' : (inStock ? 'is-stock' : 'is-empty');
+
+const price = `
+  <span class="price-tag ${priceClass}"
         aria-label="${this.escapeHTML(hint)}"
         ${window.bootstrap ? 'data-bs-toggle="tooltip"' : 'title="'+this.escapeHTML(hint)+'"'}
         ${window.bootstrap ? 'data-bs-title="'+this.escapeHTML(hint)+'"' : ''}>
-    ${item.__price}
+    ${priceText}
   </span>`;
+
 
 
   return `

@@ -795,6 +795,15 @@ td.copyable .copy-badge {
   border-color: transparent;
 }
 
+/* Позиция выведена из ассортимента (красная пилюля) */
+.price-tag.is-withdrawn {
+  background: #fdeaea;
+  color: #8a1f1f;
+  border-color: #f6d4d4;
+  font-weight: 600;
+}
+
+
 /* Кружок "i" в цене — чуть выровнять по оптической оси */
 .text-price .info-circle {
   position: relative;
