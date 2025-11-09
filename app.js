@@ -20,6 +20,7 @@
 class PriceListSearchApp {
   constructor() {
     this._withdrawnSet = null; // Set нормализованных артикулов из keaz-old-products.csv
+    this._withdrawnIndex = null
     this.data = [];
     this.filteredData = [];
     this._page = 1;
@@ -913,16 +914,13 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
   }
   
   async _ensureWithdrawnLoaded() {
-  if (this._withdrawnSet) return;
+  if (this._withdrawnSet && this._withdrawnIndex) return;
 
-  // Убедимся, что PapaParse загружен (обычно подхватывается при загрузке base.csv)
   if (!window.Papa) {
     await new Promise((resolve, reject) => {
       const s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-      s.onload = resolve;
-      s.onerror = reject;
-      document.head.appendChild(s);
+      s.onload = resolve; s.onerror = reject; document.head.appendChild(s);
     });
   }
 
@@ -931,22 +929,27 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
   const text = await resp.text();
 
   const parsed = Papa.parse(text, {
-    header: true,
-    delimiter: ';',
-    skipEmptyLines: true,
-    transformHeader: (h) => String(h).trim()
+    header: true, delimiter: ';', skipEmptyLines: true,
+    transformHeader: h => String(h).trim()
   });
 
   const rows = Array.isArray(parsed.data) ? parsed.data : [];
-  const set = new Set();
+  const set  = new Set();
+  const map  = new Map();
 
   for (const r of rows) {
-    const art = (r && (r['Артикул'] ?? r['артикул'])) ?? '';
-    const norm = this.normalizeForFuzzySearch(String(art || ''));
-    if (norm) set.add(norm);
+    const artRaw  = (r && (r['Артикул'] ?? r['артикул'])) ?? '';
+    const nameRaw = (r && (r['Наименование'] ?? r['наименование'])) ?? '';
+    const artNorm = this.normalizeForFuzzySearch(String(artRaw || ''));
+    if (!artNorm) continue;
+    set.add(artNorm);
+    map.set(artNorm, { art: String(artRaw || '').trim(), name: String(nameRaw || '').trim() });
   }
-  this._withdrawnSet = set;
+
+  this._withdrawnSet   = set;
+  this._withdrawnIndex = map;
 }
+
 
 
   // ---------- Поиск ----------
@@ -989,12 +992,54 @@ window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
       parts.length >= 2 && parts.every(p => /^\d{6}$/.test(p));
 
     if (isMultiArticle) {
-      // уникальные коды в порядке ввода
-      const uniq = [...new Set(parts)];
-      const order = new Map(uniq.map((a, i) => [a, i]));
+  // уникальные коды в порядке ввода
+  const uniq = [...new Set(parts)];
+  const order = new Map(uniq.map((a, i) => [a, i]));
 
-      // фильтруем строго по __article (он у тебя уже нормализован)
-      this.filteredData = this.data.filter(it => order.has(it.__article));
+  // базовая выборка из base.csv
+  this.filteredData = this.data.filter(it => order.has(it.__article));
+
+  // добиваем «чисто выведенные»
+  await this._ensureWithdrawnLoaded().catch(() => {});
+  const have = new Set(this.filteredData.map(it => it.__article));
+  for (const code of uniq) {
+    if (have.has(code)) continue;
+    const meta = this._withdrawnIndex?.get(code);
+    if (!meta) continue;
+    this.filteredData.push({
+      'Наименование': meta.name || '',
+      'Артикул': meta.art || code,
+      'Цена': '',
+      'Документы': '',
+      'Характеристики': '',
+      'Количество': '0',
+      __name: this.normalizeForFuzzySearch(meta.name || ''),
+      __article: code,
+      __name_delim: this.canonKeepDelims(meta.name || ''),
+      __article_delim: this.canonKeepDelims(meta.art || code),
+      __price: '',
+      __docs: [],
+      __featHtml: '',
+      __qty: 0,
+      __qtyHint: null,
+      __withdrawn: true
+    });
+  }
+
+  // порядок как вводили
+  this.filteredData.sort((a, b) => order.get(a.__article) - order.get(b.__article));
+
+  // на всякий случай проставим флаг и для «base.csv»-строк
+  for (const it of this.filteredData) {
+    it.__withdrawn = it.__withdrawn || this._withdrawnSet?.has(it.__article) || false;
+  }
+
+  this._page = 1;
+  this.displayResults();
+  return;
+}
+
+
 
       // сортируем как ввели
       this.filteredData.sort(
@@ -1021,6 +1066,44 @@ for (const it of this.filteredData) {
       (permitArticle && item.__article.includes(part))
   	)
 	);
+	
+	// === ДОБАВЛЯЕМ "ЧИСТО ВЫВЕДЕННЫЕ", ЕСЛИ ИЩЕМ ПО АРТИКУЛУ ===
+if (permitArticle) {
+  await this._ensureWithdrawnLoaded().catch(() => {});
+
+  // какие артикула уже есть в выдаче из base.csv
+  const have = new Set(this.filteredData.map(it => it.__article));
+
+  // numericSeq уже посчитан выше: это числовые токены в порядке ввода
+  for (const tok of numericSeq) {
+    if (have.has(tok)) continue;
+
+    const meta = this._withdrawnIndex?.get(tok);
+    if (!meta) continue; // нет в списке "выведенных" — пропускаем
+
+    // добавляем "виртуальную" строку под этот артикул
+    this.filteredData.push({
+      'Наименование': meta.name || '',
+      'Артикул': meta.art || tok,
+      'Цена': '',
+      'Документы': '',
+      'Характеристики': '',
+      'Количество': '0',
+
+      __name: this.normalizeForFuzzySearch(meta.name || ''),
+      __article: tok,
+      __name_delim: this.canonKeepDelims(meta.name || ''),
+      __article_delim: this.canonKeepDelims(meta.art || tok),
+      __price: '',
+      __docs: [],
+      __featHtml: '',
+      __qty: 0,
+      __qtyHint: null,
+      __withdrawn: true
+    });
+  }
+}
+
 
     const rawQuery = (
       document.getElementById('searchInput')?.value || ''
