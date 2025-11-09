@@ -1,4 +1,22 @@
 // Приложение для поиска по Excel прайс-листу (автозагрузка ./base.xlsx)
+
+// Очистка следов авторизации (ключи от старой логики)
+(() => {
+  try {
+    const KEYS_PREFIXES = ['auth:', 'firebase', 'gapi', 'whatsnew:__dummy__']; // 'whatsnew' оставляем (см. ниже); здесь — только примеры
+    const toDelete = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith('auth:') || k.startsWith('firebase') || k.startsWith('gapi')) {
+        toDelete.push(k);
+      }
+    }
+    toDelete.forEach(k => localStorage.removeItem(k));
+  } catch {}
+})();
+
+
 class PriceListSearchApp {
   constructor() {
     this.data = [];
@@ -510,6 +528,7 @@ if (row) {
     // Глобальный Esc: работает где угодно на странице
     document.addEventListener('keydown', e => {
       if (e.key !== 'Escape') return;
+      if (document.querySelector('.modal.show')) return;
 
       // Если открыт наш dropdown "Документы" — даём Esc его закрыть и не чистим поиск
       if (
@@ -1542,8 +1561,19 @@ html = mdToHtml(cleaned);
 
     const modalEl = document.getElementById('whatsnewModal');
     if (!modalEl) return;
-    const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: false });
-    modal.show();
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl, {
+  backdrop: true,
+  keyboard: true,
+  focus: true
+});
+modal.show();
+
+// гарантированная уборка «хвостов» после закрытия
+modalEl.addEventListener('hidden.bs.modal', () => {
+  try { modal.dispose?.(); } catch {}
+  document.body.classList.remove('modal-open');
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+}, { once: true });
 
     const done = () => {
       modal.hide();
