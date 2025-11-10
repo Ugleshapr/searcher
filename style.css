@@ -390,8 +390,21 @@ select.form-control {
 
 /* Поле поиска — на всю ширину + акцентная рамка (#4f6753) */
 .search-input-container { width: 100%; max-width: none; }
-.search-input-container .form-control { border-color: #4f6753; }
-.search-input-container .form-control:focus { border-color: #4f6753; box-shadow: 0 0 0 .2rem rgba(79,103,83,.25); }
+.search-input-container .form-control {
+  border-color: var(--color-primary); /* подтягивает teal / RZD */
+}
+.search-input-container .form-control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 .2rem rgba(var(--color-primary-rgb, 33,128,141), .25);
+}
+/* Поиск: outline совпадает с темой */
+.search-input-container .form-control:focus,
+.search-input-container .form-control:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 2px;
+}
+
+
 
 /* Таблица результатов */
 #resultsSection .table-responsive { margin-top: 8px; }
