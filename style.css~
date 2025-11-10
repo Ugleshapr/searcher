@@ -1212,10 +1212,3 @@ body.rzd-mode #resultsTable tbody td:nth-child(4) {
   display: none;
 }
 
-body.rzd-mode .form-control:focus-visible,
-body.rzd-mode .form-control:focus {
-  border-color: #c32b1c !important;
-  box-shadow: 0 0 0 .2rem rgba(195,43,28,.25) !important;
-}
-
-
