@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru" data-app-version="V7" data-color-scheme="light">
+<html lang="ru" data-app-version="V7.1" data-color-scheme="light">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -43,7 +43,7 @@
     <div class="card mb-3" id="searchSection" style="display:none;">
       <div class="card__body">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h3 class="mb-0">Поиск по прайс-листу</h3>
+          <h3 class="mb-0">Поиск по <span id="rzdToggle" class="mode-chip">прайс-листу</span></h3>
           <span id="datasetInfo" class="text-secondary" style="display:inline-flex;align-items:center;gap:8px;">
   <!-- COPY: компактный тумблер в правом верхнем углу -->
   <span class="copy-inline-title">COPY</span>
@@ -155,6 +155,7 @@
   <script src="addons/tips.js"></script>
   <script src="addons/copy-mode.js"></script>
   <script src="addons/filter-panel.js"></script>
+  <script src="addons/rzd-search.js"></script>
 
   <!-- Modal: Что нового -->
 <div class="modal fade" id="whatsnewModal" tabindex="-1" aria-hidden="true">

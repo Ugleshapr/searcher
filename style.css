@@ -1132,3 +1132,83 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
   .auth-tab__content{ width: 92vw; }
 }
 
+/* ===== RZD mode ===== */
+body.rzd-mode {
+  /* глобальные акцентные цвета */
+  --color-primary: #c32b1c;
+  --color-primary-rgb: 195, 43, 28;
+  --color-focus-ring: rgba(195,43,28,.35);
+}
+
+/* интерактивный чип "прайс-листу" */
+.mode-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  line-height: 1.4;
+  cursor: pointer;
+  color: var(--color-teal-500); /* по умолчанию — teal */
+}
+.mode-chip:hover {
+  background: var(--color-secondary);
+}
+body.rzd-mode .mode-chip {
+  color: #c32b1c; /* в режиме РЖД — красный */
+  border-color: #c32b1c;
+}
+
+/* поле поиска */
+.search-input-container .form-control {
+  border-color: var(--color-teal-500);
+}
+.search-input-container .form-control:focus {
+  border-color: var(--color-teal-500);
+  box-shadow: 0 0 0 .2rem rgba(33,128,141,.25);
+}
+body.rzd-mode .search-input-container .form-control {
+  border-color: #c32b1c;
+}
+body.rzd-mode .search-input-container .form-control:focus {
+  border-color: #c32b1c;
+  box-shadow: 0 0 0 .2rem rgba(195,43,28,.25);
+}
+
+/* кнопка Copy (id="copyDo") */
+#copyDo {
+  border-color: var(--color-teal-500);
+  color: var(--color-teal-500);
+}
+#copyDo:hover,
+#copyDo:focus-visible {
+  background: var(--color-teal-500);
+  color: #fff;
+  border-color: var(--color-teal-500);
+}
+body.rzd-mode #copyDo {
+  border-color: #c32b1c;
+  color: #c32b1c;
+}
+body.rzd-mode #copyDo:hover,
+body.rzd-mode #copyDo:focus-visible {
+  background: #c32b1c;
+  color: #fff;
+  border-color: #c32b1c;
+}
+
+/* скрытие фильтра и "i" возле цены */
+body.rzd-mode #filterToggle,
+body.rzd-mode #filterPanel {
+  display: none !important;
+}
+body.rzd-mode .text-price .info-circle {
+  display: none !important;
+}
+
+/* скрытие колонки "Документы" */
+body.rzd-mode #resultsTable thead th:nth-child(4),
+body.rzd-mode #resultsTable tbody td:nth-child(4) {
+  display: none;
+}
+
