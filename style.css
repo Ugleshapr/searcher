@@ -51,7 +51,7 @@
   --color-surface: var(--color-cream-100);
   --color-text: var(--color-slate-900);
   --color-text-secondary: var(--color-slate-500);
-  --color-primary: #4f6753;
+  --color-primary: var(--color-teal-500);
   --color-primary-hover: #445a48;
   --color-primary-active: #394b3d;
   --color-secondary: rgba(var(--color-brown-600-rgb), 0.12);
@@ -65,7 +65,7 @@
   --color-success: var(--color-teal-500);
   --color-warning: var(--color-orange-500);
   --color-info: var(--color-slate-500);
-  --color-focus-ring: rgba(79,103,83,.40);
+  --color-focus-ring: rgba(var(--color-teal-500-rgb), 0.4);
   --color-select-caret: rgba(var(--color-slate-900-rgb), 0.8);
 
   /* Shared patterns */
@@ -139,50 +139,10 @@
 }
 
 /* Auto dark mode */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-color-scheme]) {
-    --color-gray-400-rgb: 119, 124, 124;
-    --color-teal-300-rgb: 50, 184, 198;
-    --color-gray-300-rgb: 167, 169, 169;
-    --color-gray-200-rgb: 245, 245, 245;
 
-    --color-bg-1: rgba(29, 78, 216, 0.15);
-    --color-bg-2: rgba(180, 83, 9, 0.15);
-    --color-bg-3: rgba(21, 128, 61, 0.15);
-    --color-bg-4: rgba(185, 28, 28, 0.15);
-    --color-bg-5: rgba(107, 33, 168, 0.15);
-    --color-bg-6: rgba(194, 65, 12, 0.15);
-    --color-bg-7: rgba(190, 24, 93, 0.15);
-    --color-bg-8: rgba(8, 145, 178, 0.15);
-
-    --color-background: var(--color-charcoal-700);
-    --color-surface: var(--color-charcoal-800);
-    --color-text: var(--color-gray-200);
-    --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
-    --color-primary: var(--color-teal-300);
-    --color-primary-hover: var(--color-teal-400);
-    --color-primary-active: var(--color-teal-800);
-    --color-secondary: rgba(var(--color-gray-400-rgb), 0.15);
-    --color-secondary-hover: rgba(var(--color-gray-400-rgb), 0.25);
-    --color-secondary-active: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-border: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-error: var(--color-red-400);
-    --color-success: var(--color-teal-300);
-    --color-warning: var(--color-orange-400);
-    --color-info: var(--color-gray-300);
-    --color-focus-ring: rgba(var(--color-teal-300-rgb), 0.4);
-    --color-btn-primary-text: var(--color-slate-900);
-    --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-card-border-inner: rgba(var(--color-gray-400-rgb), 0.15);
-    --shadow-inset-sm: inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.15);
-    --button-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
-  }
-}
 
 /* Manual theme toggles (keep behavior intact) */
-[data-color-scheme="dark"] { /* … те же токены что и в блоке выше … */ }
+
 [data-color-scheme="light"] {
   --color-brown-600-rgb: 94, 82, 64;
   --color-teal-500-rgb: 33, 128, 141;
@@ -320,7 +280,7 @@ select.form-control {
   background-repeat: no-repeat; background-position: right var(--space-12) center;
   background-size: 16px; padding-right: var(--space-32);
 }
-@media (prefers-color-scheme: dark) { select.form-control { background-image: var(--select-caret-dark); } }
+
 [data-color-scheme="dark"]  select.form-control { background-image: var(--select-caret-dark); }
 [data-color-scheme="light"] select.form-control { background-image: var(--select-caret-light); }
 
@@ -388,22 +348,23 @@ select.form-control {
 .search-controls { padding: 0; border: 0; background: transparent; }
 #searchSection .card__body, #resultsSection .card__body { padding-top: 12px; padding-bottom: 12px; }
 
-/* Поле поиска — на всю ширину + акцентная рамка (#4f6753) */
+/* Поле поиска — на всю ширину + акцентная рамка (var(--color-teal-500)) */
 .search-input-container { width: 100%; max-width: none; }
 .search-input-container .form-control {
-  border-color: var(--color-primary); /* подтягивает teal / RZD */
+  border-color: var(--color-primary);
 }
+
 .search-input-container .form-control:focus {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 .2rem rgba(var(--color-primary-rgb, 33,128,141), .25);
+  box-shadow: 0 0 0 .2rem rgba(var(--color-primary-rgb), .25);
 }
+
 /* Поиск: outline совпадает с темой */
 .search-input-container .form-control:focus,
 .search-input-container .form-control:focus-visible {
-  outline: 2px solid var(--color-primary) !important;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
-
 
 
 /* Таблица результатов */
@@ -466,7 +427,7 @@ td.copyable { cursor: copy; }
 .docs-menu .dropdown-item:focus,
 .docs-menu .dropdown-item:active,
 .docs-menu .dropdown-item.active {
-  background-color: rgba(79,103,83,0.16);
+  background-color: rgba(var(--color-teal-500-rgb),0.16);
   color: #1f2a21;
 }
 .docs-menu .dropdown-item:hover::before,
@@ -474,9 +435,9 @@ td.copyable { cursor: copy; }
 .docs-menu .dropdown-item:active::before,
 .docs-menu .dropdown-item.active::before {
   content:""; position:absolute; left:0; top:0; bottom:0; width:3px;
-  background:#4f6753; border-top-left-radius:4px; border-bottom-left-radius:4px;
+  background:var(--color-teal-500); border-top-left-radius:4px; border-bottom-left-radius:4px;
 }
-.docs-menu .dropdown-item:focus-visible { outline:2px solid rgba(79,103,83,0.6); outline-offset:-2px; }
+.docs-menu .dropdown-item:focus-visible { outline:2px solid rgba(var(--color-teal-500-rgb),0.6); outline-offset:-2px; }
 
 /* ===================================================================
    Misc
@@ -498,16 +459,16 @@ td.copyable { cursor: copy; }
 
 
 /* Dark theme: белый текст на обеих плашках — красной и зелёной */
-@media (prefers-color-scheme: dark) {
-  .no-results { color: #fff !important; }
-  .no-results.no-results--empty { color: #fff !important; }
-}
+
 [data-color-scheme="dark"] .no-results { color: #fff !important; }
 [data-color-scheme="dark"] .no-results.no-results--empty { color: #fff !important; }
 
 /* Кнопка очистки в строке поиска */
 .search-input-container { position: relative; }
-.search-input-container .form-control { padding-right: 40px; } /* место под кнопку */
+.search-input-container .form-control {
+  border-color: var(--color-primary);
+}
+ /* место под кнопку */
 
 .search-clear-btn {
   position: absolute;
@@ -662,15 +623,15 @@ td.copyable { cursor: copy; }
 
 /* Спец-стиль именно для "Копировать N строк" */
 .copy-panel #copyDo {
-  color: #21808d;
-  border-color: #21808d;
+  color: var(--color-teal-500);
+  border-color: var(--color-teal-500);
   background: transparent;
 }
 .copy-panel #copyDo:hover,
 .copy-panel #copyDo:focus-visible {
-  background: #21808d;
+  background: var(--color-teal-500);
   color: #fff;
-  border-color: #21808d;
+  border-color: var(--color-teal-500);
 }
 
 /* --- COPY: отметка выбранных позиций в таблице --- */
@@ -1148,45 +1109,43 @@ body.is-filter-mode .search-clear-btn { display: none !important; }
 /* ===== RZD mode ===== */
 body.rzd-mode {
   /* глобальные акцентные цвета */
-  --color-primary: #c32b1c;
+  --color-primary: var(--color-teal-500);
   --color-primary-rgb: 195, 43, 28;
-  --color-focus-ring: rgba(195,43,28,.35);
+  --color-focus-ring: rgba(var(--color-teal-500-rgb), 0.4);
 }
 
 /* интерактивный чип "прайс-листу" */
-.mode-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 8px;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  line-height: 1.4;
-  cursor: pointer;
-  color: var(--color-teal-500); /* по умолчанию — teal */
-}
-.mode-chip:hover {
-  background: var(--color-secondary);
-}
-body.rzd-mode .mode-chip {
-  color: #c32b1c; /* в режиме РЖД — красный */
-  border-color: #c32b1c;
-}
+h3 .mode-chip{display:inline-block;vertical-align:baseline;position:relative;top:-1px;margin-left:6px;padding:1px 10px;border:1px solid currentColor;border-radius:999px;line-height:1.1;font-weight:600;font-size:.95em;color:var(--color-teal-500);background:transparent;}
+h3 .mode-chip:hover{background:var(--color-secondary);}body.rzd-mode h3 .mode-chip{color:#c32b1c;border-color:#c32b1c;}
 
 /* поле поиска */
 .search-input-container .form-control {
-  border-color: var(--color-teal-500);
+  border-color: var(--color-primary);
 }
+
 .search-input-container .form-control:focus {
-  border-color: var(--color-teal-500);
-  box-shadow: 0 0 0 .2rem rgba(33,128,141,.25);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 .2rem rgba(var(--color-primary-rgb), .25);
 }
+
+/* Поиск: outline совпадает с темой */
+.search-input-container .form-control:focus,
+.search-input-container .form-control:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 body.rzd-mode .search-input-container .form-control {
-  border-color: #c32b1c;
+  border-color: var(--color-primary);
 }
-body.rzd-mode .search-input-container .form-control:focus {
-  border-color: #c32b1c;
-  box-shadow: 0 0 0 .2rem rgba(195,43,28,.25);
+
+/* Поиск: outline совпадает с темой */
+.search-input-container .form-control:focus,
+.search-input-container .form-control:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
+
 
 /* кнопка Copy (id="copyDo") */
 #copyDo {
@@ -1224,11 +1183,4 @@ body.rzd-mode #resultsTable thead th:nth-child(4),
 body.rzd-mode #resultsTable tbody td:nth-child(4) {
   display: none;
 }
-
-body.rzd-mode .form-control:focus-visible,
-body.rzd-mode .form-control:focus {
-  border-color: #c32b1c !important;
-  box-shadow: 0 0 0 .2rem rgba(195,43,28,.25) !important;
-}
-
 
