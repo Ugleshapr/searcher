@@ -493,11 +493,11 @@ class PriceListSearchApp {
   exposeGlobalAPI() {
     window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
     window.App._preFilterData = this._preFilterData;
-  }   // ← всё! Больше методов, и закрываем класс
+  }   
 
-} // ← ЗАКРЫВАЮЩАЯ фигурная скобка класса
+} 
 
-// Дальше только вне класса!
+
 document.addEventListener('DOMContentLoaded', () => {
   window.App = new PriceListSearchApp();
   window.App.exposeGlobalAPI();
