@@ -23,7 +23,8 @@ class PriceListSearchApp {
 
     this.initializeEventListeners();
     this.loadDefaultFile();
-    
+     this.whatsNew.checkVersionChange();  
+  this.whatsNew.setupListeners(); 
      
   }
 
@@ -516,10 +517,6 @@ class PriceListSearchApp {
 document.addEventListener('DOMContentLoaded', () => {
   window.App = new PriceListSearchApp();
   window.App.exposeGlobalAPI();
-  const whatsNew = new WhatsNew(APP_VERSION);
-  whatsNew.checkVersionChange();
-  whatsNew.setupListeners();
-  window.App.whatsNew = whatsNew; // сохраняем для доступа
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
 
