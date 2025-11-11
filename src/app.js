@@ -121,6 +121,7 @@ class PriceListSearchApp {
     this._setupTableEvents();
     this._setupClearButton();
     this._setupResizeHandlers();
+    this._setupDropdownHandlers();
   }
 
   _setupTableEvents() {
@@ -280,6 +281,202 @@ class PriceListSearchApp {
       new window.bootstrap.Tooltip(el, { html: true, sanitize: false, placement: 'top' });
     }
   }
+  
+  _setupDropdownHandlers() {
+  // Обработчики для dropdown "Документы"
+  document.addEventListener('shown.bs.dropdown', e => {
+    const dd = e.target.closest('.dropdown');
+    if (!dd || !dd.closest('#resultsSection')) return;
+    
+    dd.setAttribute('data-bs-auto-close', 'outside');
+    const menu = dd.querySelector('.dropdown-menu');
+    const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
+    if (!menu || !btn) return;
+
+    menu.dataset.portal = '1';
+    document.body.appendChild(menu);
+    menu.style.position = 'fixed';
+    menu.style.transform = 'none';
+    menu.removeAttribute('data-popper-placement');
+    menu.removeAttribute('data-bs-popper');
+
+    if (menu.classList.contains('docs-menu')) {
+      menu.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+
+    const place = () => {
+      const bcr = btn.getBoundingClientRect();
+      const mw = menu.offsetWidth || 0;
+      const mh = menu.offsetHeight || 0;
+
+      let left = Math.round(bcr.right - mw);
+      let top = Math.round(bcr.bottom + 6);
+
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+
+      if (left + mw > vw - 8) left = Math.max(8, vw - mw - 8);
+      if (left < 8) left = 8;
+
+      if (top + mh > vh - 8) {
+        const altTop = Math.round(bcr.top - mh - 6);
+        if (altTop >= 8) top = altTop;
+      }
+
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+      menu.style.zIndex = 3000;
+      menu.style.maxWidth = 'initial';
+    };
+
+    place();
+    menu._reposition = place;
+
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+
+    const scroller = document.querySelector('#resultsSection .table-responsive');
+    if (scroller) {
+      const closeOnScroll = () => {
+        const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
+        try {
+          const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
+          ddInst?.hide();
+        } catch {
+          menu.dispatchEvent(new Event('hide.bs.dropdown'));
+          menu.classList.remove('show');
+          dd.appendChild(menu);
+        }
+      };
+      scroller.addEventListener('scroll', closeOnScroll, { passive: true });
+      menu._closeOnScroll = closeOnScroll;
+    }
+
+    // Ленивая загрузка содержимого документов
+    if (menu.classList.contains('docs-menu') && !menu._enhanced) {
+      menu._enhanced = true;
+      const rawName = (menu.dataset.name || '').trim();
+      let docs = [];
+      try {
+        docs = JSON.parse(decodeURIComponent(menu.dataset.docs || '[]'));
+      } catch { docs = []; }
+
+      (async () => {
+        try {
+          if (window.Tips && typeof window.Tips.getForName === 'function') {
+            const tips = await window.Tips.getForName(rawName);
+            menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+            
+            menu.style.transform = 'none';
+            menu.style.inset = 'auto';
+            menu.removeAttribute('data-popper-placement');
+            place();
+            setTimeout(place, 0);
+
+            const linksSection = (() => {
+              if (!docs.length) return `<div class="dm-empty">Ссылок нет</div>`;
+              return `
+                <ul class="dm-links">
+                  ${docs.map(d => `
+                    <li>
+                      <a class="dm-link" href="${d.url}"
+                         target="_blank" rel="noopener">
+                        ${d.title || 'Документ'}
+                      </a>
+                    </li>`).join('')}
+                </ul>`;
+            })();
+
+            const firstSection = menu.querySelector('.dm-section');
+            if (firstSection) {
+              firstSection.innerHTML = `
+                <div class="dm-section-title">Ссылки</div>
+                ${linksSection}
+              `;
+            }
+
+            const openDetail = (tip) => {
+              menu.innerHTML = window.Tips.renderDetail(tip);
+              menu.style.transform = 'none';
+              menu.style.inset = 'auto';
+              menu.removeAttribute('data-popper-placement');
+              place();
+              setTimeout(place, 0);
+              
+              window.Tips.bindDetail(menu);
+
+              const back = menu.querySelector('.dm-back');
+              if (back) {
+                back.addEventListener('click', () => {
+                  menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+                  place();
+                  
+                  const firstSection = menu.querySelector('.dm-section');
+                  if (firstSection) {
+                    firstSection.innerHTML = `
+                      <div class="dm-section-title">Ссылки</div>
+                      ${linksSection}
+                    `;
+                  }
+                  
+                  const backBtn = menu.querySelector('.dm-back');
+                  if (backBtn) backBtn.hidden = true;
+                  window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+                }, { once: true });
+              }
+
+              const backBtn = menu.querySelector('.dm-back');
+              if (backBtn) backBtn.hidden = false;
+            };
+
+            window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+            const backInit = menu.querySelector('.dm-back');
+            if (backInit) backInit.hidden = true;
+          } else {
+            const linksHtml = docs.length 
+              ? `<ul class="dm-links">${docs.map(d => `
+                  <li><a class="dm-link" href="${d.url}" 
+                     target="_blank" rel="noopener">${d.title || 'Документ'}</a></li>
+                `).join('')}</ul>`
+              : `<div class="dm-empty">Ссылок нет</div>`;
+            
+            menu.innerHTML = `<div class="px-3 py-2">${linksHtml}</div>`;
+          }
+        } catch (err) {
+          console.warn('Docs/tips render error:', err);
+          menu.innerHTML = `<div class="px-3 py-2 text-danger">Не удалось загрузить материалы</div>`;
+        }
+
+        if (typeof menu._reposition === 'function') {
+          setTimeout(menu._reposition, 0);
+        }
+      })();
+    }
+  });
+
+  document.addEventListener('hide.bs.dropdown', e => {
+    const dd = e.target.closest('.dropdown');
+    const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+    if (!menu) return;
+
+    window.removeEventListener('scroll', menu._reposition, true);
+    window.removeEventListener('resize', menu._reposition);
+
+    const scroller = document.querySelector('#resultsSection .table-responsive');
+    if (scroller && menu._closeOnScroll) {
+      scroller.removeEventListener('scroll', menu._closeOnScroll);
+      menu._closeOnScroll = null;
+    }
+
+    menu.removeAttribute('style');
+    menu.removeAttribute('data-portal');
+    if (dd) dd.appendChild(menu);
+  });
+}
+
 
   showSearchSection() {
     document.getElementById('searchSection').style.display = 'block';
@@ -300,4 +497,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Вызов функций setup из других аддонов (если есть)
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+  window.App = new PriceListSearchApp();
+  
+ 
 
