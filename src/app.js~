@@ -23,8 +23,7 @@ class PriceListSearchApp {
 
     this.initializeEventListeners();
     this.loadDefaultFile();
-     this.whatsNew.checkVersionChange();  
-  this.whatsNew.setupListeners(); 
+    
      
   }
 
@@ -59,6 +58,7 @@ class PriceListSearchApp {
   
   if (!query) {
     this.filteredData = [];
+    this._preFilterData = [];  
     this._page = 1;
     this.displayResults();
     this.exposeGlobalAPI();
@@ -66,13 +66,63 @@ class PriceListSearchApp {
   }
 
   this.filteredData = this.searchEngine.search(this.data, query);
-  this._preFilterData = this.filteredData.slice(); // ← ДОБАВЬ ЭТУ СТРОКУ
+  this._preFilterData = this.filteredData.slice(); 
   this._page = 1;
   this.displayResults();
 }
 
 
+
   displayResults() {
+  const resultsBody = document.getElementById('resultsBody');
+  const resultsCount = document.getElementById('resultsCount');
+  const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
+  const total = this.filteredData.length;
+
+  // ДОБАВЬ ЭТУ СЕКЦИЮ:
+  // Обновление кнопки фильтра
+  const filterBtn = document.getElementById('filterToggle');
+  if (filterBtn) {
+    filterBtn.disabled = (total === 0);
+    filterBtn.title = total === 0 ? '' : 'Фильтровать результаты';
+  }
+
+  // Если результатов нет
+  if (total === 0) {
+    resultsBody.innerHTML = '';
+    
+    // ДОБАВЬ ПОКАЗ БАННЕРА "Найдено: 0 результатов"
+    const banner = document.getElementById('stateBanner');
+    const titleEl = document.getElementById('stateBannerTitle');
+    const hintEl = document.getElementById('stateBannerHint');
+    
+    const isEmptyQuery = rawQuery.length === 0;
+    
+    if (banner && titleEl && hintEl) {
+      if (isEmptyQuery) {
+        banner.className = 'no-results no-results--empty text-center py-4';
+        titleEl.textContent = 'Начните поиск';
+        hintEl.textContent = '';
+      } else {
+        banner.className = 'no-results text-center py-4';
+        titleEl.textContent = 'Найдено: 0 результатов';
+        hintEl.textContent = '';
+      }
+      banner.style.display = 'block';
+    }
+
+    resultsCount.textContent = '0';
+    this._renderShowMore(false);
+    this._fitResultsHeight();
+    this.exposeGlobalAPI();
+    return;
+  }
+
+  // СКРОЙ БАННЕР если есть результаты
+  const banner = document.getElementById('stateBanner');
+  if (banner) {
+    banner.style.display = 'none';
+  }
     const query = (document.getElementById('searchInput')?.value || '').trim();
     const qAliased = this.normalizer.applyUZAliases(query);
     
@@ -517,6 +567,10 @@ class PriceListSearchApp {
 document.addEventListener('DOMContentLoaded', () => {
   window.App = new PriceListSearchApp();
   window.App.exposeGlobalAPI();
+  const whatsNew = new WhatsNew(APP_VERSION);
+  whatsNew.checkVersionChange();
+  whatsNew.setupListeners();
+  window.App.whatsNew = whatsNew; // сохраняем для доступа
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
 
