@@ -21,6 +21,7 @@ class PriceListSearchApp {
 
     this.initializeEventListeners();
     this.loadDefaultFile();
+     this._preFilterData = [];  // для фильтров
   }
 
   async loadDefaultFile() {
@@ -488,19 +489,22 @@ class PriceListSearchApp {
     document.getElementById('errorMessage').textContent = message;
     modal.show();
   }
+   exposeGlobalAPI() {
+    window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
+    window.App._preFilterData = this._preFilterData;
+  }
 }
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
   window.App = new PriceListSearchApp();
   
-  // Вызов функций setup из других аддонов (если есть)
+  // Добавляем методы для совместимости с аддонами
+  window.App.exposeGlobalAPI();
+  
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
 
-// Инициализация
-document.addEventListener('DOMContentLoaded', () => {
-  window.App = new PriceListSearchApp();
   
  
 
