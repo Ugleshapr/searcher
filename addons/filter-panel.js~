@@ -420,3 +420,6 @@ fpClearBtn?.addEventListener('click', () => {
   window.FilterPanel = { open, close };
 })();
 
+window.setupFilterAddon = setupFilterAddon;
+
+
