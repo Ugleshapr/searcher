@@ -399,7 +399,7 @@ fpClearBtn?.addEventListener('click', () => {
 
   // Публичный API
   async function open(ctx) {
-    const host = document.getElementById('filterToggle');
+    const host = document.getElementById('filterPanel');
     if (!host) return;
     _container = host;
     resetState();

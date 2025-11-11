@@ -156,6 +156,9 @@ export class TableRenderer {
   _showEmptyState(resultsBody, banner) {
     resultsBody.innerHTML = '';
     
+    const resultsCount = document.getElementById('resultsCount');
+if (resultsCount) resultsCount.textContent = 'Найдено: 0 результатов';
+    
     if (document.body.classList.contains('is-filter-mode')) {
       this._renderFilterEmptyRow(resultsBody);
       if (banner) banner.style.display = 'none';
