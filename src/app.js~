@@ -493,7 +493,7 @@ class PriceListSearchApp {
     window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
     window.App._preFilterData = this._preFilterData;
   }
-}
+
 
 // Инициализация
 document.addEventListener('DOMContentLoaded', () => {
@@ -504,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
-
+}
   
  
 

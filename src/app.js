@@ -504,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
-}
-  
+
  
 
