@@ -420,6 +420,56 @@ fpClearBtn?.addEventListener('click', () => {
   window.FilterPanel = { open, close };
 })();
 
-window.setupFilterAddon = setupFilterAddon;
+// Глобальная функция инициализации
+window.setupFilterAddon = function() {
+  const btn = document.getElementById('filterToggle');
+  if (!btn) {
+    console.warn('Кнопка #filterToggle не найдена');
+    return;
+  }
+
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+
+    const app = window.App;
+    if (!app || !app._preFilterData) {
+      console.error('window.App или _preFilterData не найдены');
+      return;
+    }
+
+    const arts = app._preFilterData.map(r => String(r['Артикул'] || '').trim()).filter(Boolean);
+    if (!arts.length) {
+      console.warn('Нет артикулов для фильтрации');
+      return;
+    }
+
+    // Открытие фильтра
+    const panel = document.getElementById('filterPanel');
+    const wasOpen = document.body.classList.contains('is-filter-mode');
+
+    if (wasOpen) {
+      // Закрываем фильтр
+      window.FilterPanel?.close?.();
+      document.body.classList.remove('is-filter-mode');
+      if (panel) panel.style.display = 'none';
+      btn.textContent = 'Фильтр';
+    } else {
+      // Открываем фильтр
+      document.body.classList.add('is-filter-mode');
+      if (panel) panel.style.display = 'block';
+      btn.textContent = 'Закрыть';
+
+      if (window.FilterPanel && typeof window.FilterPanel.open === 'function') {
+        await window.FilterPanel.open({ articles: arts });
+      } else {
+        console.error('window.FilterPanel.open не найдена');
+      }
+    }
+  });
+
+  console.log('✅ setupFilterAddon выполнен, обработчик кнопки фильтра установлен');
+};
+
+
 
 
