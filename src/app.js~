@@ -498,6 +498,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
 
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+  window.App = new PriceListSearchApp();
   
  
 
