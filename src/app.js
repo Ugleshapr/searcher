@@ -90,6 +90,7 @@ class PriceListSearchApp {
     this._fitResultsHeight();
     
     document.dispatchEvent(new CustomEvent('results:rendered'));
+    this._preFilterData = this.filteredData.slice();
      this.exposeGlobalAPI();
   }
 
@@ -500,7 +501,9 @@ class PriceListSearchApp {
   window.App._preFilterData = this._preFilterData;
   window.App.filteredData = this.filteredData;      
   window.App.displayResults = this.displayResults.bind(this); 
-  window.App._page = this._page;                  
+  window.App._page = this._page;  
+  window.App.data = this.data;
+                
 }
 
 

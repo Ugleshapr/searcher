@@ -51,19 +51,22 @@ class PriceListSearchApp {
   }
 
   performSearch() {
-    const query = (document.getElementById('searchInput')?.value || '').trim();
-    
-    if (!query) {
-      this.filteredData = [];
-      this._page = 1;
-      this.displayResults();
-      return;
-    }
-
-    this.filteredData = this.searchEngine.search(this.data, query);
+  const query = (document.getElementById('searchInput')?.value || '').trim();
+  
+  if (!query) {
+    this.filteredData = [];
     this._page = 1;
     this.displayResults();
+    this.exposeGlobalAPI();
+    return;
   }
+
+  this.filteredData = this.searchEngine.search(this.data, query);
+  this._preFilterData = this.filteredData.slice(); // ← ДОБАВЬ ЭТУ СТРОКУ
+  this._page = 1;
+  this.displayResults();
+}
+
 
   displayResults() {
     const query = (document.getElementById('searchInput')?.value || '').trim();
@@ -87,6 +90,8 @@ class PriceListSearchApp {
     this._fitResultsHeight();
     
     document.dispatchEvent(new CustomEvent('results:rendered'));
+    this._preFilterData = this.filteredData.slice();
+     this.exposeGlobalAPI();
   }
 
   _renderShowMore(show) {
@@ -491,9 +496,14 @@ class PriceListSearchApp {
   }
 
   exposeGlobalAPI() {
-    window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
-    window.App._preFilterData = this._preFilterData;
-  }   
+  window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
+  window.App.canonKeepDelims = this.normalizer.canonKeepDelims.bind(this.normalizer);
+  window.App._preFilterData = this._preFilterData;
+  window.App.filteredData = this.filteredData;      
+  window.App.displayResults = this.displayResults.bind(this); 
+  window.App._page = this._page;                  
+}
+
 
 } 
 
