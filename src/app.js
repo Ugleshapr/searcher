@@ -2,6 +2,7 @@ import { Normalizer } from './modules/core/Normalizer.js';
 import { DataLoader } from './modules/core/DataLoader.js';
 import { SearchEngine } from './modules/core/SearchEngine.js';
 import { TableRenderer } from './modules/ui/TableRenderer.js';
+import { WhatsNew } from './modules/ui/WhatsNew.js';
 import { debounce } from './modules/utils/helpers.js';
 import { RANK_RULES, PAGE_SIZE, APP_VERSION } from './modules/utils/constants.js';
 
@@ -18,10 +19,13 @@ class PriceListSearchApp {
     this.filteredData = [];
     this._page = 1;
     this._pageSize = PAGE_SIZE;
+    this._preFilterData = [];  // для фильтров
 
     this.initializeEventListeners();
     this.loadDefaultFile();
-     this._preFilterData = [];  // для фильтров
+     this.whatsNew.checkVersionChange();  
+  this.whatsNew.setupListeners(); 
+     
   }
 
   async loadDefaultFile() {
