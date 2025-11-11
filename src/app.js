@@ -479,7 +479,7 @@ class PriceListSearchApp {
 }
 
 
-  showSearchSection() {
+    showSearchSection() {
     document.getElementById('searchSection').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'block';
   }
@@ -489,21 +489,19 @@ class PriceListSearchApp {
     document.getElementById('errorMessage').textContent = message;
     modal.show();
   }
-   exposeGlobalAPI() {
+
+  exposeGlobalAPI() {
     window.App.normalizeForFuzzySearch = this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
     window.App._preFilterData = this._preFilterData;
-  }
+  }   
+
+} 
 
 
-// Инициализация
 document.addEventListener('DOMContentLoaded', () => {
   window.App = new PriceListSearchApp();
-  
-  // Добавляем методы для совместимости с аддонами
   window.App.exposeGlobalAPI();
-  
   if (typeof setupFilterAddon === 'function') setupFilterAddon();
 });
 
- 
 
