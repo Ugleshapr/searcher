@@ -9,56 +9,44 @@ export class DataLoader {
     this.MAX_XLSX_BYTES = 15 * 1024 * 1024;
   }
 
-  async loadCSV(url) {
+  async loadCSV(url, options = {}) {
+  const { cachePolicy = 'daily' } = options;
   const BASE = location.pathname.includes('/searcher/') ? '/searcher/' : '/';
   const full = `${BASE}${url}`;
 
-  try {
-    // пробуем взять из кеша IndexedDB
+  // если файл статичный — проверяем IndexedDB
+  if (cachePolicy === 'static') {
     const cached = await IDB.get(full, APP_VERSION);
     if (cached) {
-      console.log('[CACHE HIT]', full);
+      console.log('[STATIC CACHE HIT]', full);
       return this._preprocessData(cached);
     }
-
-    const resp = await fetch(full, { cache: 'no-store' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-    const text = await resp.text();
-
-    // подключаем PapaParse при необходимости
-    if (!window.Papa) {
-      await this._loadPapaParse();
-    }
-
-    const parsed = Papa.parse(text, {
-      header: true,
-      delimiter: ';',
-      skipEmptyLines: true,
-      worker: true, // !!! web worker
-      transformHeader: h => h.trim(),
-    });
-
-    const jsonData = parsed.data;
-    if (!jsonData.length) throw new Error('Файл пустой или не содержит данных');
-    if (jsonData.length > this.MAX_ROWS)
-      throw new Error(`Слишком много строк (${jsonData.length}). Предел ${this.MAX_ROWS}.`);
-
-    const required = ['Наименование', 'Артикул', 'Цена'];
-    const firstRow = jsonData[0] || {};
-    const missing = required.filter(c => !(c in firstRow));
-    if (missing.length)
-      throw new Error(`Отсутствуют колонки: ${missing.join(', ')}`);
-
-    // сохраняем в IndexedDB
-    await IDB.put(full, APP_VERSION, jsonData);
-    console.log('[CACHE PUT]', full);
-
-    return this._preprocessData(jsonData);
-  } catch (e) {
-    console.error('Загрузка CSV не удалась:', e);
-    throw e;
   }
+
+  // если daily — не лезем в IndexedDB, всегда fetch
+  const resp = await fetch(full, { cache: 'no-store' });
+  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+  const text = await resp.text();
+
+  if (!window.Papa) await this._loadPapaParse();
+
+  const parsed = Papa.parse(text, {
+    header: true,
+    delimiter: ';',
+    skipEmptyLines: true,
+    worker: true,
+    transformHeader: h => h.trim()
+  }).data;
+
+  // если статичный — кладём в IndexedDB
+  if (cachePolicy === 'static') {
+    await IDB.put(full, APP_VERSION, parsed);
+    console.log('[STATIC CACHE PUT]', full);
+  }
+
+  return this._preprocessData(parsed);
 }
+
 
 
   _preprocessData(jsonData) {

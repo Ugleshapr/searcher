@@ -78,74 +78,50 @@
     chip.textContent = isRzd() ? 'прайс-листу РЖД' : 'прайс-листу';
   }
 
-  async function ensurePapa() {
-    if (window.Papa) return;
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-  }
-
   async function loadRzdCsv() {
-    try {
-      await ensurePapa();
-      const resp = await fetch('rzd.csv', { cache: 'no-cache' });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-      const text = await resp.text();
+  try {
+    if (!window.App || !App.dataLoader) throw new Error('App.dataLoader недоступен');
 
-      const parsed = Papa.parse(text, {
-        header: true,
-        delimiter: ';',
-        skipEmptyLines: true,
-        transformHeader: h => String(h).trim()
-      });
+    // грузим как "static" → сначала IndexedDB, иначе fetch + кладём в кеш
+    const rows = await App.dataLoader.loadCSV('rzd.csv', { cachePolicy: 'static' });
 
-      const rows = Array.isArray(parsed.data) ? parsed.data : [];
-      if (!rows.length) throw new Error('Файл rzd.csv пустой');
+    if (!Array.isArray(rows) || !rows.length) throw new Error('Файл rzd.csv пустой');
 
-      // Проверим требуемые столбцы
-      const first = rows[0] || {};
-      const need = ['Наименование', 'Артикул'];
-      const miss = need.filter(k => !(k in first));
-      if (miss.length) throw new Error(`В rzd.csv отсутствуют колонки: ${miss.join(', ')}`);
+    const first = rows[0] || {};
+    const need = ['Наименование', 'Артикул'];
+    const miss = need.filter(k => !(k in first));
+    if (miss.length) throw new Error(`В rzd.csv отсутствуют колонки: ${miss.join(', ')}`);
 
-      // Приводим к формату, который ожидает app.js (минимум поля и прединдексация)
-      App.data = rows.map(r => ({
-        ...r,
-        // обязательные «внутренние» поля, чтобы поиск/сортировка работали как в обычном режиме
-        __name: App.normalizeForFuzzySearch(r['Наименование'] || ''),
-        __article: App.normalizeForFuzzySearch(r['Артикул'] || ''),
-        __name_delim: App.canonKeepDelims(r['Наименование'] || ''),
-        __article_delim: App.canonKeepDelims(r['Артикул'] || ''),
+    // Приводим к формату, который ожидает app.js (часть полей уже подготовлена DataLoader'ом)
+    App.data = rows.map(r => ({
+      ...r,
+      __name: r.__name ?? App.normalizeForFuzzySearch(r['Наименование'] || ''),
+      __article: r.__article ?? App.normalizeForFuzzySearch(r['Артикул'] || ''),
+      __name_delim: r.__name_delim ?? App.canonKeepDelims(r['Наименование'] || ''),
+      __article_delim: r.__article_delim ?? App.canonKeepDelims(r['Артикул'] || ''),
 
-        // поля, которых нет в rzd.csv — ставим значения-заглушки
-        'Цена': '',                // нет данных
-        __price: '—',              // формат для колонки цены
-        'Документы': '',           // нет документов
-        __docs: [],                // пустое меню документов
-        'Характеристики': '',      // нет характеристик
-        __featHtml: null,
-        'Количество': '',
-        __qty: 0,
-        __qtyHint: null
-      }));
+      'Цена': r['Цена'] ?? '',
+      __price: r.__price ?? '—',
+      'Документы': r['Документы'] ?? '',
+      __docs: r.__docs ?? [],
+      'Характеристики': r['Характеристики'] ?? '',
+      __featHtml: r.__featHtml ?? null,
+      'Количество': r['Количество'] ?? '',
+      __qty: r.__qty ?? 0,
+      __qtyHint: r.__qtyHint ?? null
+    }));
 
-      // Обновим тултип «i» в шапке (счётчик записей/версия)
-      App._updateInfoTooltip?.();
-
-      // В РЖД меняем акценты через класс body (CSS переопределит переменные/рамки)
-      document.body.classList.add('rzd-mode');
-    } catch (e) {
-      console.error('Ошибка загрузки rzd.csv:', e);
-      App.showError?.(`Не удалось загрузить rzd.csv\n${e.message}`);
-      // если провал — откат к обычной базе
-      rzdMode = false;
-      document.body.classList.remove('rzd-mode');
-      updateChipLabel();
-    }
+    App._updateInfoTooltip?.();
+    document.body.classList.add('rzd-mode');
+  } catch (e) {
+    console.error('Ошибка загрузки rzd.csv:', e);
+    App.showError?.(`Не удалось загрузить rzd.csv\n${e.message}`);
+    rzdMode = false;
+    document.body.classList.remove('rzd-mode');
+    updateChipLabel();
   }
+}
+
 
   // Экспорт в глобальную область — на случай, если понадобится управление извне
   window.RZDMode = { isOn: isRzd, toggle: toggleMode };

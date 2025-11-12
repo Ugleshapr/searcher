@@ -4,45 +4,31 @@
   let withdrawnSet = null;   // Set нормализованных артикулов
   let withdrawnIndex = null; // Map нормализованный→{ art, name }
 
-  async function ensurePapa() {
-    if (window.Papa) return;
-    await new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js';
-      s.onload = resolve; s.onerror = reject;
-      document.head.appendChild(s);
-    });
-  }
-
+  
   async function ensureLoaded(normalizer) {
-    if (loaded) return;
-    await ensurePapa();
+  if (loaded) return;
 
-    const resp = await fetch('keaz-old-products.csv', { cache: 'no-cache' });
-    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-    const text = await resp.text();
+  if (!window.App || !App.dataLoader) throw new Error('App.dataLoader недоступен');
+  // грузим как "static" → сначала IndexedDB, иначе fetch + кладём в кеш
+  const rows = await App.dataLoader.loadCSV('keaz-old-products.csv', { cachePolicy: 'static' });
 
-    const parsed = Papa.parse(text, {
-      header: true, delimiter: ';', skipEmptyLines: true,
-      transformHeader: h => String(h).trim()
-    });
+  const set = new Set();
+  const map = new Map();
 
-    const set = new Set();
-    const map = new Map();
-    const rows = Array.isArray(parsed.data) ? parsed.data : [];
-    for (const r of rows) {
-      const artRaw  = (r && (r['Артикул'] ?? r['артикул'])) ?? '';
-      const nameRaw = (r && (r['Наименование'] ?? r['наименование'])) ?? '';
-      const artNorm = normalizer.normalizeForFuzzySearch(String(artRaw || ''));
-      if (!artNorm) continue;
-      set.add(artNorm);
-      map.set(artNorm, { art: String(artRaw || '').trim(), name: String(nameRaw || '').trim() });
-    }
-
-    withdrawnSet = set;
-    withdrawnIndex = map;
-    loaded = true;
+  for (const r of rows) {
+    const artRaw  = (r && (r['Артикул'] ?? r['артикул'])) ?? '';
+    const nameRaw = (r && (r['Наименование'] ?? r['наименование'])) ?? '';
+    const artNorm = normalizer.normalizeForFuzzySearch(String(artRaw || ''));
+    if (!artNorm) continue;
+    set.add(artNorm);
+    map.set(artNorm, { art: String(artRaw || '').trim(), name: String(nameRaw || '').trim() });
   }
+
+  withdrawnSet = set;
+  withdrawnIndex = map;
+  loaded = true;
+}
+
 
   function splitParts(normalizer, q) {
     return String(q)

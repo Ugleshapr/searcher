@@ -29,7 +29,7 @@ class PriceListSearchApp {
 
   async loadDefaultFile() {
     try {
-      this.data = await this.dataLoader.loadCSV('base.csv');
+      this.data = await this.dataLoader.loadCSV('base.csv', { cachePolicy: 'daily' });
       this._updateInfoTooltip();
       this.showSearchSection();
       this._fitResultsHeight();
