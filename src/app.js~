@@ -107,9 +107,8 @@ class PriceListSearchApp {
         hintEl.textContent = '';
       } else {
         banner.className = 'no-results text-center py-4';
-        titleEl.textContent = 'По вашему запросу ничего не найдено';
-hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
-
+        titleEl.textContent = 'Найдено: 0 результатов';
+        hintEl.textContent = '';
       }
       banner.style.display = 'block';
     }
