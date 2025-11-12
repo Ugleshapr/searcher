@@ -1,6 +1,6 @@
 /* ===== addons/tips.js ===== */
 ;(() => {
-  const CSV_URL = 'addons/Akkumuliator viki.csv'; // как договорились
+  const CSV_URL = 'src/addons/Akkumuliator viki.csv';
   const DELIM = ';';
 
   // Глобальный неймспейс

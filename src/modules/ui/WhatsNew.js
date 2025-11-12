@@ -58,7 +58,7 @@ export class WhatsNew {
   }
 
   async loadMarkdown(version) {
-  const url = `addons/whatsnew/Release.md?v=${encodeURIComponent(this.appVersion)}`;
+  const url = `src/addons/whatsnew/Release.md?v=${encodeURIComponent(this.appVersion)}`;
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`Release notes not found: ${url}`);
   return res.text();

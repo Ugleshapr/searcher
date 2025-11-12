@@ -57,7 +57,7 @@
 
   async function ensureSpecsLoaded() {
     if (_specMap) return;
-    const specs = await parseCSV('addons/products_spec.csv', true);
+    const specs  = await parseCSV('src/addons/products_spec.csv', true);
     _specMap = new Map();
     for (const s of specs) {
       const id = String(s['spec_id'] ?? s['specId'] ?? s['id']).trim();
@@ -73,7 +73,7 @@
 
   async function buildIndex(articles) {
     await ensureSpecsLoaded();
-    const values = await parseCSV('addons/products_spec_values.csv', true);
+    const values = await parseCSV('src/addons/products_spec_values.csv', true);
     const want = new Set(articles);
 
     const appData = (window.App && window.App._preFilterData) ? window.App._preFilterData : [];
