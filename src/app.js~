@@ -188,33 +188,6 @@ if (input) {
     this._setupClearButton();
     this._setupResizeHandlers();
     this._setupDropdownHandlers();
-    
-    // Обработка закрытия фильтра
-document.addEventListener('filter:closed', () => {
-  const input = document.getElementById('searchInput');
-  if (input) {
-    input.removeAttribute('disabled');
-  }
-  
-  // Восстановление результатов
-  if (this._preFilterData && this._preFilterData.length > 0) {
-    this.filteredData = this._preFilterData.slice();
-    this._page = 1;
-    this.displayResults();
-  }
-});
-
-// Обработка открытия фильтра
-document.addEventListener('filter:opened', () => {
-  const input = document.getElementById('searchInput');
-  if (input) {
-    input.setAttribute('disabled', 'disabled');
-  }
-  
-  // Сохранение текущих результатов
-  this._preFilterData = this.filteredData.slice();
-});
-
   }
 
   _setupTableEvents() {
@@ -590,14 +563,7 @@ document.addEventListener('filter:opened', () => {
   window.App.displayResults = this.displayResults.bind(this); 
   window.App._page = this._page;  
   window.App.data = this.data;
-  
-  window.App.restoreFromFilter = () => {
-    if (this._preFilterData && this._preFilterData.length > 0) {
-      this.filteredData = this._preFilterData.slice();
-      this._page = 1;
-      this.displayResults();
-    }
-    };            
+                
 }
 
 

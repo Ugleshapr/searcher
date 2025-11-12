@@ -451,11 +451,13 @@ window.setupFilterAddon = function() {
       // Закрываем фильтр
       window.FilterPanel?.close?.();
       document.body.classList.remove('is-filter-mode');
+      document.dispatchEvent(new CustomEvent('filter:closed'));
       if (panel) panel.style.display = 'none';
       btn.textContent = 'Фильтр';
     } else {
       // Открываем фильтр
       document.body.classList.add('is-filter-mode');
+      document.dispatchEvent(new CustomEvent('filter:opened'));
       if (panel) panel.style.display = 'block';
       btn.textContent = 'Закрыть';
 
