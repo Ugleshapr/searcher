@@ -53,7 +53,7 @@ class PriceListSearchApp {
     }
   }
 
-  performSearch() {
+  async performSearch() {
   if (document.body.classList.contains('is-filter-mode')) return;
  
   const query = (document.getElementById('searchInput')?.value || '').trim();
@@ -70,6 +70,9 @@ class PriceListSearchApp {
   this.filteredData = this.searchEngine.search(this.data, query);
   this._preFilterData = this.filteredData.slice(); 
   this._page = 1;
+  if (window.Withdrawn) {
+  await window.Withdrawn.augment(this, query);
+}
   this.displayResults();
 }
 
