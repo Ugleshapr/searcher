@@ -146,7 +146,7 @@ class PriceListSearchApp {
     this._fitResultsHeight();
     
     document.dispatchEvent(new CustomEvent('results:rendered'));
-
+// Не трогаем снимок в режиме фильтра, иначе он «схлопывается»
 if (!document.body.classList.contains('is-filter-mode')) {
   this._preFilterData = this.filteredData.slice();
 }
