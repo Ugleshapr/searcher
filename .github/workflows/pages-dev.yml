@@ -2,7 +2,7 @@ name: Pages (dev under /dev)
 on:
   push:
     branches: [ dev ]
-workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
