@@ -54,6 +54,8 @@ class PriceListSearchApp {
   }
 
   performSearch() {
+  if (document.body.classList.contains('is-filter-mode')) return;
+ 
   const query = (document.getElementById('searchInput')?.value || '').trim();
   
   if (!query) {
@@ -167,15 +169,19 @@ class PriceListSearchApp {
   }
 
   initializeEventListeners() {
-    const input = document.getElementById('searchInput');
-    const debounced = debounce(() => this.performSearch(), 200);
-    
-    if (input) {
-      input.addEventListener('input', debounced);
-      input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') e.preventDefault();
-      });
-    }
+   const input = document.getElementById('searchInput');
+const debounced = debounce(() => {
+  // Запрещаем поиск при активном фильтре
+  if (document.body.classList.contains('is-filter-mode')) return;
+  this.performSearch();
+}, 200);
+
+if (input) {
+  input.addEventListener('input', debounced);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') e.preventDefault();
+  });
+}
 
     // Остальные обработчики (копирование, очистка, resize и т.д.)
     this._setupTableEvents();
