@@ -113,7 +113,7 @@ class PriceListSearchApp {
       banner.style.display = 'block';
     }
 
-    resultsCount.textContent = '0';
+    resultsCount.textContent = 'Ничего не найдено';
     this._renderShowMore(false);
     this._fitResultsHeight();
     this.exposeGlobalAPI();
