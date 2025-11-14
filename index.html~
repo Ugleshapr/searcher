@@ -34,19 +34,6 @@
 
 <body>
 
- <!-- Глобальный лоадер при загрузке базы -->
-  <div id="globalLoader" class="global-loader" aria-live="polite" aria-busy="true">
-    <div class="global-loader__box">
-      <div class="global-loader__spinner"></div>
-      <div class="global-loader__text">
-        Загружаем прайс-лист…
-      </div>
-      <div class="global-loader__hint">
-        Это может занять несколько секунд
-      </div>
-    </div>
-  </div>
-
   <!-- Небольшой бейдж, чтобы не перепутать среду -->
   
 
