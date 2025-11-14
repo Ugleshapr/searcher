@@ -38,11 +38,14 @@ export class DataLoader {
     transformHeader: h => h.trim()
   }).data;
 
-  // если статичный — кладём в IndexedDB
+    // если статичный — кладём в IndexedDB
   if (cachePolicy === 'static') {
-    await IDB.put(full, APP_VERSION, parsed);
+    // Убираем всё несериализуемое перед сохранением
+    const cleanData = JSON.parse(JSON.stringify(parsed));
+    await IDB.put(full, APP_VERSION, cleanData);
     console.log('[STATIC CACHE PUT]', full);
   }
+
 
   return this._preprocessData(parsed);
 }
