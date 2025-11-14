@@ -30,13 +30,27 @@ export class DataLoader {
 
   if (!window.Papa) await this._loadPapaParse();
 
-  const parsed = Papa.parse(text, {
-    header: true,
-    delimiter: ';',
-    skipEmptyLines: true,
-    worker: true,
-    transformHeader: h => h.trim()
-  }).data;
+ const parsedRaw = Papa.parse(text, {
+  header: true,
+  delimiter: ';',
+  skipEmptyLines: true,
+  worker: true
+});
+
+// parsedRaw.data — сами строки
+// parsedRaw.meta.fields — исходные имена колонок
+const { data, meta } = parsedRaw;
+const fields = meta.fields || [];
+
+const parsed = data.map(row => {
+  const out = {};
+  for (const origKey of fields) {
+    const trimmed = origKey.trim();   // то, что раньше делал transformHeader
+    out[trimmed] = row[origKey];
+  }
+  return out;
+});
+
 
     // если статичный — кладём в IndexedDB
   if (cachePolicy === 'static') {

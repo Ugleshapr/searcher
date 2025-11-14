@@ -9,60 +9,53 @@ export class DataLoader {
     this.MAX_XLSX_BYTES = 15 * 1024 * 1024;
   }
 
-  async loadCSV(url, options = {}) {
-  const { cachePolicy = 'daily' } = options;
-  const BASE = location.pathname.includes('/searcher/') ? '/searcher/' : '/';
-  const full = `${BASE}${url}`;
+    async loadCSV(url, options = {}) {
+    const { cachePolicy = 'daily' } = options;
+    const BASE = location.pathname.includes('/searcher/') ? '/searcher/' : '/';
+    const full = `${BASE}${url}`;
 
-  // если файл статичный — проверяем IndexedDB
-  if (cachePolicy === 'static') {
-    const cached = await IDB.get(full, APP_VERSION);
-    if (cached) {
-      console.log('[STATIC CACHE HIT]', full);
-      return this._preprocessData(cached);
+    // если файл статичный — проверяем IndexedDB
+    if (cachePolicy === 'static') {
+      const cached = await IDB.get(full, APP_VERSION);
+      if (cached) {
+        console.log('[STATIC CACHE HIT]', full);
+        return this._preprocessData(cached);
+      }
     }
-  }
 
-  // если daily — не лезем в IndexedDB, всегда fetch
-  const resp = await fetch(full, { cache: 'no-store' });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
-  const text = await resp.text();
+    // если daily — не лезем в IndexedDB, всегда fetch
+    const resp = await fetch(full, { cache: 'no-store' });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} ${resp.statusText}`);
+    const text = await resp.text();
 
-  if (!window.Papa) await this._loadPapaParse();
+    // грузим PapaParse при необходимости
+    if (!window.Papa) await this._loadPapaParse();
 
- const parsedRaw = Papa.parse(text, {
-  header: true,
-  delimiter: ';',
-  skipEmptyLines: true,
-  worker: true
-});
+    // СИНХРОННЫЙ парсинг без worker
+    const result = Papa.parse(text, {
+      header: true,
+      delimiter: ';',
+      skipEmptyLines: true,
+      // без worker: true
+      transformHeader: h => h.trim()
+    });
 
-// parsedRaw.data — сами строки
-// parsedRaw.meta.fields — исходные имена колонок
-const { data, meta } = parsedRaw;
-const fields = meta.fields || [];
+    if (result.errors && result.errors.length) {
+      console.warn('PapaParse errors:', result.errors.slice(0, 3));
+    }
 
-const parsed = data.map(row => {
-  const out = {};
-  for (const origKey of fields) {
-    const trimmed = origKey.trim();   // то, что раньше делал transformHeader
-    out[trimmed] = row[origKey];
-  }
-  return out;
-});
-
+    const parsed = result.data;
 
     // если статичный — кладём в IndexedDB
-  if (cachePolicy === 'static') {
-    // Убираем всё несериализуемое перед сохранением
-    const cleanData = JSON.parse(JSON.stringify(parsed));
-    await IDB.put(full, APP_VERSION, cleanData);
-    console.log('[STATIC CACHE PUT]', full);
+    if (cachePolicy === 'static') {
+      const cleanData = JSON.parse(JSON.stringify(parsed));
+      await IDB.put(full, APP_VERSION, cleanData);
+      console.log('[STATIC CACHE PUT]', full);
+    }
+
+    return this._preprocessData(parsed);
   }
 
-
-  return this._preprocessData(parsed);
-}
 
 
 
