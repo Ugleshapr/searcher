@@ -217,6 +217,50 @@ function normalizeFacetValue(raw, dict, specId) {
 
     return grouped;
   }
+  
+  function liftImportantParams(grouped) {
+  if (!window.FilterRange || !Array.isArray(window.FilterRange.importantSpecIds)) {
+    return grouped;
+  }
+
+  const important = new Set(window.FilterRange.importantSpecIds.map(String));
+
+  // Собираем найденные параметры
+  const extracted = [];
+
+  for (let gi = 0; gi < grouped.length; gi++) {
+    const g = grouped[gi];
+    for (let pi = g.items.length - 1; pi >= 0; pi--) {
+      const p = g.items[pi];
+      if (important.has(String(p.spec_id))) {
+        extracted.push(p);
+        g.items.splice(pi, 1);
+      }
+    }
+    if (g.items.length === 0) {
+      grouped.splice(gi, 1);
+      gi--;
+    }
+  }
+
+  if (extracted.length === 0) return grouped;
+
+  const importantGroup = {
+    group_id: -0.4,
+    group_name: "Важные",
+    items: extracted
+  };
+
+  // Найти «Тип оборудования»
+  let pos = grouped.findIndex(g => g.group_id === -0.5);
+  if (pos === -1) pos = 0;
+
+  grouped.splice(pos + 1, 0, importantGroup);
+
+  return grouped;
+}
+
+
 
 
   async function buildIndex(articles) {
@@ -323,7 +367,7 @@ arr.push({ spec_id: sid, value, dict });
    let grouped = Array.from(groups.values())
   .sort((a, b) => (a.group_id || 0) - (b.group_id || 0))
   .map(g => {
-    const params = Array.from(g.params.values()).map(p => {
+    let params = Array.from(g.params.values()).map(p => {
       const variants = Array.from(p.values.entries())
         .map(([key, meta]) => ({
           value: key,
@@ -344,6 +388,12 @@ arr.push({ spec_id: sid, value, dict });
     })
       .filter(p => p.variants.length > 1)
       .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+      // исключение ненужных параметров
+if (window.FilterRange && Array.isArray(window.FilterRange.excludeSpecIds)) {
+  params = params.filter(p => !window.FilterRange.excludeSpecIds.includes(String(p.spec_id)));
+}
+
+
 
     return { group_id: g.group_id, group_name: g.group_name, items: params };
   })
@@ -352,6 +402,9 @@ arr.push({ spec_id: sid, value, dict });
 
 // Вырвать «Тип оборудования» из группы и вставить отдельным блоком
 grouped = liftTypeEquipmentGroup(grouped);
+
+// Вырвать важные параметры и поместить в группу "Важные"
+grouped = liftImportantParams(grouped);
 
 
     _index = index;
