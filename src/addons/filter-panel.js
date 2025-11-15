@@ -6,6 +6,100 @@
   const unquote = s => String(s ?? '').replace(/^'(.*)'$/, '$1').trim();
   const escRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Приводим значения фильтров к «каноническому» виду
+// Приводим значения фильтров к «каноническому» виду
+function normalizeFacetValue(raw, dict, specId) {
+  const original = String(raw ?? '').trim();
+  if (!original) {
+    return { key: '', display: '', sortNum: null };
+  }
+
+  // 0) Унификация неразрывных пробелов, если вдруг прилетели
+  const src = original.replace(/\u00A0/g, ' ');
+
+  // 1) Унификация "Нет" / "-" / "0"
+  const lower = src.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (['нет', 'нет.', '-', '0', 'no'].includes(lower)) {
+    return { key: 'Нет', display: 'Нет', sortNum: null };
+  }
+  if (['да', 'есть', 'yes'].includes(lower)) {
+    return { key: 'Да', display: 'Да', sortNum: null };
+  }
+
+  // 2) Диапазоны вида "5-10In", "5...10In", "5-10 In", "0,8-1In"
+  
+  const rangeRe = /^(\d+(?:[.,]\d+)?)\s*[-–.…]{1,3}\s*(\d+(?:[.,]\d+)?)(.*)$/i;
+  const rm = src.match(rangeRe);
+  if (rm) {
+    // числа оставляем как строки, но нормализуем запятую/точку
+    const fromRaw = rm[1].replace('.', ',');
+    const toRaw   = rm[2].replace('.', ',');
+    let tail      = (rm[3] || '').trim();
+
+    // хвост: убираем лишние пробелы, приводим In к единому виду
+    tail = tail.replace(/\s+/g, '');
+    if (tail) {
+      tail = tail.replace(/in/gi, 'In'); // in / IN / In → "In"
+    }
+
+    const display =
+      tail
+        ? `${fromRaw}–${toRaw} ${tail}`   // показываем красивый диапазон с "In"
+        : `${fromRaw}–${toRaw}`;
+
+    // ключ — максимально каноничный, лишь бы был одинаковый для всех вариаций
+    const key =
+      tail
+        ? `${fromRaw}-${toRaw}${tail.toUpperCase()}`
+        : `${fromRaw}-${toRaw}`;
+
+    return { key, display, sortNum: null }; // сортируем их как строковые
+  }
+
+  // 3) Число + единица измерения (или просто число)
+  //   примеры: "10", "3,5", "1000A", "1000 А", "1000 A"
+  const numUnitRe = /^(\d+(?:[.,]\d+)?)(?:\s*([a-zа-яµμω%°]+.*))?$/i;
+  const m = src.match(numUnitRe);
+
+  if (m) {
+    const num = parseFloat(m[1].replace(',', '.'));
+    if (!Number.isNaN(num)) {
+      let unit = (m[2] || '').trim();
+
+      // если единицы нет, но в названии параметра есть "(A)" — считаем, что это амперы
+      if (!unit && dict && dict.title) {
+        const t = String(dict.title).toLowerCase();
+        if (/\(a\)|\(а\)|амп/i.test(t)) {
+          unit = 'A';
+        }
+      }
+
+      // нормализуем единицу: убираем пробелы, приводим А/а к латинице
+      unit = unit
+        .replace(/\s+/g, '')
+        .replace(/А/g, 'A')  // кириллица → латиница
+        .replace(/а/g, 'a');
+
+      const sortNum = num;
+      const unitForKey = unit ? unit.toUpperCase() : '';
+
+      const key = unitForKey ? `${sortNum} ${unitForKey}` : String(sortNum);
+
+      const displayNum = String(m[1]).replace('.', ','); // "3,5"
+      const display = unitForKey ? `${displayNum} ${unitForKey}` : displayNum;
+
+      return { key, display, sortNum };
+    }
+  }
+
+  // 4) Всё остальное — просто аккуратно нормализуем пробелы
+  const display = src.replace(/\s+/g, ' ').trim();
+  return { key: display, display, sortNum: null };
+}
+
+
+
+
   async function fetchText(url) {
     const res = await fetch(url); // позволяем HTTP-кэшу работать
     if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
@@ -79,6 +173,52 @@
     }
   }
 
+  function liftTypeEquipmentGroup(grouped) {
+    const TYPE_TITLE = 'Тип оборудования';
+
+    let param = null;
+    let fromGroupIdx = -1;
+    let fromParamIdx = -1;
+
+    // Ищем параметр "Тип оборудования" в уже собранных группах
+    for (let gi = 0; gi < grouped.length; gi++) {
+      const g = grouped[gi];
+      const pi = g.items.findIndex(p => p.title === TYPE_TITLE);
+      if (pi !== -1) {
+        fromGroupIdx = gi;
+        fromParamIdx = pi;
+        param = g.items[pi];
+        break;
+      }
+    }
+
+    if (!param) return grouped; // не нашли — ничего не делаем
+
+    // Удаляем параметр из исходной группы
+    const srcGroup = grouped[fromGroupIdx];
+    srcGroup.items.splice(fromParamIdx, 1);
+    if (srcGroup.items.length === 0) {
+      grouped.splice(fromGroupIdx, 1); // группа опустела — убираем
+    }
+
+    // Создаём новую группу только для "Тип оборудования"
+    const newGroup = {
+      group_id: -0.5,                // чтобы было рядом с Наличием (-1)
+      group_name: TYPE_TITLE,        // заголовок блока
+      items: [param]
+    };
+
+    // Вставляем после "Наличие"
+    let insertPos = grouped.findIndex(
+      g => g.group_name === 'Наличие' || g.group_id === -1
+    );
+    if (insertPos === -1) insertPos = 0;
+    grouped.splice(insertPos + 1, 0, newGroup);
+
+    return grouped;
+  }
+
+
   async function buildIndex(articles) {
     await ensureSpecsLoaded();
 
@@ -127,49 +267,87 @@
 
       const g = { group_id: -1, group_name: 'Наличие', params: new Map() };
       g.params.set(STOCK_SID, {
-        spec_id: STOCK_SID,
-        title: 'Наличие',
-        values: new Map([
-          [STOCK_VAL_IN, vmap.get(STOCK_VAL_IN).size],
-          [STOCK_VAL_OUT, vmap.get(STOCK_VAL_OUT).size]
-        ])
-      });
+  spec_id: STOCK_SID,
+  title: 'Наличие',
+  values: new Map([
+    [STOCK_VAL_IN, { count: vmap.get(STOCK_VAL_IN).size, display: STOCK_VAL_IN, sortNum: null }],
+    [STOCK_VAL_OUT, { count: vmap.get(STOCK_VAL_OUT).size, display: STOCK_VAL_OUT, sortNum: null }]
+  ])
+});
+
       groups.set(g.group_id, g);
     })();
 
     for (const art of want) {
-      const rows = perArt.get(art) || [];
-      for (const { spec_id, value, dict } of rows) {
-        let vmap = index.get(spec_id);
-        if (!vmap) index.set(spec_id, (vmap = new Map()));
-        let aset = vmap.get(value);
-        if (!aset) vmap.set(value, (aset = new Set()));
-        aset.add(art);
+  const rows = perArt.get(art) || [];
+  for (const { spec_id, value, dict } of rows) {
+    // Нормализуем значение
+    const norm = normalizeFacetValue(value, dict, spec_id);
+    if (!norm.key) continue;
+    const key = norm.key;
 
-        const gid = dict.group_id ?? 0;
-        const gname = dict.group_name || '';
-        let g = groups.get(gid);
-        if (!g) groups.set(gid, (g = { group_id: gid, group_name: gname, params: new Map() }));
-        let p = g.params.get(spec_id);
-        if (!p) g.params.set(spec_id, (p = { spec_id, title: dict.title || spec_id, values: new Map() }));
-        let cnt = p.values.get(value) || 0;
-        p.values.set(value, cnt + 1);
-      }
+    // Индекс: ключом становится нормализованное значение
+    let vmap = index.get(spec_id);
+    if (!vmap) index.set(spec_id, (vmap = new Map()));
+    let aset = vmap.get(key);
+    if (!aset) vmap.set(key, (aset = new Set()));
+    aset.add(art);
+
+    // Группы/параметры: храним счётчик + мета (отображение, sortNum)
+    const gid = dict.group_id ?? 0;
+    const gname = dict.group_name || '';
+    let g = groups.get(gid);
+    if (!g) groups.set(gid, (g = { group_id: gid, group_name: gname, params: new Map() }));
+    let p = g.params.get(spec_id);
+    if (!p) g.params.set(spec_id, (p = { spec_id, title: dict.title || spec_id, values: new Map() }));
+
+    let meta = p.values.get(key);
+    if (!meta) {
+      meta = { count: 0, display: norm.display, sortNum: norm.sortNum };
     }
+    meta.count += 1;
+    // если вдруг первое значение было пустое — подхватываем следующий display
+    if (!meta.display && norm.display) meta.display = norm.display;
+    if (meta.sortNum == null && norm.sortNum != null) meta.sortNum = norm.sortNum;
+    p.values.set(key, meta);
+  }
+}
+
 
     let grouped = Array.from(groups.values())
-      .sort((a, b) => (a.group_id || 0) - (b.group_id || 0))
-      .map(g => {
-        const params = Array.from(g.params.values()).map(p => {
-          const variants = Array.from(p.values.entries())
-            .sort((a, b) => a[0].localeCompare(b[0], 'ru'))
-            .map(([val, count]) => ({ value: val, count }));
-          return { spec_id: p.spec_id, title: p.title, variants };
-        })
-          .filter(p => p.variants.length > 1)
-          .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
-        return { group_id: g.group_id, group_name: g.group_name, items: params };
-      })
+  .sort((a, b) => (a.group_id || 0) - (b.group_id || 0))
+  .map(g => {
+    const params = Array.from(g.params.values()).map(p => {
+      const variants = Array.from(p.values.entries())
+        .map(([key, meta]) => ({
+          value: key,              // «каноническое» значение, по нему фильтруем
+          count: meta.count,
+          display: meta.display || key,
+          sortNum: meta.sortNum
+        }))
+        .sort((a, b) => {
+          // Оба числовые → сортируем по числу
+          if (a.sortNum != null && b.sortNum != null && a.sortNum !== b.sortNum) {
+            return a.sortNum - b.sortNum;
+          }
+          // Один числовой, другой нет → числовые вверх
+          if (a.sortNum != null && b.sortNum == null) return -1;
+          if (a.sortNum == null && b.sortNum != null) return 1;
+          // Остальное — обычная строковая сортировка
+          return a.display.localeCompare(b.display, 'ru');
+        });
+
+      return { spec_id: p.spec_id, title: p.title, variants };
+    })
+      .filter(p => p.variants.length > 1)
+      .sort((a, b) => a.title.localeCompare(b.title, 'ru'));
+
+// Вырвать «Тип оборудования» из группы и вставить отдельным блоком
+grouped = liftTypeEquipmentGroup(grouped);
+
+    return { group_id: g.group_id, group_name: g.group_name, items: params };
+  })
+
       .filter(g => g.items.length > 0)
       .filter(g => String(g.group_name).toLowerCase() !== 'классификация');
 
@@ -349,15 +527,15 @@
 
         const wrap = qs('.fp-values', pEl);
         for (const v of p.variants) {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'fp-pill';
-          btn.textContent = v.value || '—';
-          btn.title = `Совпадений: ${v.count}`;
-          btn.dataset.sid = p.spec_id;
-          btn.dataset.val = v.value;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'fp-pill';
+  btn.textContent = v.display || v.value || '—';
+  btn.title = `Совпадений: ${v.count}`;
+  btn.dataset.sid = p.spec_id;
+  btn.dataset.val = v.value;
 
-          if (_selected.get(p.spec_id)?.has(v.value)) btn.classList.add('is-active');
+  if (_selected.get(p.spec_id)?.has(v.value)) btn.classList.add('is-active');
 
           btn.addEventListener('click', () => {
             const sid = btn.dataset.sid;
