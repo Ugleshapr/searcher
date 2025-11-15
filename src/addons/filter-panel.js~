@@ -249,13 +249,7 @@ function normalizeFacetValue(raw, dict, specId) {
       if (!sid) continue;
       const dict = _specMap.get(sid) || {};
       const value = unquote(row['value']);
-      let arr = perArt.get(art);
-if (!arr) {
-  arr = [];
-  perArt.set(art, arr);
-}
-arr.push({ spec_id: sid, value, dict });
-
+      (perArt.get(art) || perArt.set(art, []).get(art)).push({ spec_id: sid, value, dict });
     }
 
     const index = new Map();
