@@ -1288,5 +1288,47 @@ body.rzd-mode .form-control:focus {
 .global-loader.is-hidden {
   display: none;
 }
+/* ===================================================================
+   Filter panel loader
+   =================================================================== */
+
+#filterPanel .filter-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;          /* чтобы было ощущение карточки */
+  padding: 16px;
+  text-align: center;
+  gap: 8px;
+}
+
+#filterPanel .filter-loader__spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  border-top-color: var(--color-primary);
+  animation: globalLoaderSpin 0.8s linear infinite; /* уже есть в CSS */
+}
+
+#filterPanel .filter-loader__text {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+#filterPanel .filter-loader__hint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Ошибка при загрузке фильтров (опционально) */
+#filterPanel .filter-loader--error {
+  border-radius: 10px;
+  border: 1px dashed var(--color-error);
+  background: rgba(var(--color-error-rgb, 192,21,47), 0.06);
+  color: var(--color-error);
+}
 
 

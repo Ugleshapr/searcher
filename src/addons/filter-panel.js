@@ -382,15 +382,46 @@
   }
 
   async function open(ctx) {
-    const host = document.getElementById('filterPanel');
-    if (!host) return;
-    _container = host;
-    resetState();
+  const host = document.getElementById('filterPanel');
+  if (!host) return;
+
+  _container = host;
+
+  // 1) Сразу показываем локальный лоадер в области фильтров
+  _container.innerHTML = `
+    <div class="filter-loader">
+      <div class="filter-loader__spinner"></div>
+      <div class="filter-loader__text">Готовим параметры фильтра…</div>
+      <div class="filter-loader__hint">Парсим характеристики для найденных товаров</div>
+    </div>
+  `;
+
+  // 2) Сбрасываем внутреннее состояние фильтров
+  resetState();
+
+  try {
+    // 3) Строим индекс (парсим products_spec*.csv и т.п.)
     await buildIndex(ctx.articles || []);
+
+    // 4) Рендер панели и пересчёт счётчиков
     renderPanel();
     updatePillsCounts();
+
     if (_container) _container.scrollTop = 0;
+  } catch (err) {
+    console.error('FilterPanel.open error:', err);
+    // 5) Простейший fallback: сообщение об ошибке в той же зоне
+    if (_container) {
+      _container.innerHTML = `
+        <div class="filter-loader filter-loader--error">
+          Не удалось загрузить фильтры.<br/>
+          Попробуйте закрыть панель и открыть ещё раз.
+        </div>
+      `;
+    }
   }
+}
+
 
   function close() {
     if (_container) _container.innerHTML = '';
@@ -439,18 +470,29 @@
     });
 
     document.addEventListener('filter:opened', async () => {
-      const panelNow = document.getElementById('filterPanel');
-      if (!panelNow) return;
-      const app = window.App;
-      if (!app) return;
-      const arts = (app._preFilterData || app.filteredData || [])
-        .map(r => String(r['Артикул'] || '').trim())
-        .filter(Boolean);
-      panelNow.style.display = 'block';
-      if (window.FilterPanel && typeof window.FilterPanel.open === 'function') {
-        await window.FilterPanel.open({ articles: arts });
-      }
-    });
+  const panelNow = document.getElementById('filterPanel');
+  if (!panelNow) return;
+  const app = window.App;
+  if (!app) return;
+
+  const arts = (app._preFilterData || app.filteredData || [])
+    .map(r => String(r['Артикул'] || '').trim())
+    .filter(Boolean);
+
+  panelNow.style.display = 'block';
+
+  // Визуально блокируем кнопку на время загрузки фильтров
+  btn.disabled = true;
+
+  try {
+    if (window.FilterPanel && typeof window.FilterPanel.open === 'function') {
+      await window.FilterPanel.open({ articles: arts });
+    }
+  } finally {
+    btn.disabled = false;
+  }
+});
+
 
     updateBtn();
   }
