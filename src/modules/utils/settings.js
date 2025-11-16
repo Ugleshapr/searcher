@@ -35,12 +35,28 @@
     const errorEl = $('accentColorError');
 
     const close = () => { menu.hidden = true; };
-    const open = () => {
-      menu.hidden = false;
-      input.value = localStorage.getItem(STORAGE_KEY) || DEFAULT;
-    };
+const open = () => {
+  menu.hidden = false;
 
-    btn.onclick = e => (menu.hidden ? open() : close());
+  const rect = btn.getBoundingClientRect();
+  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  menu.style.right = `${window.innerWidth - rect.right - window.scrollX}px`;
+
+  input.value = localStorage.getItem(STORAGE_KEY) || DEFAULT;
+};
+
+
+    btn.onclick = e => {
+  e.stopPropagation();
+  menu.hidden ? open() : close();
+};
+
+document.addEventListener('click', e => {
+  if (menu.hidden) return;
+  if (e.target.closest('#settingsMenu') || e.target.closest('#settingsBtn')) return;
+  close();
+});
+
     applyBtn.onclick = () => {
       const hex = normalizeHex(input.value);
       if (!hex) return (errorEl.textContent = 'HEX #rrggbb');

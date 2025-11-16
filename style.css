@@ -720,21 +720,20 @@ td.copyable .copy-badge {
   border-radius: 50%;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  font-size: 13px;
-  cursor: pointer;
+  font-size: 15px;      
+  line-height: 1;      
   padding: 0;
-
-  
   color: var(--color-primary);
 }
+
 
 .settings-btn:hover,
 .settings-btn:focus-visible {
   background: var(--color-secondary);
-  color: var(--color-primary-hover); 
+  color: var(--color-primary); 
 }
 
-}
+
 /* Порядок элементов в правом верхнем углу */
 #datasetInfo { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 #datasetInfo .copy-inline-title { order: 1; }   /* COPY */
@@ -1394,7 +1393,7 @@ body.rzd-mode .form-control:focus {
 
 .dm-tab--active {
   border-color: var(--color-primary);
-  background: rgba(var(--color-teal-500-rgb, 33,128,141), 0.08);
+  background: rgba(var(--color-primary-rgb, 79,103,83), 0.08);
   color: var(--color-primary);
 }
 
@@ -1503,6 +1502,22 @@ body.rzd-mode .form-control:focus {
   font-size: 11px;
   color: var(--color-error);
 }
+
+.settings-btn,
+.btn--icon,
+.legend-info-btn {
+  margin-left: .4rem; 
+}
+
+#datasetInfo {
+  display: flex;
+  align-items: center;
+  gap: .4rem;    /* все интервалы одинаковые */
+}
+#datasetInfo > * {
+  margin: 0 !important; /* убираем старые margin у отдельных кнопок */
+}
+
 
 
 
