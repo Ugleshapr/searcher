@@ -720,11 +720,18 @@ td.copyable .copy-badge {
   border-radius: 50%;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
-  font-size: 15px;      
-  line-height: 1;      
+  cursor: pointer;
   padding: 0;
   color: var(--color-primary);
 }
+
+/* чтобы внутри не было лишних отступов/базовой линии */
+.settings-btn .settings-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
 
 
 .settings-btn:hover,
