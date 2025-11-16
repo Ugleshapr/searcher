@@ -842,8 +842,19 @@ td.copyable .copy-badge {
   word-break: break-word;
   overflow-wrap: anywhere;
 }
-.dm-header { display: flex; align-items: center; gap: .5rem; padding: .5rem .75rem; border-bottom: 1px solid var(--color-border); }
-.dm-title { font-weight: 700; font-size: 18px; } 
+.dm-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* прячем текстовый заголовок полностью */
+.dm-title {
+  display: none;
+}
+
 
 .dm-back {
   border: 1px solid var(--color-border);
@@ -1360,6 +1371,13 @@ body.rzd-mode .form-control:focus {
   padding-top: 0;
 }
 
+/* панель "Аксессуары" — ограничение по высоте + скролл */
+.dm-pane--accs {
+  max-height: 650px;      
+  overflow-y: auto;
+  padding-right: 4px;     
+}
+
 /* Список аксессуаров */
 .dm-acc-list {
   list-style: none;
@@ -1419,5 +1437,6 @@ body.rzd-mode .form-control:focus {
 .dm-acc:last-child {
   border-bottom: none; /* чтобы последняя строка была без линии */
 }
+
 
 

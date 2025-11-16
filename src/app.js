@@ -473,7 +473,8 @@ document.addEventListener('filter:opened', () => {
           if (window.Tips && typeof window.Tips.getForName === 'function') {
             const tips = await window.Tips.getForName(rawName);
             menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
-            
+            const headerTitle = menu.querySelector('.dm-header .dm-title');
+  if (headerTitle) headerTitle.remove();
             menu.style.transform = 'none';
             menu.style.inset = 'auto';
             menu.removeAttribute('data-popper-placement');
