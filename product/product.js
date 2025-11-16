@@ -211,7 +211,7 @@ document.addEventListener('click', async (e) => {
 
     // 1) Загружаем словарь спецификаций
     //    Ожидаемые колонки: spec_id;title;value_type;group_id;group_name
-    const specs = await parseCSV('../addons/products_spec.csv', /*header*/ true);
+    const specs  = await parseCSV('../src/addons/products_spec.csv', true);
 
     // Сформируем map spec_id → {title, value_type, group_id, group_name}
     const specMap = new Map();
@@ -228,7 +228,7 @@ document.addEventListener('click', async (e) => {
 
     // 2) Значения по продуктам
     //    Ожидаемые колонки: product_id;spec_id;value
-    const values = await parseCSV('../addons/products_spec_values.csv', /*header*/ true);
+    const values = await parseCSV('../src/addons/products_spec_values.csv', true);
     const mine = values.filter(v => String(v['product_id'] ?? '').trim() === art);
 
     // 3) Объединяем: подставляем title + group_* по spec_id
