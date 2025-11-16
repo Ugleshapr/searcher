@@ -11,10 +11,71 @@
   };
 
   const applyColor = hex => {
-    const root = document.documentElement;
-    root.style.setProperty('--color-teal-500', hex);
-    root.style.setProperty('--color-primary', hex);
+  const root = document.documentElement;
+  root.style.setProperty('--color-primary', hex);
+
+  const rgb = hexToRgbObj(hex);
+  if (rgb) {
+    const hsl = rgbToHsl(rgb);
+    const hoverHsl = { ...hsl, l: Math.min(hsl.l + 0.12, 1) }; // чуть светлее
+    const hoverHex = hslToHex(hoverHsl);
+
+    root.style.setProperty('--color-primary-hover', hoverHex);
+  }
+};
+
+  
+  const hexToRgbObj = hex => {
+  const v = normalizeHex(hex);
+  if (!v) return null;
+  return {
+    r: parseInt(v.slice(1, 3), 16),
+    g: parseInt(v.slice(3, 5), 16),
+    b: parseInt(v.slice(5, 7), 16),
   };
+};
+
+const rgbToHsl = ({ r, g, b }) => {
+  (r /= 255), (g /= 255), (b /= 255);
+  const max = Math.max(r, g, b),
+    min = Math.min(r, g, b);
+  let h,
+    s,
+    l = (max + min) / 2;
+  if (max === min) {
+    h = s = 0;
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return { h, s, l };
+};
+
+const hslToHex = ({ h, s, l }) => {
+  const toHex = x => {
+    const v = Math.round(x * 255).toString(16);
+    return v.length === 1 ? '0' + v : v;
+  };
+  const a = s * Math.min(l, 1 - l);
+  const f = n => {
+    const k = (n + h * 6) % 6;
+    return l - a * Math.max(Math.min(k - 3, 1, 5 - k), -1);
+  };
+  return `#${toHex(f(0))}${toHex(f(2))}${toHex(f(4))}`;
+};
+
 
   const loadStoredColor = () => {
     const saved = localStorage.getItem(COLOR_KEY);

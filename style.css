@@ -737,7 +737,7 @@ td.copyable .copy-badge {
 .settings-btn:hover,
 .settings-btn:focus-visible {
   background: var(--color-secondary);
-  color: var(--color-primary); 
+  color: var(--color-primary-hover); 
 }
 
 
@@ -1524,6 +1524,10 @@ body.rzd-mode .form-control:focus {
 .settings-menu-row--checkbox .settings-menu-label {
   margin-bottom: 0;
 }
+.settings-menu-row--checkbox input[type="checkbox"] {
+  accent-color: var(--color-primary);
+}
+
 
 
 .settings-btn,
