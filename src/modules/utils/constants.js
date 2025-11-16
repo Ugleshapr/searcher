@@ -3,9 +3,12 @@ export const APP_VERSION = document.documentElement.getAttribute('data-app-versi
 export const RANK_RULES = {
   bonuses: {
     wordBonuses: [
-    { words: ['новый'], score: +1200 },
-    { words: ['Контактор','Выключатель','Перключатель'], score: +150 },
+      { words: ['новый'], score: +1200 },
+      { words: ['Контактор','Выключатель','Перключатель'], score: +150 },
     ],
+
+    // бонус за пару NА-N*10 (10А-100, 20А-200, 200А-2000, 630А-6300 и т.д.)
+    ampIcuPairScore: 250,
   },
   penalties: {
     wordPenalties: [
@@ -19,6 +22,7 @@ export const RANK_RULES = {
     noDocsPenalty: -400,
   }
 };
+
 
 export const PAGE_SIZE = 200;
 export const MAX_ROWS = 200000;

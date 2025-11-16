@@ -209,6 +209,12 @@ export class SearchEngine {
         it.__score += rule.score;
       }
     }
+    // Бонус за "20А-200", "200А-2000" и т.п.
+    if (rr.bonuses.ampIcuPairScore) {
+      if (this._hasAmpIcuPair(nd) || this._hasAmpIcuPair(ctx.raw)) {
+        it.__score += rr.bonuses.ampIcuPairScore;
+      }
+    }
 
     // Штрафы за слова
     for (const rule of rr.penalties.wordPenalties || []) {
@@ -295,6 +301,23 @@ export class SearchEngine {
     it.__amp = amp;
     return amp;
   }
+  
+    _hasAmpIcuPair(str) {
+    if (!str) return false;
+    const s = String(str);
+    // Ищем "20А-200", "200A-2000", "16А-160", "630А-6300" и т.п.
+    const re = /(\d{1,4})\s*[aа]\s*[-–—]\s*(\d{2,5})\b/gi;
+    let m;
+    while ((m = re.exec(s))) {
+      const a = parseInt(m[1], 10);
+      const b = parseInt(m[2], 10);
+      if (Number.isFinite(a) && Number.isFinite(b) && b === a * 10) {
+        return true;
+      }
+    }
+    return false;
+  }
+
 
 }
 
