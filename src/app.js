@@ -71,7 +71,11 @@ class PriceListSearchApp {
     return;
   }
 
-  this.filteredData = this.searchEngine.search(this.data, query);
+    const relaxed =
+    window.AppSettings && window.AppSettings.relaxedSearch === true;
+
+  this.filteredData = this.searchEngine.search(this.data, query, { relaxed });
+
   this._preFilterData = this.filteredData.slice(); 
   this._page = 1;
   if (window.Withdrawn) {
