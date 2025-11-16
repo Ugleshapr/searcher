@@ -125,4 +125,8 @@ html, body {
   cursor: copy;
 }
 
+:root {
+  --color-accent: var(--color-primary, #21808d);
+}
+
 
