@@ -89,6 +89,9 @@
       if (!modal) return;
 
       const header = modal.querySelector('.dm-header');
+      // убираем старый заголовок, если он был
+const title = header.querySelector(':scope > .dm-title');
+if (title) title.remove();
       const body = modal.querySelector('.dm-body');
       if (!header || !body) return;
 

@@ -1403,4 +1403,21 @@ body.rzd-mode .form-control:focus {
   color: var(--color-error);
 }
 
+.dm-acc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dm-acc {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dm-acc:last-child {
+  border-bottom: none; /* чтобы последняя строка была без линии */
+}
+
 
