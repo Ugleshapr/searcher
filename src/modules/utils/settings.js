@@ -1,7 +1,7 @@
-
 (function () {
-  const STORAGE_KEY = 'plAccentColor';
-  const DEFAULT = '#21808d';
+  const COLOR_KEY = 'plAccentColor';
+  const ART_LABEL_KEY = 'plAddArtLabel';
+  const DEFAULT_COLOR = '#21808d';
 
   const $ = id => document.getElementById(id);
 
@@ -17,13 +17,23 @@
   };
 
   const loadStoredColor = () => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const hex = normalizeHex(saved) || DEFAULT;
+    const saved = localStorage.getItem(COLOR_KEY);
+    const hex = normalizeHex(saved) || DEFAULT_COLOR;
     applyColor(hex);
+    return hex;
+  };
+
+  const loadStoredArtLabel = appSettings => {
+    const stored = localStorage.getItem(ART_LABEL_KEY);
+    appSettings.addArtLabel = stored === '1';
   };
 
   const init = () => {
-    loadStoredColor();
+    // глобальный объект настроек
+    const appSettings = (window.AppSettings = window.AppSettings || {});
+
+    const currentColor = loadStoredColor();
+    loadStoredArtLabel(appSettings);
 
     const btn = $('settingsBtn');
     const menu = $('settingsMenu');
@@ -33,40 +43,63 @@
     const applyBtn = $('accentColorApply');
     const resetBtn = $('accentColorReset');
     const errorEl = $('accentColorError');
+    const artCheckbox = $('addArtLabel');
+
+    if (input) input.value = currentColor;
+    if (errorEl) errorEl.textContent = '';
+
+    if (artCheckbox) {
+      artCheckbox.checked = !!appSettings.addArtLabel;
+      artCheckbox.addEventListener('change', () => {
+        const value = artCheckbox.checked;
+        appSettings.addArtLabel = value;
+        if (value) {
+          localStorage.setItem(ART_LABEL_KEY, '1');
+        } else {
+          localStorage.removeItem(ART_LABEL_KEY);
+        }
+      });
+    }
 
     const close = () => { menu.hidden = true; };
-const open = () => {
-  menu.hidden = false;
+    const open = () => {
+      menu.hidden = false;
 
-  const rect = btn.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
-  menu.style.right = `${window.innerWidth - rect.right - window.scrollX}px`;
+      const rect = btn.getBoundingClientRect();
+      menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
+      menu.style.right = `${window.innerWidth - rect.right - window.scrollX}px`;
 
-  input.value = localStorage.getItem(STORAGE_KEY) || DEFAULT;
-};
-
+      if (input) input.value = localStorage.getItem(COLOR_KEY) || DEFAULT_COLOR;
+      if (artCheckbox) artCheckbox.checked = !!appSettings.addArtLabel;
+      if (errorEl) errorEl.textContent = '';
+    };
 
     btn.onclick = e => {
-  e.stopPropagation();
-  menu.hidden ? open() : close();
-};
+      e.stopPropagation();
+      menu.hidden ? open() : close();
+    };
 
-document.addEventListener('click', e => {
-  if (menu.hidden) return;
-  if (e.target.closest('#settingsMenu') || e.target.closest('#settingsBtn')) return;
-  close();
-});
+    document.addEventListener('click', e => {
+      if (menu.hidden) return;
+      if (e.target.closest('#settingsMenu') || e.target.closest('#settingsBtn')) return;
+      close();
+    });
 
     applyBtn.onclick = () => {
       const hex = normalizeHex(input.value);
-      if (!hex) return (errorEl.textContent = 'HEX #rrggbb');
-      localStorage.setItem(STORAGE_KEY, hex);
+      if (!hex) {
+        if (errorEl) errorEl.textContent = 'HEX #rrggbb';
+        return;
+      }
+      localStorage.setItem(COLOR_KEY, hex);
       applyColor(hex);
       close();
     };
+
     resetBtn.onclick = () => {
-      localStorage.removeItem(STORAGE_KEY);
-      applyColor(DEFAULT);
+      localStorage.removeItem(COLOR_KEY);
+      applyColor(DEFAULT_COLOR);
+      if (input) input.value = DEFAULT_COLOR;
       close();
     };
   };

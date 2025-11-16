@@ -70,7 +70,7 @@
   class="settings-btn"
   aria-haspopup="true"
   aria-expanded="false"
-  title="Настройки COPY"
+  title="Настройки"
 >
   <svg
   class="settings-icon"
@@ -132,10 +132,12 @@
       </div>
     </div>
     
-    <!-- ВЫПАДАЮЩЕЕ МЕНЮ НАСТРОЕК -->
+      <!-- ВЫПАДАЮЩЕЕ МЕНЮ НАСТРОЕК -->
   <div id="settingsMenu" class="settings-menu" hidden>
+    <div class="settings-menu-header">Настройки</div>
+
     <div class="settings-menu-row">
-      <label for="accentColorInput" class="settings-menu-label">Цвет (HEX)</label>
+      <label for="accentColorInput" class="settings-menu-label">Цвет интерфейса (HEX)</label>
       <input
         id="accentColorInput"
         type="text"
@@ -144,12 +146,23 @@
         autocomplete="off"
       />
     </div>
+
+    <div class="settings-menu-row settings-menu-row--checkbox">
+      <label for="addArtLabel" class="settings-menu-label">Добавлять слово «Артикул:»</label>
+      <input
+        id="addArtLabel"
+        type="checkbox"
+        class="form-check-input"
+      />
+    </div>
+
     <div class="settings-menu-actions">
       <button type="button" id="accentColorApply" class="btn btn--primary btn--sm">Применить</button>
       <button type="button" id="accentColorReset" class="btn btn--secondary btn--sm">Сбросить</button>
     </div>
     <div class="settings-menu-error" id="accentColorError" aria-live="polite"></div>
   </div>
+
     
     
 

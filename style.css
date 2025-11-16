@@ -727,8 +727,8 @@ td.copyable .copy-badge {
 
 /* чтобы внутри не было лишних отступов/базовой линии */
 .settings-btn .settings-icon {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: block;
 }
 
@@ -1509,6 +1509,22 @@ body.rzd-mode .form-control:focus {
   font-size: 11px;
   color: var(--color-error);
 }
+.settings-menu-header {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.settings-menu-row--checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-menu-row--checkbox .settings-menu-label {
+  margin-bottom: 0;
+}
+
 
 .settings-btn,
 .btn--icon,

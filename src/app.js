@@ -229,15 +229,16 @@ document.addEventListener('filter:opened', () => {
 
   }
 
-  _setupTableEvents() {
+    _setupTableEvents() {
     const tbody = document.getElementById('resultsBody');
     if (!tbody) return;
 
-    // Клик по ячейке для копирования
+    // Клик по ячейке для копирования (ЛКМ)
     tbody.addEventListener('click', async e => {
       const cell = e.target.closest('td.copyable');
       if (!cell) return;
 
+      // COPY-режим трогаем как раньше
       if (window.CopyMode && window.CopyMode.isOn && window.CopyMode.isOn()) {
         e.preventDefault();
         window.CopyMode.toggleFromCell(cell);
@@ -249,7 +250,15 @@ document.addEventListener('filter:opened', () => {
 
       if (!rawName || !article) return;
 
-      const tsv = `${rawName}\t${article}`;
+      const addLabel =
+        window.AppSettings && typeof window.AppSettings.addArtLabel === 'boolean'
+          ? window.AppSettings.addArtLabel
+          : false;
+
+      const tsv = addLabel
+        ? `${rawName}\tартикул: ${article}`
+        : `${rawName}\t${article}`;
+
       try {
         await navigator.clipboard.writeText(tsv);
         const prev = cell.getAttribute('title') || '';
@@ -260,7 +269,7 @@ document.addEventListener('filter:opened', () => {
       }
     });
 
-    // Двойной клик по info кнопке
+    // Двойной клик по info кнопке — без изменений
     tbody.addEventListener('dblclick', e => {
       const btn = e.target.closest('.info-circle');
       if (!btn) return;
@@ -286,6 +295,7 @@ document.addEventListener('filter:opened', () => {
       window.open(url, '_blank', 'noopener');
     });
   }
+
 
   _setupClearButton() {
     const inputEl = document.getElementById('searchInput');
@@ -363,7 +373,7 @@ document.addEventListener('filter:opened', () => {
     host.style.display = 'inline-flex';
 
     if (!host.querySelector('#helpLink')) {
-      host.insertAdjacentHTML('beforeend', `<button type="button" id="helpLink" class="info-circle" title="Открыть справку">?</button>`);
+      host.insertAdjacentHTML('beforeend', `<button type="button" id="helpLink" class="info-circle" title="Открыть аккумулятор">?</button>`);
       const help = host.querySelector('#helpLink');
       help?.addEventListener('click', () => {
         window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290', '_blank', 'noopener');
