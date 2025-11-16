@@ -209,6 +209,17 @@ export class SearchEngine {
         it.__score += rule.score;
       }
     }
+        // Бонусы за подстроки
+    for (const rule of rr.bonuses.substrBonuses || []) {
+      for (const tok of rule.tokens) {
+        const re = new RegExp(this.normalizer.escapeRegExp(tok), 'i');
+        if (re.test(raw) || re.test(ndLower)) {
+          it.__score += rule.score;
+          break;
+        }
+      }
+    }
+
     // Бонус за "20А-200", "200А-2000" и т.п.
     if (rr.bonuses.ampIcuPairScore) {
       if (this._hasAmpIcuPair(nd) || this._hasAmpIcuPair(ctx.raw)) {
