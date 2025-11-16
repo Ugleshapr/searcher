@@ -1,6 +1,7 @@
 (function () {
   const COLOR_KEY = 'plAccentColor';
   const ART_LABEL_KEY = 'plAddArtLabel';
+  const RELAXED_KEY = 'plRelaxedSearch';   
   const DEFAULT_COLOR = '#21808d';
 
   const $ = id => document.getElementById(id);
@@ -88,6 +89,10 @@ const hslToHex = ({ h, s, l }) => {
     const stored = localStorage.getItem(ART_LABEL_KEY);
     appSettings.addArtLabel = stored === '1';
   };
+  const loadStoredRelaxed = appSettings => {
+    const stored = localStorage.getItem(RELAXED_KEY);
+    appSettings.relaxedSearch = stored === '1';
+  };
 
   const init = () => {
     // глобальный объект настроек
@@ -95,6 +100,7 @@ const hslToHex = ({ h, s, l }) => {
 
     const currentColor = loadStoredColor();
     loadStoredArtLabel(appSettings);
+    loadStoredRelaxed(appSettings);
 
     const btn = $('settingsBtn');
     const menu = $('settingsMenu');
@@ -105,6 +111,7 @@ const hslToHex = ({ h, s, l }) => {
     const resetBtn = $('accentColorReset');
     const errorEl = $('accentColorError');
     const artCheckbox = $('addArtLabel');
+    const relaxedCheckbox = $('relaxedSearch');
 
     if (input) input.value = currentColor;
     if (errorEl) errorEl.textContent = '';
@@ -121,6 +128,20 @@ const hslToHex = ({ h, s, l }) => {
         }
       });
     }
+    
+        if (relaxedCheckbox) {
+      relaxedCheckbox.checked = !!appSettings.relaxedSearch;
+      relaxedCheckbox.addEventListener('change', () => {
+        const value = relaxedCheckbox.checked;
+        appSettings.relaxedSearch = value;
+        if (value) {
+          localStorage.setItem(RELAXED_KEY, '1');
+        } else {
+          localStorage.removeItem(RELAXED_KEY);
+        }
+      });
+    }
+
 
     const close = () => { menu.hidden = true; };
     const open = () => {
@@ -130,8 +151,9 @@ const hslToHex = ({ h, s, l }) => {
       menu.style.top = `${rect.bottom + window.scrollY + 4}px`;
       menu.style.right = `${window.innerWidth - rect.right - window.scrollX}px`;
 
-      if (input) input.value = localStorage.getItem(COLOR_KEY) || DEFAULT_COLOR;
+       if (input) input.value = localStorage.getItem(COLOR_KEY) || DEFAULT_COLOR;
       if (artCheckbox) artCheckbox.checked = !!appSettings.addArtLabel;
+      if (relaxedCheckbox) relaxedCheckbox.checked = !!appSettings.relaxedSearch;  // <--- добавить
       if (errorEl) errorEl.textContent = '';
     };
 
