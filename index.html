@@ -58,12 +58,22 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h3 class="mb-0">Поиск по <span id="rzdToggle" class="mode-chip">прайс-листу</span></h3>
           <span id="datasetInfo" class="text-secondary" style="display:inline-flex;align-items:center;gap:8px;">
-  <!-- COPY: компактный тумблер в правом верхнем углу -->
   <span class="copy-inline-title">COPY</span>
   <input type="checkbox" id="copyModeSwitch" />
   <label for="copyModeSwitch" class="copy-switch copy-switch--compact">
     <span class="copy-knob"></span>
   </label>
+
+  <button
+    type="button"
+    id="settingsBtn"
+    class="settings-btn"
+    aria-haspopup="true"
+    aria-expanded="false"
+    title="Настройки COPY"
+  >
+    ⚙
+  </button>
 </span>
         </div>
 
@@ -91,6 +101,27 @@
         </div>
       </div>
     </div>
+    
+    <!-- ВЫПАДАЮЩЕЕ МЕНЮ НАСТРОЕК -->
+  <div id="settingsMenu" class="settings-menu" hidden>
+    <div class="settings-menu-row">
+      <label for="accentColorInput" class="settings-menu-label">Цвет COPY (HEX)</label>
+      <input
+        id="accentColorInput"
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="#21808d"
+        autocomplete="off"
+      />
+    </div>
+    <div class="settings-menu-actions">
+      <button type="button" id="accentColorApply" class="btn btn--primary btn--sm">Применить</button>
+      <button type="button" id="accentColorReset" class="btn btn--secondary btn--sm">Сбросить</button>
+    </div>
+    <div class="settings-menu-error" id="accentColorError" aria-live="polite"></div>
+  </div>
+    
+    
 
 <!-- COPY: панель действий (показывается только в режиме COPY) -->
 <div id="copyPanel" class="copy-panel hidden" aria-hidden="true">
@@ -170,6 +201,7 @@
 <script src="src/addons/copy-mode.js"></script>
 <script src="src/addons/rzd-search.js"></script>
 <script type="module" src="./src/app.js"></script>
+<script src="src/modules/utils/settings.js"></script>
 <script src="src/addons/filter-addon.js"></script>
 <script src="src/addons/filter-range.js"></script>
 <script src="src/addons/filter-panel.js"></script>

@@ -667,16 +667,17 @@ td.copyable { cursor: copy; }
 
 /* Спец-стиль именно для "Копировать N строк" */
 .copy-panel #copyDo {
-  color: #21808d;
-  border-color: #21808d;
+  color: var(--color-primary);
+  border-color: var(--color-primary);
   background: transparent;
 }
 .copy-panel #copyDo:hover,
 .copy-panel #copyDo:focus-visible {
-  background: #21808d;
+  background: var(--color-primary);
   color: #fff;
-  border-color: #21808d;
+  border-color: var(--color-primary);
 }
+
 
 /* --- COPY: отметка выбранных позиций в таблице --- */
 tr.copy-selected {
@@ -709,11 +710,37 @@ td.copyable .copy-badge {
   letter-spacing: .5px;
   color: var(--color-text-secondary);
 }
+
+.settings-btn {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+
+  
+  color: var(--color-primary);
+}
+
+.settings-btn:hover,
+.settings-btn:focus-visible {
+  background: var(--color-secondary);
+  color: var(--color-primary-hover); 
+}
+
+}
 /* Порядок элементов в правом верхнем углу */
 #datasetInfo { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 #datasetInfo .copy-inline-title { order: 1; }   /* COPY */
 #datasetInfo .copy-switch       { order: 2; }   /* переключатель */
-#datasetInfo .info-circle       { order: 3; }   /* затем ? и i */
+#datasetInfo .settings-btn { order: 3; }
+#datasetInfo .info-circle { order: 4; }
 
 /* COPY: выпадающий список выбранных позиций */
 .copy-panel-left { position: relative; }
@@ -1178,7 +1205,7 @@ body.rzd-mode {
   border-radius: 999px;
   line-height: 1.4;
   cursor: pointer;
-  color: var(--color-teal-500); /* по умолчанию — teal */
+  color: var(--color-primary); /* по умолчанию — teal */
 }
 .mode-chip:hover {
   background: var(--color-secondary);
@@ -1190,10 +1217,10 @@ body.rzd-mode .mode-chip {
 
 /* поле поиска */
 .search-input-container .form-control {
-  border-color: var(--color-teal-500);
+  border-color: var(--color-primary);
 }
 .search-input-container .form-control:focus {
-  border-color: var(--color-teal-500);
+  border-color: var(--color-primary);
   box-shadow: 0 0 0 .2rem rgba(33,128,141,.25);
 }
 body.rzd-mode .search-input-container .form-control {
@@ -1206,14 +1233,14 @@ body.rzd-mode .search-input-container .form-control:focus {
 
 /* кнопка Copy (id="copyDo") */
 #copyDo {
-  border-color: var(--color-teal-500);
-  color: var(--color-teal-500);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 #copyDo:hover,
 #copyDo:focus-visible {
-  background: var(--color-teal-500);
+  background: var(--color-primary);
   color: #fff;
-  border-color: var(--color-teal-500);
+  border-color: var(--color-primary);
 }
 body.rzd-mode #copyDo {
   border-color: #c32b1c;
@@ -1441,6 +1468,40 @@ body.rzd-mode .form-control:focus {
 
 .dm-acc:last-child {
   border-bottom: none; /* чтобы последняя строка была без линии */
+}
+.settings-menu {
+  position: fixed;
+  min-width: 220px;
+  max-width: 260px;
+  padding: 8px 10px 10px;
+  border-radius: var(--radius-base);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  z-index: 4000;
+}
+
+.settings-menu-row {
+  margin-bottom: 8px;
+}
+
+.settings-menu-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.settings-menu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.settings-menu-error {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--color-error);
 }
 
 
