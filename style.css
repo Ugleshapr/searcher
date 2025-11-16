@@ -452,6 +452,11 @@ td.copyable { cursor: copy; }
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
 .docs-menu { max-height: none; overflow: visible; }
 .dropdown-menu { z-index: 3000; }
+/* подсказки (цены/наличие) всегда поверх выпадашек */
+.tooltip {
+  z-index: 4000;
+}
+
 
 /* Центровка «Артикул» и «Цена» (и заголовков) */
 #resultsTable th:nth-child(2),
