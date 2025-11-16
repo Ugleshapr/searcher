@@ -473,7 +473,8 @@ document.addEventListener('filter:opened', () => {
           if (window.Tips && typeof window.Tips.getForName === 'function') {
             const tips = await window.Tips.getForName(rawName);
             menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
-            
+            const headerTitle = menu.querySelector('.dm-header .dm-title');
+  if (headerTitle) headerTitle.remove();
             menu.style.transform = 'none';
             menu.style.inset = 'auto';
             menu.removeAttribute('data-popper-placement');
@@ -540,6 +541,14 @@ document.addEventListener('filter:opened', () => {
 
             const backInit = menu.querySelector('.dm-back');
             if (backInit) backInit.hidden = true;
+            if (window.Accessories && typeof window.Accessories.enhanceDocsMenu === 'function') {
+              const art = (menu.dataset.art || '').trim();
+              window.Accessories.enhanceDocsMenu(menu, {
+                art,
+                docs,
+                tips
+              });
+            }
           } else {
             const linksHtml = docs.length 
               ? `<ul class="dm-links">${docs.map(d => `
@@ -549,7 +558,18 @@ document.addEventListener('filter:opened', () => {
               : `<div class="dm-empty">Ссылок нет</div>`;
             
             menu.innerHTML = `<div class="px-3 py-2">${linksHtml}</div>`;
+            if (window.Accessories && typeof window.Accessories.enhanceDocsMenu === 'function') {
+              const art = (menu.dataset.art || '').trim();
+              window.Accessories.enhanceDocsMenu(menu, {
+                art,
+                docs,
+                tips: null
+              });
+            }
           }
+            
+                      
+          
         } catch (err) {
           console.warn('Docs/tips render error:', err);
           menu.innerHTML = `<div class="px-3 py-2 text-danger">Не удалось загрузить материалы</div>`;

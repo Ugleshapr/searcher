@@ -118,11 +118,12 @@ export class TableRenderer {
     }
   }
 
-  _renderDocs(docs, item) {
+    _renderDocs(docs, item) {
     if (!docs.length) return '—';
 
     const docsData = encodeURIComponent(JSON.stringify(docs));
     const nameForTips = (item['Наименование'] || '').trim();
+    const artRaw = (item['Артикул'] || '').trim();
 
     return `
       <div class="dropdown">
@@ -139,12 +140,14 @@ export class TableRenderer {
         </button>
         <ul class="dropdown-menu dropdown-menu-end docs-menu"
             data-name="${escapeHTML(nameForTips)}"
+            data-art="${escapeHTML(artRaw)}"
             data-docs="${docsData}">
           <li class="px-3 py-2 text-muted">Загрузка…</li>
         </ul>
       </div>
     `;
   }
+
 
   _highlightText(escapedText, tokenPatterns) {
     if (!escapedText || !tokenPatterns.length) return escapedText;
