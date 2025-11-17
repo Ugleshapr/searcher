@@ -450,10 +450,8 @@ td.copyable { cursor: copy; }
 #resultsSection .table-responsive { overflow-x: auto; overflow-y: auto !important; }
 
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
-.docs-menu {
-  max-height: calc(100vh - 160px); /* можно уменьшить при желании */
-  overflow: hidden; /* чтобы не выглядывал контент */
-}
+/* длинные списки — скроллим внутри меню; поверх соседних элементов */
+
 .dropdown-menu { z-index: 3000; }
 /* подсказки (цены/наличие) всегда поверх выпадашек */
 .tooltip {
@@ -915,9 +913,6 @@ td.copyable .copy-badge {
 
 .dm-body {
   padding: .5rem .75rem .75rem;
-  /* ограничиваем высоту содержимого */
-  max-height: min(480px, calc(100vh - 160px));
-  overflow-y: auto;          /* скроллим внутри */
 }
 
 .dm-section { margin-top: .5rem; }
@@ -1420,7 +1415,7 @@ body.rzd-mode .form-control:focus {
 
 /* панель "Аксессуары" — ограничение по высоте + скролл */
 .dm-pane--accs {
-  max-height: 100%;      /* вместо фиксированных 650px */
+  max-height: 650px;      /* как у тебя было изначально */
   overflow-y: auto;
   padding-right: 4px;
 }
