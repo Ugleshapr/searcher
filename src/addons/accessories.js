@@ -283,10 +283,27 @@ if (title) title.remove();
 
 
 function setupGlobalScrollClose() {
-  window.addEventListener('scroll', () => {
-    if (!document.querySelector('.docs-menu.show')) return;
-    closeDocsMenus();
+  let isPointerOverDocsMenu = false;
+
+  // Отслеживаем, находится ли курсор над меню документов
+  document.addEventListener('pointermove', e => {
+    isPointerOverDocsMenu = !!e.target.closest('.docs-menu');
   });
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      const opened = document.querySelector('.docs-menu.show');
+      if (!opened) return;
+
+      // Если скроллим, пока курсор над меню — не закрываем
+      if (isPointerOverDocsMenu) return;
+
+      // Скролл вне меню — закрываем
+      closeDocsMenus();
+    },
+    { passive: true }
+  );
 }
 
 if (document.readyState === 'loading') {
