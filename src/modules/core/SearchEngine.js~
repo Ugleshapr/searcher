@@ -78,7 +78,7 @@ export class SearchEngine {
         weakParts.length = 0;
       }
 
-      filtered = data.filter(item => {
+      f      filtered = data.filter(item => {
         const matchToken = (part) =>
           item.__name.includes(part) ||
           (permitArticle && item.__article.includes(part));
