@@ -248,46 +248,45 @@ if (title) title.remove();
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
-  };
+  };          
 
-        window.Accessories = Accessories;
+  window.Accessories = Accessories;
 
-  function setupDocsDropdownScrollAutoClose() {
+  // Отключаем авто-обновление Popper именно для выпадашек с .docs-menu,
+  // чтобы Popper не двигает / не растягивает меню при скролле страницы.
+  function disableDocsDropdownAutoUpdate() {
     if (!window.bootstrap || !window.bootstrap.Dropdown) return;
 
-    // Когда раскрывается ЛЮБОЙ dropdown
     document.addEventListener('shown.bs.dropdown', function (event) {
-      const toggle = event.target; // элемент с data-bs-toggle="dropdown"
+      const toggle = event.target;                  // кнопка с data-bs-toggle="dropdown"
       const dropdown = toggle.closest('.dropdown');
       if (!dropdown) return;
 
-      // Нас интересуют только те, где меню = .docs-menu
       const menu = dropdown.querySelector('.docs-menu');
-      if (!menu) return;
+      if (!menu) return;                            // нас интересуют только меню документов
 
-      // Обработчик колеса мыши: первый скролл вне меню — скрыть dropdown
-      const onWheel = function(e) {
-        // Если крутим прямо внутри меню документов — игнорируем
-        if (e.target.closest('.docs-menu')) return;
+      const inst = window.bootstrap.Dropdown.getInstance(toggle);
+      if (!inst || !inst._popper || typeof inst._popper.setOptions !== 'function') return;
 
-        const inst = window.bootstrap.Dropdown.getInstance(toggle);
-        if (inst) {
-          inst.hide();
-        }
-
-        document.removeEventListener('wheel', onWheel);
-      };
-
-      document.addEventListener('wheel', onWheel, { passive: true });
+      // Вырубаем у Popper слушатели скролла/resize,
+      // чтобы он перестал "телепортировать" и ресайзить меню.
+      inst._popper.setOptions(options => ({
+        ...options,
+        modifiers: [
+          ...(options.modifiers || []),
+          { name: 'eventListeners', enabled: false }
+        ]
+      }));
     });
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupDocsDropdownScrollAutoClose);
+    document.addEventListener('DOMContentLoaded', disableDocsDropdownAutoUpdate);
   } else {
-    setupDocsDropdownScrollAutoClose();
+    disableDocsDropdownAutoUpdate();
   }
 })();
+
 
 
 

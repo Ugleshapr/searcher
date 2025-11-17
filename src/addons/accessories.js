@@ -248,9 +248,7 @@ if (title) title.remove();
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
     }
-  };
-
-          };
+  };          
 
   window.Accessories = Accessories;
 
