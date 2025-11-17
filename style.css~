@@ -450,10 +450,7 @@ td.copyable { cursor: copy; }
 #resultsSection .table-responsive { overflow-x: auto; overflow-y: auto !important; }
 
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
-.docs-menu {
-  max-height: calc(100vh - 160px); /* можно уменьшить при желании */
-  overflow: hidden; /* чтобы не выглядывал контент */
-}
+.docs-menu { max-height: none; overflow: visible; }
 .dropdown-menu { z-index: 3000; }
 /* подсказки (цены/наличие) всегда поверх выпадашек */
 .tooltip {
@@ -1420,9 +1417,9 @@ body.rzd-mode .form-control:focus {
 
 /* панель "Аксессуары" — ограничение по высоте + скролл */
 .dm-pane--accs {
-  max-height: 100%;      /* вместо фиксированных 650px */
+  max-height: 650px;      
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 4px;     
 }
 
 /* Список аксессуаров */
