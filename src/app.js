@@ -450,28 +450,33 @@ document.addEventListener('filter:opened', () => {
       menu.style.maxWidth = 'initial';
     };
 
-    place();
-    menu._reposition = place;
+        place(); // позиционируем один раз при открытии
 
-    window.addEventListener('scroll', place, true);
-    window.addEventListener('resize', place);
+    // Для всех КРОМЕ .docs-menu оставляем динамическое позиционирование
+    if (!menu.classList.contains('docs-menu')) {
+      menu._reposition = place;
 
-    const scroller = document.querySelector('#resultsSection .table-responsive');
-    if (scroller) {
-      const closeOnScroll = () => {
-        const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
-        try {
-          const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
-          ddInst?.hide();
-        } catch {
-          menu.dispatchEvent(new Event('hide.bs.dropdown'));
-          menu.classList.remove('show');
-          dd.appendChild(menu);
-        }
-      };
-      scroller.addEventListener('scroll', closeOnScroll, { passive: true });
-      menu._closeOnScroll = closeOnScroll;
+      window.addEventListener('scroll', place, true);
+      window.addEventListener('resize', place);
+
+      const scroller = document.querySelector('#resultsSection .table-responsive');
+      if (scroller) {
+        const closeOnScroll = () => {
+          const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
+          try {
+            const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
+            ddInst?.hide();
+          } catch {
+            menu.dispatchEvent(new Event('hide.bs.dropdown'));
+            menu.classList.remove('show');
+            dd.appendChild(menu);
+          }
+        };
+        scroller.addEventListener('scroll', closeOnScroll, { passive: true });
+        menu._closeOnScroll = closeOnScroll;
+      }
     }
+
 
     // Ленивая загрузка содержимого документов
     if (menu.classList.contains('docs-menu') && !menu._enhanced) {

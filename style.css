@@ -452,6 +452,15 @@ td.copyable { cursor: copy; }
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
 .docs-menu { max-height: none; overflow: visible; }
 .dropdown-menu { z-index: 3000; }
+
+
+/* Панель "Аксессуары" — скролл внутри панели, чтобы вся выпадашка не разъезжалась */
+.dm-pane--accs {
+  max-height: 600px;      /* можешь вернуть сюда своё 650px, если удобнее */
+  overflow-y: auto;
+  padding-right: 4px;     /* чтобы не резался скроллбар */
+}
+
 /* подсказки (цены/наличие) всегда поверх выпадашек */
 .tooltip {
   z-index: 4000;
@@ -910,7 +919,10 @@ td.copyable .copy-badge {
 .dm-back[hidden] { display: none; }
 
 
-.dm-body { padding: .5rem .75rem .75rem; }
+.dm-body {
+  padding: .5rem .75rem .75rem;
+}
+
 .dm-section { margin-top: .5rem; }
 .dm-section-title { font-weight: 600; margin-bottom: .25rem; }
 
@@ -1411,9 +1423,9 @@ body.rzd-mode .form-control:focus {
 
 /* панель "Аксессуары" — ограничение по высоте + скролл */
 .dm-pane--accs {
-  max-height: 650px;      
+  max-height: 650px;      /* как у тебя было изначально */
   overflow-y: auto;
-  padding-right: 4px;     
+  padding-right: 4px;
 }
 
 /* Список аксессуаров */
