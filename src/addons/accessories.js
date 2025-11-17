@@ -250,6 +250,39 @@ if (title) title.remove();
     }
   };
 
-  window.Accessories = Accessories;
+    window.Accessories = Accessories;
+
+  function closeDocsMenus() {
+  const menus = document.querySelectorAll('.docs-menu.show');
+  if (!menus.length) return;
+
+  menus.forEach(menu => {
+    menu.classList.remove('show');
+
+    const dropdown = menu.closest('.dropdown');
+    if (!dropdown) return;
+
+    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
+    if (toggle) {
+      toggle.classList.remove('show');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+function setupGlobalScrollClose() {
+  window.addEventListener('scroll', () => {
+    if (!document.querySelector('.docs-menu.show')) return;
+    closeDocsMenus();
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupGlobalScrollClose);
+} else {
+  setupGlobalScrollClose();
+}
+
 })();
+
 
