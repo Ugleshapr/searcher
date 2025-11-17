@@ -110,7 +110,7 @@ export class SearchEngine {
         return coverage >= 0.7;
       });
 
-
+}
 
 
     // Ранжирование
