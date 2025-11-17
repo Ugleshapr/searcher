@@ -252,43 +252,76 @@ if (title) title.remove();
 
     window.Accessories = Accessories;
 
-    function closeDocsMenus() {
-  const menus = document.querySelectorAll('.docs-menu.show');
-  if (!menus.length) return;
+      function resetDocsMenuState(menu) {
+    // Сброс активной вкладки на "Документы"
+    const tabs = menu.querySelector('.dm-tabs');
+    if (tabs) {
+      const tabDocs = tabs.querySelector('[data-tab="docs"]');
+      const tabAccs = tabs.querySelector('[data-tab="accs"]');
+      if (tabDocs) tabDocs.classList.add('dm-tab--active');
+      if (tabAccs) tabAccs.classList.remove('dm-tab--active');
+    }
 
-  menus.forEach(menu => {
-    const dropdownEl = menu.closest('.dropdown');
-    const toggle = dropdownEl
-      ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
-      : null;
+    // Показать панель документов, скрыть аксессуары
+    const docsPane = menu.querySelector('.dm-pane--docs');
+    const accPane  = menu.querySelector('.dm-pane--accs');
+    if (docsPane) {
+      docsPane.hidden = false;
+      docsPane.scrollTop = 0;
+    }
+    if (accPane) {
+      accPane.hidden = true;
+      accPane.scrollTop = 0;
+    }
 
-    // 1) снимаем .show с меню
-    menu.classList.remove('show');
+    // Сброс прокрутки всего тела
+    const body = menu.querySelector('.dm-body');
+    if (body) body.scrollTop = 0;
 
-    // 2) жёстко сбрасываем inline-позиционирование от Popper
+    // Сброс inline-стилей позиционирования от Popper
     menu.style.transform = '';
     menu.style.inset = '';
     menu.style.top = '';
     menu.style.left = '';
     menu.style.bottom = '';
     menu.style.right = '';
+  }
 
-    // 3) снимаем .show и aria-expanded с кнопки
-    if (toggle) {
-      toggle.classList.remove('show');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
+  function closeDocsMenus() {
+    const menus = document.querySelectorAll('.docs-menu.show');
+    if (!menus.length) return;
 
-    // 4) если есть инстанс Bootstrap.Dropdown — гасим его,
-    // чтобы при следующем клике он создался заново с чистым состоянием
-    if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
-      const inst = window.bootstrap.Dropdown.getInstance(toggle);
-      if (inst) {
-        inst.dispose();
+    menus.forEach(menu => {
+      const dropdownEl = menu.closest('.dropdown');
+      const toggle = dropdownEl
+        ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
+        : null;
+
+      // Жёстко сбрасываем состояние вкладок/скролла/стилей
+      resetDocsMenuState(menu);
+
+      if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+        // Работаем через Bootstrap, но сразу гасим инстанс,
+        // чтобы при следующем открытии всё пересчиталось как в первый раз
+        const inst = window.bootstrap.Dropdown.getInstance(toggle);
+        if (inst) {
+          inst.hide();
+          inst.dispose();
+        } else {
+          // на всякий случай, если инстанса ещё нет
+          new window.bootstrap.Dropdown(toggle).hide();
+        }
+      } else {
+        // Фолбэк — ручное закрытие
+        menu.classList.remove('show');
+        if (toggle) {
+          toggle.classList.remove('show');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
       }
-    }
-  });
-}
+    });
+  }
+
 
 
 
