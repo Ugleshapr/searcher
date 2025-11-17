@@ -252,23 +252,35 @@ if (title) title.remove();
 
     window.Accessories = Accessories;
 
-  function closeDocsMenus() {
-  const menus = document.querySelectorAll('.docs-menu.show');
-  if (!menus.length) return;
+    function closeDocsMenus() {
+    const menus = document.querySelectorAll('.docs-menu.show');
+    if (!menus.length) return;
 
-  menus.forEach(menu => {
-    menu.classList.remove('show');
+    menus.forEach(menu => {
+      const dropdownEl = menu.closest('.dropdown');
+      const toggle = dropdownEl
+        ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
+        : null;
 
-    const dropdown = menu.closest('.dropdown');
-    if (!dropdown) return;
+      // Если Bootstrap доступен — закрываем "правильно"
+      if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+        let inst = window.bootstrap.Dropdown.getInstance(toggle);
+        if (!inst) {
+          inst = new window.bootstrap.Dropdown(toggle);
+        }
+        inst.hide();
+        return;
+      }
 
-    const toggle = dropdown.querySelector('[data-bs-toggle="dropdown"]');
-    if (toggle) {
-      toggle.classList.remove('show');
-      toggle.setAttribute('aria-expanded', 'false');
-    }
-  });
-}
+      // Фолбэк: старое ручное закрытие
+      menu.classList.remove('show');
+      if (toggle) {
+        toggle.classList.remove('show');
+        toggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
 
 function setupGlobalScrollClose() {
   window.addEventListener('scroll', () => {

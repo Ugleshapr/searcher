@@ -78,17 +78,27 @@ export class SearchEngine {
         weakParts.length = 0;
       }
 
-      filtered = data.filter(item => {
+      f      filtered = data.filter(item => {
         const matchToken = (part) =>
           item.__name.includes(part) ||
           (permitArticle && item.__article.includes(part));
 
+        // Считаем совпадения по сильным токенам
         const strongMatched = strongParts.filter(matchToken).length;
-        if (strongMatched < strongParts.length) {
-          // Не все сильные токены нашли — выкидываем.
+        const strongCoverage = strongParts.length
+          ? strongMatched / strongParts.length
+          : 1;
+
+        // Для коротких запросов (1–2 сильных токена) требуем 100% совпадения,
+        // для более длинных допускаем часть потерь.
+        const minStrongCoverage =
+          strongParts.length <= 2 ? 1 : 0.7;
+
+        if (strongCoverage < minStrongCoverage) {
           return false;
         }
 
+        // Считаем общее покрытие по всем baseParts
         const totalMatched =
           strongMatched + weakParts.filter(matchToken).length;
 
@@ -99,7 +109,7 @@ export class SearchEngine {
         // Порог покрытия: хотя бы 70% токенов должны где-то встретиться.
         return coverage >= 0.7;
       });
-    }
+
 
 
 
