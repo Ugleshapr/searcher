@@ -450,17 +450,9 @@ td.copyable { cursor: copy; }
 #resultsSection .table-responsive { overflow-x: auto; overflow-y: auto !important; }
 
 /* длинные списки — скроллим внутри меню; поверх соседних элементов */
-.docs-menu { max-height: none; overflow: visible; }
+/* длинные списки — скроллим внутри меню; поверх соседних элементов */
+
 .dropdown-menu { z-index: 3000; }
-
-
-/* Панель "Аксессуары" — скролл внутри панели, чтобы вся выпадашка не разъезжалась */
-.dm-pane--accs {
-  max-height: 600px;      /* можешь вернуть сюда своё 650px, если удобнее */
-  overflow-y: auto;
-  padding-right: 4px;     /* чтобы не резался скроллбар */
-}
-
 /* подсказки (цены/наличие) всегда поверх выпадашек */
 .tooltip {
   z-index: 4000;

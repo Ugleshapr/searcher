@@ -249,42 +249,106 @@ if (title) title.remove();
         .replace(/'/g, '&#39;');
     }
   };          
+   
 
+  // Экспортим объект аксессуаров
   window.Accessories = Accessories;
 
-  // Отключаем авто-обновление Popper именно для выпадашек с .docs-menu,
-  // чтобы Popper не двигает / не растягивает меню при скролле страницы.
-  function disableDocsDropdownAutoUpdate() {
-    if (!window.bootstrap || !window.bootstrap.Dropdown) return;
+  // Сброс состояния вкладок и скролла — чтобы при каждом открытии
+  // всё выглядело как «в первый раз»
+  function resetDocsMenuState(menu) {
+    if (!menu) return;
 
-    document.addEventListener('shown.bs.dropdown', function (event) {
-      const toggle = event.target;                  // кнопка с data-bs-toggle="dropdown"
-      const dropdown = toggle.closest('.dropdown');
-      if (!dropdown) return;
+    // Вкладки
+    const tabs = menu.querySelector('.dm-tabs');
+    if (tabs) {
+      const tabDocs = tabs.querySelector('[data-tab="docs"]');
+      const tabAccs = tabs.querySelector('[data-tab="accs"]');
+      if (tabDocs) tabDocs.classList.add('dm-tab--active');
+      if (tabAccs) tabAccs.classList.remove('dm-tab--active');
+    }
 
-      const menu = dropdown.querySelector('.docs-menu');
-      if (!menu) return;                            // нас интересуют только меню документов
+    // Пэйн «Документы» / «Аксессуары»
+    const docsPane = menu.querySelector('.dm-pane--docs');
+    const accPane  = menu.querySelector('.dm-pane--accs');
 
-      const inst = window.bootstrap.Dropdown.getInstance(toggle);
-      if (!inst || !inst._popper || typeof inst._popper.setOptions !== 'function') return;
+    if (docsPane) {
+      docsPane.hidden = false;
+      docsPane.scrollTop = 0;
+    }
+    if (accPane) {
+      accPane.hidden = true;
+      accPane.scrollTop = 0;
+    }
 
-      // Вырубаем у Popper слушатели скролла/resize,
-      // чтобы он перестал "телепортировать" и ресайзить меню.
-      inst._popper.setOptions(options => ({
-        ...options,
-        modifiers: [
-          ...(options.modifiers || []),
-          { name: 'eventListeners', enabled: false }
-        ]
-      }));
+    // Общий скролл тела
+    const body = menu.querySelector('.dm-body');
+    if (body) body.scrollTop = 0;
+  }
+
+  // Жёсткое закрытие всех открытых меню документов
+  function closeDocsMenus() {
+    const menus = document.querySelectorAll('.docs-menu.show');
+    if (!menus.length) return;
+
+    menus.forEach(menu => {
+      const dropdownEl = menu.closest('.dropdown');
+      const toggle = dropdownEl
+        ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
+        : null;
+
+      // Сброс вкладок и скролла
+      resetDocsMenuState(menu);
+
+      // Нормально закрываем через Bootstrap, чтобы сработали все события
+      if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+        const inst =
+          window.bootstrap.Dropdown.getInstance(toggle) ||
+          new window.bootstrap.Dropdown(toggle);
+        inst.hide();
+      } else {
+        // Фолбэк — руками снимаем классы
+        menu.classList.remove('show');
+        if (toggle) {
+          toggle.classList.remove('show');
+          toggle.setAttribute('aria-expanded', 'false');
+        }
+      }
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', disableDocsDropdownAutoUpdate);
-  } else {
-    disableDocsDropdownAutoUpdate();
+  // Автозакрытие при скролле страницы ВНЕ меню
+  function setupGlobalScrollClose() {
+    let isPointerOverDocsMenu = false;
+
+    // Отслеживаем, висит ли курсор над меню документов
+    document.addEventListener('pointermove', e => {
+      isPointerOverDocsMenu = !!e.target.closest('.docs-menu');
+    });
+
+    // Скролл окна
+    window.addEventListener(
+      'scroll',
+      () => {
+        const opened = document.querySelector('.docs-menu.show');
+        if (!opened) return;
+
+        // Если скроллим, пока курсор над меню — не закрываем
+        if (isPointerOverDocsMenu) return;
+
+        // Скролл вне меню — закрываем через наш helper
+        closeDocsMenus();
+      },
+      { passive: true }
+    );
   }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupGlobalScrollClose);
+  } else {
+    setupGlobalScrollClose();
+  }
+
 })();
 
 
