@@ -253,33 +253,43 @@ if (title) title.remove();
     window.Accessories = Accessories;
 
     function closeDocsMenus() {
-    const menus = document.querySelectorAll('.docs-menu.show');
-    if (!menus.length) return;
+  const menus = document.querySelectorAll('.docs-menu.show');
+  if (!menus.length) return;
 
-    menus.forEach(menu => {
-      const dropdownEl = menu.closest('.dropdown');
-      const toggle = dropdownEl
-        ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
-        : null;
+  menus.forEach(menu => {
+    const dropdownEl = menu.closest('.dropdown');
+    const toggle = dropdownEl
+      ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
+      : null;
 
-      // Если Bootstrap доступен — закрываем "правильно"
-      if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
-        let inst = window.bootstrap.Dropdown.getInstance(toggle);
-        if (!inst) {
-          inst = new window.bootstrap.Dropdown(toggle);
-        }
-        inst.hide();
-        return;
+    // 1) снимаем .show с меню
+    menu.classList.remove('show');
+
+    // 2) жёстко сбрасываем inline-позиционирование от Popper
+    menu.style.transform = '';
+    menu.style.inset = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.bottom = '';
+    menu.style.right = '';
+
+    // 3) снимаем .show и aria-expanded с кнопки
+    if (toggle) {
+      toggle.classList.remove('show');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+
+    // 4) если есть инстанс Bootstrap.Dropdown — гасим его,
+    // чтобы при следующем клике он создался заново с чистым состоянием
+    if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+      const inst = window.bootstrap.Dropdown.getInstance(toggle);
+      if (inst) {
+        inst.dispose();
       }
+    }
+  });
+}
 
-      // Фолбэк: старое ручное закрытие
-      menu.classList.remove('show');
-      if (toggle) {
-        toggle.classList.remove('show');
-        toggle.setAttribute('aria-expanded', 'false');
-      }
-    });
-  }
 
 
 function setupGlobalScrollClose() {
