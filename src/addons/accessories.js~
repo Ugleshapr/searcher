@@ -250,55 +250,41 @@ if (title) title.remove();
     }
   };
 
-      window.Accessories = Accessories;
+    window.Accessories = Accessories;
 
-  // Полный ресет меню документов/аксессуаров к исходному состоянию
-  function hardResetDocsMenu(menu) {
-    // Если это меню никогда не усиливалось аксессуарами — выходим
-    if (!menu._acsEnhanced) return;
-
-    const modal = menu.querySelector('.docs-modal') || menu.firstElementChild;
-    if (!modal) return;
-
-    const header = modal.querySelector('.dm-header');
-    const body   = modal.querySelector('.dm-body');
-
-    if (!body) return;
-
-    // 1) Удаляем вкладки
-    if (header) {
-      const tabs = header.querySelector('.dm-tabs');
-      if (tabs) tabs.remove();
+      function resetDocsMenuState(menu) {
+    // Сброс активной вкладки на "Документы"
+    const tabs = menu.querySelector('.dm-tabs');
+    if (tabs) {
+      const tabDocs = tabs.querySelector('[data-tab="docs"]');
+      const tabAccs = tabs.querySelector('[data-tab="accs"]');
+      if (tabDocs) tabDocs.classList.add('dm-tab--active');
+      if (tabAccs) tabAccs.classList.remove('dm-tab--active');
     }
 
-    // 2) Разворачиваем dm-pane--docs обратно в body
-    const docsPane = body.querySelector('.dm-pane--docs');
+    // Показать панель документов, скрыть аксессуары
+    const docsPane = menu.querySelector('.dm-pane--docs');
+    const accPane  = menu.querySelector('.dm-pane--accs');
     if (docsPane) {
-      while (docsPane.firstChild) {
-        body.insertBefore(docsPane.firstChild, docsPane);
-      }
-      docsPane.remove();
+      docsPane.hidden = false;
+      docsPane.scrollTop = 0;
     }
-
-    // 3) Удаляем панель аксессуаров целиком
-    const accPane = body.querySelector('.dm-pane--accs');
     if (accPane) {
-      accPane.remove();
+      accPane.hidden = true;
+      accPane.scrollTop = 0;
     }
 
-    // 4) Сброс скролла
-    body.scrollTop = 0;
+    // Сброс прокрутки всего тела
+    const body = menu.querySelector('.dm-body');
+    if (body) body.scrollTop = 0;
 
-    // 5) Чистим inline-позиционирование от Popper
+    // Сброс inline-стилей позиционирования от Popper
     menu.style.transform = '';
     menu.style.inset = '';
     menu.style.top = '';
     menu.style.left = '';
     menu.style.bottom = '';
     menu.style.right = '';
-
-    // 6) Сбрасываем флаг — чтобы enhanceDocsMenu снова построил всё заново
-    delete menu._acsEnhanced;
   }
 
   function closeDocsMenus() {
@@ -311,59 +297,64 @@ if (title) title.remove();
         ? dropdownEl.querySelector('[data-bs-toggle="dropdown"]')
         : null;
 
-      // Закрываем через Bootstrap, чтобы он сам убрал классы/aria
+      // Жёстко сбрасываем состояние вкладок/скролла/стилей
+      resetDocsMenuState(menu);
+
       if (window.bootstrap && window.bootstrap.Dropdown && toggle) {
+        // Работаем через Bootstrap, но сразу гасим инстанс,
+        // чтобы при следующем открытии всё пересчиталось как в первый раз
         const inst = window.bootstrap.Dropdown.getInstance(toggle);
         if (inst) {
           inst.hide();
-          inst.dispose(); // гасим инстанс, при следующем открытии будет новый
+          inst.dispose();
         } else {
+          // на всякий случай, если инстанса ещё нет
           new window.bootstrap.Dropdown(toggle).hide();
         }
       } else {
-        // Фолбэк, если bootstrap недоступен
+        // Фолбэк — ручное закрытие
         menu.classList.remove('show');
         if (toggle) {
           toggle.classList.remove('show');
           toggle.setAttribute('aria-expanded', 'false');
         }
       }
-
-      // После закрытия — полный ресет структуры
-      hardResetDocsMenu(menu);
     });
   }
 
-  function setupGlobalScrollClose() {
-    let isPointerOverDocsMenu = false;
 
-    // Отслеживаем, висит ли курсор над меню документов
-    document.addEventListener('pointermove', e => {
-      isPointerOverDocsMenu = !!e.target.closest('.docs-menu');
-    });
 
-    window.addEventListener(
-      'scroll',
-      () => {
-        const opened = document.querySelector('.docs-menu.show');
-        if (!opened) return;
 
-        // Если скролл пока курсор над меню — не закрываем
-        if (isPointerOverDocsMenu) return;
+function setupGlobalScrollClose() {
+  let isPointerOverDocsMenu = false;
 
-        // Скролл вне меню — закрываем и жёстко сбрасываем
-        closeDocsMenus();
-      },
-      { passive: true }
-    );
-  }
+  // Отслеживаем, находится ли курсор над меню документов
+  document.addEventListener('pointermove', e => {
+    isPointerOverDocsMenu = !!e.target.closest('.docs-menu');
+  });
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupGlobalScrollClose);
-  } else {
-    setupGlobalScrollClose();
-  }
+  window.addEventListener(
+    'scroll',
+    () => {
+      const opened = document.querySelector('.docs-menu.show');
+      if (!opened) return;
+
+      // Если скроллим, пока курсор над меню — не закрываем
+      if (isPointerOverDocsMenu) return;
+
+      // Скролл вне меню — закрываем
+      closeDocsMenus();
+    },
+    { passive: true }
+  );
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', setupGlobalScrollClose);
+} else {
+  setupGlobalScrollClose();
+}
+
 })();
-
 
 
