@@ -380,7 +380,7 @@ document.addEventListener('filter:opened', () => {
       host.insertAdjacentHTML('beforeend', `<button type="button" id="helpLink" class="info-circle" title="Открыть аккумулятор">?</button>`);
       const help = host.querySelector('#helpLink');
       help?.addEventListener('click', () => {
-        window.open('https://forms.yandex.ru/u/68dfc48bd046883763799290', '_blank', 'noopener');
+        window.open('https://forms.yandex.ru/u/691c525095add5da586b5053', '_blank', 'noopener');
       });
     }
 
