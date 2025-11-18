@@ -197,16 +197,16 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
     `;
   }
 
-  _initializeTooltips() {
+    _initializeTooltips() {
     if (!window.bootstrap?.Tooltip) return;
 
-    // Убираем старые Tooltips
+    // Убираем старые Tooltips на .feat-info (если где-то остались)
     document.querySelectorAll('.feat-info').forEach(el => {
       const tt = window.bootstrap.Tooltip?.getInstance?.(el);
       tt?.dispose();
     });
 
-    // Поповеры для характеристик
+    // Поповеры для характеристик (ТОЛЬКО кнопки .feat-info без .is-disabled)
     document.querySelectorAll('.feat-info:not(.is-disabled)').forEach(el => {
       const pop = window.bootstrap.Popover.getInstance(el);
       if (pop) pop.dispose();
@@ -225,6 +225,42 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
       if (t) t.dispose();
       new window.bootstrap.Tooltip(el, { html: false, placement: 'top' });
     });
+
+    // Глобальные хендлеры ТОЛЬКО для поповеров .feat-info
+    if (!window.__featPopoverGlobalHandlersAttached) {
+      window.__featPopoverGlobalHandlersAttached = true;
+
+      const hideAllFeatPopovers = () => {
+        if (!window.bootstrap?.Popover) return;
+        document.querySelectorAll('.feat-info').forEach(el => {
+          const inst = window.bootstrap.Popover.getInstance(el);
+          if (inst) inst.hide();
+        });
+      };
+
+      // Клик по документу:
+      //  - НЕ закрываем, если клик по самой .feat-info
+      //  - НЕ закрываем, если клик внутри .popover
+      //  - иначе закрываем все поповеры характеристик
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+
+        // клик по "i" — отрабатывает сам Bootstrap (toggle), не мешаем
+        if (target.closest('.feat-info')) return;
+
+        // клик внутри любого popover — не закрываем характеристики,
+        // чтобы можно было выделять/копировать текст
+        if (target.closest('.popover')) return;
+
+        hideAllFeatPopovers();
+      });
+
+      // Любой скролл (внутри таблицы, страницы и т.д.) закрывает только поповеры характеристик
+      document.addEventListener('scroll', () => {
+        hideAllFeatPopovers();
+      }, { passive: true, capture: true });
+    }
   }
+
 }
 
