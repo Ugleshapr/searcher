@@ -89,10 +89,10 @@ export class SearchEngine {
           ? strongMatched / strongParts.length
           : 1;
 
-        // Для коротких запросов (1–2 сильных токена) требуем 100% совпадения,
+        // Для коротких запросов (1–2 сильных токена) требуем 55% совпадения,
         // для более длинных допускаем часть потерь.
         const minStrongCoverage =
-          strongParts.length <= 2 ? 1 : 0.7;
+          strongParts.length <= 2 ? 1 : 0.55;
 
         if (strongCoverage < minStrongCoverage) {
           return false;
@@ -106,8 +106,8 @@ export class SearchEngine {
           ? totalMatched / baseParts.length
           : 1;
 
-        // Порог покрытия: хотя бы 70% токенов должны где-то встретиться.
-        return coverage >= 0.7;
+        // Порог покрытия: хотя бы 50% токенов должны где-то встретиться.
+        return coverage >= 0.50;
       });
 
 }
