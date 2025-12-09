@@ -4,7 +4,7 @@ export const RANK_RULES = {
   bonuses: {
     wordBonuses: [
       { words: ['новый'], score: +1200 },
-      { words: ['Контактор','Выключатель','Перключатель'], score: +250 },
+      { words: ['Контактор','Выключатель','Переключатель','Предохранитель','Разъединитель'], score: +250 },
     ],
 
     // бонус за пару NА-N*10 (10А-100, 20А-200, 200А-2000, 630А-6300 и т.д.)
@@ -18,6 +18,7 @@ export const RANK_RULES = {
     wordPenalties: [
       { words: ['om4','ом4'], score: -700 },
       { words: ['reg','рег'], score: -700 },
+      { words: ['t3','т3'], score: -700 },
     ],
     substrPenalties: [
       { tokens: ['БЗАВ'], score: -300 },
