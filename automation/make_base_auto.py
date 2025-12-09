@@ -596,6 +596,41 @@ def main():
     base = pd.DataFrame({"Наименование": name, "Артикул": art, "Цена": price})
     base = base[(base["Наименование"] != "") | (base["Артикул"] != "")].copy()
 
+        # --- 4.1) Добавляем позиции из АК5.xlsx ---
+    ak5_path = script_dir / "АК5.xlsx"
+    if ak5_path.exists():
+        try:
+            ak5 = pd.read_excel(ak5_path, sheet_name=0, header=0, dtype=str)
+        except Exception as e:
+            print(f"[!] Не удалось прочитать АК5.xlsx: {e}")
+            ak5 = None
+
+        if ak5 is not None:
+            # Находим колонки "Наименование" и "Артикул" в АК5
+            cols = [str(c).strip().lower() for c in ak5.columns]
+            try:
+                name_col = next(c for c in ak5.columns if str(c).strip().lower() in ("наименование","номенклатура","название"))
+                art_col  = next(c for c in ak5.columns if str(c).strip().lower() in ("артикул","код","id"))
+            except StopIteration:
+                print("[!] В АК5.xlsx не найдены нужные колонки — пропущено.")
+                name_col = art_col = None
+
+            if name_col and art_col:
+                ak5_df = pd.DataFrame({
+                    "Наименование": ak5[name_col].map(clean_name),
+                    "Артикул": ak5[art_col].map(clean_article),
+                    "Цена": 0.0
+                })
+                # Убираем пустые строки
+                ak5_df = ak5_df[(ak5_df["Наименование"] != "") | (ak5_df["Артикул"] != "")]
+                print(f"[i] Из АК5 добавлено позиций: {len(ak5_df)}")
+                base = pd.concat([base, ak5_df], ignore_index=True)
+            else:
+                print("[i] АК5.xlsx есть, но подходящие столбцы не найдены — пропущено.")
+    else:
+        print("[i] АК5.xlsx не найден — добавление позиций пропущено.")
+
+
     # 5) Обогащение наименований из products.csv (если есть)
     base = enrich_names_with_products(base, script_dir)
 
