@@ -601,6 +601,12 @@ def main():
 
     # 5.0) Построить карту «Сайт ссылка» из products.csv (если есть)
     site_link_map = build_site_link_map_from_products(script_dir)
+    
+    # 5.0.1) Добавить автогенерацию ссылки для отсутствующих артикулов
+    for art in base["Артикул"]:
+        art_clean = clean_article(art)
+        if art_clean and art_clean not in site_link_map:
+            site_link_map[art_clean] = f"https://keaz.ru/catalog/product/{art_clean}"
 
     # 5.1) Колонка «Документы»: сначала «Сайт ссылка», затем документы из CSV (если есть)
     base = attach_documents_column(base, script_dir, site_link_map=site_link_map)
