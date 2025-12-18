@@ -240,13 +240,27 @@ if (input && on) input.value = '';
       if (pid) cats.get(cid).products.push({ id: pid, title: ptitle || '' });
     }
 
-    // build children index
+        // auto-detect rootKey: самый частый parent_id, который НЕ является category_id
+    const rootCounter = new Map();
+    for (const c of cats.values()){
+      const p = (c.parent_id || '').toString().trim();
+      if (p && !cats.has(p)) rootCounter.set(p, (rootCounter.get(p) || 0) + 1);
+    }
+    let rootKey = '__ROOT__';
+    let best = 0;
+    for (const [k, v] of rootCounter.entries()){
+      if (v > best) { best = v; rootKey = k; }
+    }
+
+    // build children index: всё, у кого parent_id не найден среди категорий — в rootKey
     const children = new Map();
     for (const [id, c] of cats.entries()){
-      const p = c.parent_id || '__ROOT__';
+      const pRaw = (c.parent_id || '').toString().trim();
+      const p = (pRaw && cats.has(pRaw)) ? pRaw : rootKey;
       if (!children.has(p)) children.set(p, []);
       children.get(p).push(id);
     }
+
     for (const arr of children.values()){
       arr.sort((a,b)=>{
         const ta = (cats.get(a)?.title || '').toLowerCase();
@@ -267,7 +281,8 @@ if (input && on) input.value = '';
       subtree.set(id, subtreeCount(id));
     }
 
-    return { cats, children, subtree };
+    return { cats, children, subtree, rootKey };
+
   }
 
   async function loadCatalog(){
@@ -276,6 +291,8 @@ if (input && on) input.value = '';
     const text = await resp.text();
     const rows = parseCSV(text);
     graph = buildGraph(rows);
+        window.__catalogGraph = graph;
+
   }
 
   function renderCurrent(){
@@ -305,7 +322,7 @@ if (input && on) input.value = '';
       });
     }
 
-    const parentKey = currentCat ?? '__ROOT__';
+       const parentKey = currentCat ?? graph.rootKey;
     const kids = graph.children.get(parentKey) || [];
     if (grid) grid.innerHTML = '';
 
