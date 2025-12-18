@@ -1,0 +1,127 @@
+/* ===== Catalog layout & breadcrumb ===== */
+
+.catalog-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.catalog-breadcrumb .catalog-crumb {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.catalog-breadcrumb .catalog-crumb:hover {
+  background: var(--color-secondary);
+}
+
+.catalog-breadcrumb .catalog-crumb.is-current {
+  cursor: default;
+  background: var(--color-secondary);
+}
+
+.catalog-breadcrumb .catalog-sep {
+  color: var(--color-text-secondary);
+  padding: 0 2px;
+}
+
+/* ===== Fixed actions (В корень / Назад) ===== */
+
+#catalogSection .card__body {
+  position: relative;
+}
+
+#catalogSection .catalog-actions {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: inline-flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+#catalogSection .catalog-breadcrumb {
+  padding-right: 180px; /* чтобы не налезало на кнопки */
+}
+
+/* ===== Categories grid (early build tiles) ===== */
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+@media (max-width: 1024px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Category tile ===== */
+
+.cat-tile {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition:
+    box-shadow var(--duration-normal) var(--ease-standard),
+    transform var(--duration-normal) var(--ease-standard),
+    background var(--duration-normal) var(--ease-standard);
+}
+
+.cat-tile:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  background: rgba(var(--color-primary-rgb, 33, 128, 141), 0.04);
+}
+
+.cat-tile__title {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.cat-tile__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+/* ===== Hide empty category state completely ===== */
+
+#catalogCategoriesEmpty {
+  display: none !important;
+}
+
+/* ===== Products table small alignment tweak (as in early build) ===== */
+
+#productsTable td:nth-child(2),
+#productsTable th:nth-child(2) {
+  text-align: center;
+  width: 180px;
+}
+
