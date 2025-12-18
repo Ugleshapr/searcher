@@ -155,12 +155,10 @@
     const sec = $('catalogSection');
     if (sec) sec.style.display = on ? '' : 'none';
 
-    // In catalog mode, we don't use free-text search input
-    const input = $('searchInput');
-    if (input) {
-      input.disabled = on;
-      if (on) input.value = '';
-    }
+    // В каталоге строка поиска скрыта CSS-ом, тут просто чистим значение
+const input = $('searchInput');
+if (input && on) input.value = '';
+
   }
 
   async function enterCatalog(){
@@ -231,7 +229,11 @@
       if (!cats.has(cid)){
         cats.set(cid, {
           id: cid,
-          parent_id: r.parent_id || r['parent_id'] || '',
+          parent_id: (() => {
+  const v = (r.parent_id || r['parent_id'] || '').trim();
+  return (v === '0' || v.toLowerCase() === 'null') ? '' : v;
+})(),
+
           title: r.category_title || r['category_title'] || r.title || r['title'] || '',
           products: []
         });
@@ -244,7 +246,7 @@
     // build children index
     const children = new Map();
     for (const [id, c] of cats.entries()){
-      const p = c.parent_id || '';
+      const p = (c.parent_id === '0' ? '' : (c.parent_id || '')).trim();
       if (!children.has(p)) children.set(p, []);
       children.get(p).push(id);
     }
@@ -349,13 +351,31 @@
   function renderProductsForCurrent(){
     if (!window.App || !graph) return;
     const catId = currentCat;
-    const prods = catId ? (graph.cats.get(catId)?.products || []) : [];
-    const rows = prods.map(p => toAppRow(p));
 
-    window.App.filteredData = rows;
-    window.App._preFilterData = rows.slice();
-    window.App._page = 1;
-    window.App.displayResults?.();
+// В корне каталога: таблицу не заполняем, показываем подсказку
+if (mode === 'catalog' && !catId) {
+  window.App.filteredData = [];
+  window.App._preFilterData = [];
+  window.App._page = 1;
+  window.App.displayResults?.();
+
+  const b = $('stateBanner');
+  const t = $('stateBannerTitle');
+  const h = $('stateBannerHint');
+  if (t) t.textContent = 'Выберите нужную категорию';
+  if (h) h.textContent = '';
+  if (b) b.style.display = '';
+  return;
+}
+
+const prods = (graph.cats.get(catId)?.products || []);
+const rows = prods.map(p => toAppRow(p));
+
+window.App.filteredData = rows;
+window.App._preFilterData = rows.slice();
+window.App._page = 1;
+window.App.displayResults?.();
+
   }
 
   function toAppRow(p){

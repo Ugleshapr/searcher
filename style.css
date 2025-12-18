@@ -1617,6 +1617,9 @@ body.catalog-mode{
   --color-primary-rgb: 10, 10, 240;
   --color-focus-ring: rgba(10,10,240,.35);
 }
+body.catalog-mode .search-controls{
+  display: none !important;
+}
 body.catalog-mode .mode-chip{
   color: #0a0af0;
   border-color: #0a0af0;
