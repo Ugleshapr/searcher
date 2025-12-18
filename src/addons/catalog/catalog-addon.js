@@ -22,23 +22,58 @@
   function ensureMenu(){
     const chip = $('rzdToggle');
     if (!chip) return null;
-    let menu = chip.querySelector('.mode-menu');
+
+    let menu = document.querySelector('.mode-menu[data-owner="rzdToggle"]');
     if (menu) return menu;
 
     menu = document.createElement('div');
     menu.className = 'mode-menu';
     menu.hidden = true;
     menu.setAttribute('role','menu');
+    menu.setAttribute('data-owner','rzdToggle');
 
-    chip.appendChild(menu);
+    // ВАЖНО: меню в body, чтобы не резалось контейнерами
+    document.body.appendChild(menu);
 
     document.addEventListener('click', (e) => {
-      if (!chip.contains(e.target)) menu.hidden = true;
-      chip.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+      if (!chip.contains(e.target) && !menu.contains(e.target)) {
+        menu.hidden = true;
+        chip.setAttribute('aria-expanded', 'false');
+      }
     });
+
+    window.addEventListener('resize', () => {
+      if (!menu.hidden) positionMenu(menu, chip);
+    });
+    window.addEventListener('scroll', () => {
+      if (!menu.hidden) positionMenu(menu, chip);
+    }, true);
 
     return menu;
   }
+
+  function positionMenu(menu, chip){
+    const r = chip.getBoundingClientRect();
+    const gap = 8;
+
+    // базовая позиция "под чипом"
+    let left = r.left;
+    let top = r.bottom + gap;
+
+    // если вылезает вправо — сдвинем влево
+    const mw = menu.offsetWidth || 210;
+    const maxLeft = window.innerWidth - mw - 8;
+    if (left > maxLeft) left = Math.max(8, maxLeft);
+
+    // если вылезает вниз — попробуем вверх
+    const mh = menu.offsetHeight || 120;
+    const maxTop = window.innerHeight - mh - 8;
+    if (top > maxTop) top = Math.max(8, r.top - mh - gap);
+
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+  }
+
 
   function renderMenu(){
     const chip = $('rzdToggle');
@@ -56,14 +91,19 @@
       btn.type = 'button';
       btn.className = 'mode-menu__item';
       btn.textContent = it.label;
-      btn.addEventListener('click', async () => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         menu.hidden = true;
         chip.setAttribute('aria-expanded','false');
         await switchMode(it.key);
       });
       menu.appendChild(btn);
     }
+
+    requestAnimationFrame(() => positionMenu(menu, chip));
   }
+
 
   async function switchMode(next){
     // hard rule: catalog and rzd cannot be on together
@@ -362,13 +402,23 @@
 
     // Intercept click to open menu (prevent rzd-search.js toggling)
     chip.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopImmediatePropagation();
       const menu = ensureMenu();
       if (!menu) return;
+
+      // Если клик по самому меню — не перехватываем (иначе пункты не нажимаются)
+      if (menu.contains(e.target)) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+
       renderMenu();
+
       menu.hidden = !menu.hidden;
       chip.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+
+      if (!menu.hidden) {
+        requestAnimationFrame(() => positionMenu(menu, chip));
+      }
     }, true);
 
     // root/up buttons
