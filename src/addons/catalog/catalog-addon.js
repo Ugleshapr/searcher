@@ -167,7 +167,7 @@ if (input && on) input.value = '';
       await loadCatalog();
       isLoaded = true;
       currentCat = null;
-      path = [];
+      path = []
     }
     renderCurrent();
   }
@@ -229,10 +229,7 @@ if (input && on) input.value = '';
       if (!cats.has(cid)){
         cats.set(cid, {
           id: cid,
-          parent_id: (() => {
-  const v = (r.parent_id || r['parent_id'] || '').trim();
-  return (v === '0' || v.toLowerCase() === 'null') ? '' : v;
-})(),
+          parent_id: r.parent_id || r['parent_id'] || '',
 
           title: r.category_title || r['category_title'] || r.title || r['title'] || '',
           products: []
@@ -246,7 +243,7 @@ if (input && on) input.value = '';
     // build children index
     const children = new Map();
     for (const [id, c] of cats.entries()){
-      const p = (c.parent_id === '0' ? '' : (c.parent_id || '')).trim();
+      const p = c.parent_id || '__ROOT__';
       if (!children.has(p)) children.set(p, []);
       children.get(p).push(id);
     }
@@ -308,7 +305,7 @@ if (input && on) input.value = '';
       });
     }
 
-    const parentKey = currentCat ?? '';
+    const parentKey = currentCat ?? '__ROOT__';
     const kids = graph.children.get(parentKey) || [];
     if (grid) grid.innerHTML = '';
 
