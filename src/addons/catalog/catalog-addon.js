@@ -9,6 +9,28 @@
   let currentCat = null;
   let path = []; // breadcrumb: [{id,title}]
   let isLoaded = false;
+    let baseIndex = null; // Map(Артикул -> строка из window.App.data)
+
+  function buildBaseIndexFromApp() {
+    const data = window.App && Array.isArray(window.App.data) ? window.App.data : null;
+    if (!data || !data.length) return null;
+
+    const idx = new Map();
+    for (const row of data) {
+      const art = (row && row['Артикул'] != null) ? String(row['Артикул']).trim() : '';
+      if (art) idx.set(art, row);
+    }
+    return idx;
+  }
+
+  function ensureBaseIndex() {
+    if (baseIndex) return true;
+    const idx = buildBaseIndexFromApp();
+    if (!idx) return false;
+    baseIndex = idx;
+    return true;
+  }
+
 
   function $(id){ return document.getElementById(id); }
 
@@ -161,16 +183,21 @@ if (input && on) input.value = '';
 
   }
 
-  async function enterCatalog(){
+    async function enterCatalog(){
     showCatalog(true);
     if (!isLoaded) {
       await loadCatalog();
+
+      // base.csv уже загружен приложением (window.App.data), просто строим индекс
+      ensureBaseIndex();
+
       isLoaded = true;
       currentCat = null;
-      path = []
+      path = [];
     }
     renderCurrent();
   }
+
 
   async function exitCatalog(){
     showCatalog(false);
@@ -180,6 +207,7 @@ if (input && on) input.value = '';
       window.App._preFilterData = [];
       window.App._page = 1;
       window.App.displayResults?.();
+      
     }
   }
 
@@ -386,6 +414,15 @@ if (mode === 'catalog' && !catId) {
   window.App._preFilterData = [];
   window.App._page = 1;
   window.App.displayResults?.();
+  
+  if (mode === 'catalog') {
+  const t = document.getElementById('stateBannerTitle');
+  const h = document.getElementById('stateBannerHint');
+
+  if (t) t.textContent = 'Выберите нужную категорию';
+  if (h) h.textContent = '';
+}
+
 
   const b = $('stateBanner');
   const t = $('stateBannerTitle');
@@ -397,12 +434,33 @@ if (mode === 'catalog' && !catId) {
 }
 
 const prods = (graph.cats.get(catId)?.products || []);
-const rows = prods.map(p => toAppRow(p));
+
+// гарантируем индекс по base.csv (из window.App.data)
+ensureBaseIndex();
+
+const rows = prods.map(p => {
+  const art = (p && p.id != null) ? String(p.id).trim() : '';
+  const baseRow = (baseIndex && art) ? baseIndex.get(art) : null;
+
+  // если нашли артикул в base.csv — возвращаем “родную” строку (все столбцы + __поля)
+  if (baseRow) return baseRow;
+
+  // fallback: минимальная строка, если артикула нет в base
+  return toAppRow(p);
+});
+
 
 window.App.filteredData = rows;
 window.App._preFilterData = rows.slice();
 window.App._page = 1;
 window.App.displayResults?.();
+if (mode === 'catalog') {
+  const t = document.getElementById('stateBannerTitle');
+  const h = document.getElementById('stateBannerHint');
+
+  if (t) t.textContent = 'Выберите нужную категорию';
+  if (h) h.textContent = '';
+}
 
   }
 

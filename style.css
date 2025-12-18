@@ -1579,11 +1579,11 @@ body.rzd-mode .form-control:focus {
 
 
 /* ===== Mode dropdown (Прайс-листу / РЖД / Каталог) ===== */
-.mode-chip--dropdown { position: relative; padding-right: 18px; }
+.mode-chip--dropdown { position: relative; padding-right: 10px; }
 .mode-chip--dropdown::after{
   content:"▾";
   font-size: 12px;
-  margin-left: 6px;
+  margin-left: 4px;
   opacity: .75;
 }
 .mode-menu{
