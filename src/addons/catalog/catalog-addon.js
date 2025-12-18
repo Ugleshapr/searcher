@@ -327,28 +327,42 @@ if (input && on) input.value = '';
     if (grid) grid.innerHTML = '';
 
     if (!kids.length){
-      if (empty) empty.style.display = '';
-      if (grid) grid.style.display = 'none';
+  if (empty) empty.style.display = 'none';
+  if (grid) grid.style.display = 'none';
     } else {
       if (empty) empty.style.display = 'none';
       if (grid) grid.style.display = '';
       for (const id of kids){
         const c = graph.cats.get(id);
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = 'catalog-card';
-        const title = c?.title || id;
-        const total = graph.subtree.get(id) || 0;
-        card.innerHTML = `
-          <div class="catalog-card__title">${escapeHtml(title)}</div>
-          <div class="catalog-card__meta">${total} тов.</div>
-        `;
-        card.addEventListener('click', ()=>{
-          currentCat = id;
-          path.push({ id, title });
-          renderCurrent();
-          renderProductsForCurrent();
-        });
+        const card = document.createElement('div');
+card.className = 'cat-tile fade-in';
+card.tabIndex = 0;
+card.role = 'button';
+
+const title = c?.title || id;
+const total = graph.subtree.get(id) || 0;
+
+card.innerHTML = `
+  <div class="cat-tile__title">${escapeHtml(title)}</div>
+  <div class="cat-tile__meta">
+    <div></div>
+    <div>${total} тов.</div>
+  </div>
+`;
+        const open = () => {
+  currentCat = id;
+  path.push({ id, title });
+  renderCurrent();
+  renderProductsForCurrent();
+};
+
+card.addEventListener('click', open);
+card.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    open();
+  }
+});
         grid.appendChild(card);
       }
     }
