@@ -142,6 +142,7 @@ function normalizeFacetValue(raw, dict, specId) {
   let _lastCountSig = null;
   let _lastArtsNow = null;
   let _valuesCache = null; // кэш распарсенного products_spec_values.csv
+  let _orMode = false;     // режим "без исключения" (OR внутри параметра без вырубания остальных)
 
   const STOCK_SID = '__stock__';
   const STOCK_VAL_IN = 'В наличии';
@@ -154,8 +155,10 @@ function normalizeFacetValue(raw, dict, specId) {
     _prebuiltGroups = null;
     _lastCountSig = null;
     _lastArtsNow = null;
+    _orMode = false;
     // _valuesCache не трогаем — он общий на жизнь вкладки
   }
+
 
   async function ensureSpecsLoaded() {
     if (_specMap) return;
@@ -420,13 +423,20 @@ grouped = liftImportantParams(grouped);
     return parts.sort().join('&');
   }
 
-  function updatePillsCounts() {
+   function updatePillsCounts() {
     const app = window.App;
     if (!app) return;
 
-    const sig = selectionSignature();
+    const sig = selectionSignature() + `|or=${_orMode ? 1 : 0}`;
+
+    // В обычном режиме считаем от текущей выдачи (сужает и “гасит” остальные)
+    // В OR-режиме считаем от исходного набора, чтобы остальные значения не становились недоступными
+    const baseRows = _orMode
+      ? (app._preFilterData || app.filteredData || [])
+      : (app.filteredData || []);
+
     if (sig !== _lastCountSig || !_lastArtsNow) {
-      _lastArtsNow = new Set(app.filteredData.map(it => String(it['Артикул'] || '').trim()));
+      _lastArtsNow = new Set(baseRows.map(it => String(it['Артикул'] || '').trim()));
       _lastCountSig = sig;
     }
     const artsNow = _lastArtsNow;
@@ -443,10 +453,21 @@ grouped = liftImportantParams(grouped);
       const base = val || '—';
       btn.textContent = base;
       btn.title = `Совпадений: ${n}`;
-      btn.disabled = n === 0 && !btn.classList.contains('is-active');
-      btn.classList.toggle('is-disabled', btn.disabled);
+
+      const isActive = btn.classList.contains('is-active');
+      const shouldDisable = !_orMode && (n === 0) && !isActive;
+
+      btn.disabled = shouldDisable;
+      btn.classList.toggle('is-disabled', shouldDisable);
       btn.dataset.count = String(n);
     });
+
+    // В OR-режиме ничего не прячем (иначе это снова “исключение”)
+    if (_orMode) {
+      qsa('.fp-param.is-hidden', _container).forEach(el => el.classList.remove('is-hidden'));
+      qsa('.fp-group.is-hidden', _container).forEach(el => el.classList.remove('is-hidden'));
+      return;
+    }
 
     qsa('.fp-param', _container).forEach(paramEl => {
       const pills = qsa('.fp-pill', paramEl);
@@ -461,6 +482,7 @@ grouped = liftImportantParams(grouped);
       groupEl.classList.toggle('is-hidden', visibleParams.length === 0);
     });
   }
+
 
   function applySelection() {
     const app = window.App;
@@ -506,18 +528,48 @@ grouped = liftImportantParams(grouped);
 
     const header = document.createElement('div');
     header.className = 'fp-header';
-    header.innerHTML = `
+        header.innerHTML = `
       <div class="fp-search">
         <input type="search" class="form-control" placeholder="Поиск параметра..." aria-label="Поиск параметра"/>
         <button type="button" class="fp-clear-btn" title="Очистить">×</button>
       </div>
       <button type="button" class="btn btn--secondary btn--sm" id="fpClear">Сбросить</button>
+      <button
+        type="button"
+        class="btn btn--secondary btn--sm fp-mode-btn"
+        id="fpOrMode"
+        title="Режим без исключения"
+        aria-label="Режим без исключения"
+      >⧉</button>
     `;
+
     _container.appendChild(header);
 
-    _searchInput = header.querySelector('input[type="search"]');
+        _searchInput = header.querySelector('input[type="search"]');
     const fpSearchBox = header.querySelector('.fp-search');
     const fpClearBtn = header.querySelector('.fp-clear-btn');
+    const fpOrBtn = header.querySelector('#fpOrMode');
+
+    if (fpOrBtn) {
+      fpOrBtn.classList.toggle('is-active', _orMode);
+
+      fpOrBtn.addEventListener('click', () => {
+        const next = !_orMode;
+        _orMode = next;
+        fpOrBtn.classList.toggle('is-active', _orMode);
+
+        // Включаем OR: ничего не сбрасываем
+        if (_orMode) {
+          updatePillsCounts();
+          return;
+        }
+
+        // Выключаем OR: сброс ВСЕХ выбранных фильтров
+        _selected.clear();
+        qsa('.fp-pill.is-active', _container).forEach(el => el.classList.remove('is-active'));
+        applySelection();
+      });
+    }
 
     const toggleFpClear = () => {
       if (!fpSearchBox || !_searchInput) return;
