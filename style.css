@@ -1060,6 +1060,23 @@ body.is-filter-mode #resultsTable .table-empty-row td{
 }
 #filterPanel .fp-header { box-shadow: 0 1px 0 rgba(0,0,0,.06); }
 
+/* OR-mode button (⧉) */
+#filterPanel .fp-mode-btn{
+  width: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+#filterPanel .fp-mode-btn.is-active{
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb, 50,184,198), .12);
+  box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 50, 184, 198), .15);
+}
+
+
 
 /* Прячем системную кнопку очистки строки поиска только в режиме фильтра */
 body.is-filter-mode #searchInput::-webkit-search-cancel-button { 
