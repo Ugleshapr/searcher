@@ -128,6 +128,8 @@
 
 
   async function switchMode(next){
+  // при любом переключении режима фильтры должны выключаться и забываться
+    hardCloseFilters();
     // hard rule: catalog and rzd cannot be on together
     if (next === 'rzd') {
       if (mode === 'catalog') await exitCatalog();
@@ -182,8 +184,28 @@ const input = $('searchInput');
 if (input && on) input.value = '';
 
   }
+  
+    function hardCloseFilters() {
+    // 1) закрыть режим фильтра через официальный API (он бросит filter:closed)
+    try { window.FilterAddon?.close?.(); } catch {}
+
+    // 2) на случай, если события/аддоны не сработали — добиваем вручную
+    try { document.body.classList.remove('is-filter-mode'); } catch {}
+
+    const panel = document.getElementById('filterPanel');
+    if (panel) panel.style.display = 'none';
+
+    // 3) очистка состояния панели (resetState вызывается внутри close)
+    try { window.FilterPanel?.close?.(); } catch {}
+
+    // 4) вернуть текст кнопки
+    const btn = document.getElementById('filterToggle');
+    if (btn) btn.textContent = 'Фильтр';
+  }
+
 
     async function enterCatalog(){
+    hardCloseFilters();
     showCatalog(true);
     if (!isLoaded) {
       await loadCatalog();
@@ -200,6 +222,7 @@ if (input && on) input.value = '';
 
 
   async function exitCatalog(){
+    hardCloseFilters();
     showCatalog(false);
     // clear results
     if (window.App) {
