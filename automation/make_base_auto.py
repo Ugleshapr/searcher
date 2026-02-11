@@ -596,39 +596,41 @@ def main():
     base = pd.DataFrame({"Наименование": name, "Артикул": art, "Цена": price})
     base = base[(base["Наименование"] != "") | (base["Артикул"] != "")].copy()
 
-        # --- 4.1) Добавляем позиции из АК5.xlsx ---
-    ak5_path = script_dir / "АК5.xlsx"
-    if ak5_path.exists():
+    # --- 4.1) Добавляем позиции из vp.csv ---
+    vp_path = script_dir / "vp.csv"
+    if vp_path.exists():
         try:
-            ak5 = pd.read_excel(ak5_path, sheet_name=0, header=0, dtype=str)
+            vp = pd.read_csv(
+                vp_path,
+                sep=';',
+                header=0,            # есть заголовки: Наименование;Артикул
+                dtype=str,
+                encoding='utf-8-sig',  # чтобы спокойно читать файл с BOM
+                engine='python'
+            )
         except Exception as e:
-            print(f"[!] Не удалось прочитать АК5.xlsx: {e}")
-            ak5 = None
+            print(f"[!] Не удалось прочитать vp.csv: {e}")
+            vp = None
 
-        if ak5 is not None:
-            # Находим колонки "Наименование" и "Артикул" в АК5
-            cols = [str(c).strip().lower() for c in ak5.columns]
-            try:
-                name_col = next(c for c in ak5.columns if str(c).strip().lower() in ("наименование","номенклатура","название"))
-                art_col  = next(c for c in ak5.columns if str(c).strip().lower() in ("артикул","код","id"))
-            except StopIteration:
-                print("[!] В АК5.xlsx не найдены нужные колонки — пропущено.")
-                name_col = art_col = None
+        if vp is not None:
+            # ожидаем колонки ровно "Наименование" и "Артикул"
+            cols = {str(c).strip().lower(): c for c in vp.columns}
+            name_col = cols.get("наименование")
+            art_col  = cols.get("артикул")
 
-            if name_col and art_col:
-                ak5_df = pd.DataFrame({
-                    "Наименование": ak5[name_col].map(clean_name),
-                    "Артикул": ak5[art_col].map(clean_article),
+            if not name_col or not art_col:
+                print("[!] В vp.csv нет колонок 'Наименование' и/или 'Артикул' — пропущено.")
+            else:
+                vp_df = pd.DataFrame({
+                    "Наименование": vp[name_col].map(clean_name),
+                    "Артикул": vp[art_col].map(clean_article),
                     "Цена": 0.0
                 })
-                # Убираем пустые строки
-                ak5_df = ak5_df[(ak5_df["Наименование"] != "") | (ak5_df["Артикул"] != "")]
-                print(f"[i] Из АК5 добавлено позиций: {len(ak5_df)}")
-                base = pd.concat([base, ak5_df], ignore_index=True)
-            else:
-                print("[i] АК5.xlsx есть, но подходящие столбцы не найдены — пропущено.")
+                vp_df = vp_df[(vp_df["Наименование"] != "") | (vp_df["Артикул"] != "")]
+                print(f"[i] Из vp.csv добавлено позиций: {len(vp_df)}")
+                base = pd.concat([base, vp_df], ignore_index=True)
     else:
-        print("[i] АК5.xlsx не найден — добавление позиций пропущено.")
+        print("[i] vp.csv не найден — добавление позиций пропущено.")
 
 
     # 5) Обогащение наименований из products.csv (если есть)
