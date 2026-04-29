@@ -16,7 +16,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment:
-      name: github-pages        # <-- ОБЯЗАТЕЛЬНО
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
@@ -24,17 +24,26 @@ jobs:
 
       - name: Inject API Key
         env:
-          # Передаем секрет через переменную окружения (безопасно и надежно)
           KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
         run: |
-          # Используем | как разделитель, чтобы слеши в хеше не ломали sed
-          # Проверяем наличие файла перед заменой
-          if [ -f src/modules/utils/config.js ]; then
-            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" src/modules/utils/config.js
-            echo "Injection successful"
-          else
-            echo "Error: File src/modules/utils/config.js not found!"
+          FILE_PATH="src/modules/utils/config.js"
+          
+          # 1. Проверяем, существует ли файл вообще
+          if [ ! -f "$FILE_PATH" ]; then
+            echo "Ошибка: Файл $FILE_PATH не найден!"
             exit 1
+          fi
+
+          # 2. Выполняем замену
+          # Используем разделитель | на всякий случай
+          sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" "$FILE_PATH"
+
+          # 3. ПРОВЕРКА: остался ли плейсхолдер в файле?
+          if grep -q "__API_KEY_PLACEHOLDER__" "$FILE_PATH"; then
+            echo "КРИТИЧЕСКАЯ ОШИБКА: Плейсхолдер не был заменен!"
+            exit 1
+          else
+            echo "УСПЕХ: Ключ успешно вставлен в config.js"
           fi
 
       - uses: actions/upload-pages-artifact@v3
@@ -43,4 +52,3 @@ jobs:
 
       - id: deployment
         uses: actions/deploy-pages@v4
-
