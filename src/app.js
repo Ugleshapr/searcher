@@ -3,6 +3,7 @@ import { DataLoader } from './modules/core/DataLoader.js';
 import { SearchEngine } from './modules/core/SearchEngine.js';
 import { TableRenderer } from './modules/ui/TableRenderer.js';
 import { WhatsNew } from './modules/ui/WhatsNew.js';
+import { AvailabilityService } from './addons/AvailabilityService.js';
 import { debounce } from './modules/utils/helpers.js';
 import {
   RANK_RULES,
@@ -17,6 +18,7 @@ class PriceListSearchApp {
     this.dataLoader = new DataLoader(this.normalizer);
     this.searchEngine = new SearchEngine(this.normalizer, RANK_RULES);
     this.tableRenderer = new TableRenderer(this.normalizer);
+    this.availabilityService = new AvailabilityService();
 
     // Состояние
     this.data = [];
@@ -470,6 +472,48 @@ class PriceListSearchApp {
         menu.addEventListener('click', e => {
           e.stopPropagation();
         });
+      }
+
+      // Логика расчета сроков поставки (price-menu)
+      if (menu.classList.contains('price-menu') && !menu._logicAttached) {
+        menu._logicAttached = true;
+        const searchBtn = menu.querySelector('.price-menu-btn');
+        const input = menu.querySelector('.price-menu-input');
+        const placeholder = menu.querySelector('.price-menu-placeholder');
+
+        if (searchBtn && input && placeholder) {
+          searchBtn.addEventListener('click', async () => {
+            const qty = parseInt(input.value, 10) || 1;
+            const row = dd.closest('tr');
+            const productId = row ? row.dataset.sku : null;
+
+            if (!productId) return;
+
+            placeholder.textContent = '...';
+            placeholder.classList.add('is-loading');
+
+            try {
+              const days = await this.availabilityService.getAvailabilityPeriod(
+                productId,
+                qty
+              );
+
+              if (typeof days === 'number') {
+                placeholder.textContent = `${days} р. д.`;
+              } else if (
+                days === 'Обратитесь в управление обслуживания покупателей'
+              ) {
+                placeholder.textContent = 'Нет срока';
+              } else {
+                placeholder.textContent = days || 'Нет срока';
+              }
+            } catch (err) {
+              placeholder.textContent = 'Ошибка';
+            } finally {
+              placeholder.classList.remove('is-loading');
+            }
+          });
+        }
       }
 
       const place = () => {

@@ -21,9 +21,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Inject API Key
+        run: |
+          # Заменяем заглушку на секрет из настроек репозитория
+          sed -i "s/__API_KEY_PLACEHOLDER__/${{ secrets.KEAZ_API_HASH }}/g" src/modules/utils/config.js
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+
       - id: deployment
         uses: actions/deploy-pages@v4
 
