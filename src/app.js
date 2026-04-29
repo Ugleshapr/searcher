@@ -502,7 +502,7 @@ class PriceListSearchApp {
             if (productId.length > 6) productId = productId.slice(0, 6);
             productId = productId.padStart(6, '0');
 
-            placeholder.textContent = '...';
+            placeholder.textContent = '';
             placeholder.classList.add('is-loading');
 
             try {
