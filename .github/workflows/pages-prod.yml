@@ -23,9 +23,19 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Inject API Key
+        env:
+          # Передаем секрет через переменную окружения (безопасно и надежно)
+          KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
         run: |
-          # Заменяем заглушку на секрет из настроек репозитория
-          sed -i "s/__API_KEY_PLACEHOLDER__/${{ secrets.KEAZ_API_HASH }}/g" src/modules/utils/config.js
+          # Используем | как разделитель, чтобы слеши в хеше не ломали sed
+          # Проверяем наличие файла перед заменой
+          if [ -f src/modules/utils/config.js ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" src/modules/utils/config.js
+            echo "Injection successful"
+          else
+            echo "Error: File src/modules/utils/config.js not found!"
+            exit 1
+          fi
 
       - uses: actions/upload-pages-artifact@v3
         with:
