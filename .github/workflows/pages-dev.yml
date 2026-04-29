@@ -40,10 +40,19 @@ jobs:
           mkdir -p site/dev
           rsync -a --delete dev-src/ site/dev/
 
-      - name: Inject API Key for Dev
+     - name: Inject API Keys for Prod and Dev
+        env:
+          KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
         run: |
-          # ВАЖНО: путь теперь внутри папки site/dev/
-          sed -i "s/__API_KEY_PLACEHOLDER__/${{ secrets.KEAZ_API_HASH }}/g" site/dev/src/modules/utils/config.js
+          # 1. Заменяем ключ в корневой (prod) версии
+          if [ -f site/src/modules/utils/config.js ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" site/src/modules/utils/config.js
+          fi
+          
+          # 2. Заменяем ключ в dev-версии
+          if [ -f site/dev/src/modules/utils/config.js ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" site/dev/src/modules/utils/config.js
+          fi
 
       # 4) деплой артефакта из папки site
       - uses: actions/upload-pages-artifact@v3
