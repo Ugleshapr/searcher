@@ -467,11 +467,14 @@ class PriceListSearchApp {
 
       if (
         menu.classList.contains('docs-menu') ||
-        menu.classList.contains('price-menu')
+        (menu.classList.contains('price-menu') && !menu._stopPropagatonAttached)
       ) {
         menu.addEventListener('click', e => {
           e.stopPropagation();
         });
+        if (menu.classList.contains('price-menu')) {
+          menu._stopPropagatonAttached = true;
+        }
       }
 
       // Логика расчета сроков поставки (price-menu)
