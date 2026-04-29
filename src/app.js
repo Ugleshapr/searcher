@@ -458,14 +458,24 @@ class PriceListSearchApp {
       const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
       if (!menu || !btn) return;
 
-      // Присваиваем ID, чтобы Bootstrap не терял меню при перемещении в body
-      if (!menu.id) {
-        menu.id = 'dropdown-' + Math.random().toString(36).substr(2, 9);
-      }
-      btn.setAttribute('data-bs-target', '#' + menu.id);
-
       menu.dataset.portal = '1';
       document.body.appendChild(menu);
+
+      // Возврат меню на место при закрытии для стабильности DOM
+      const cleanup = () => {
+        if (menu.dataset.portal === '1') {
+          dd.appendChild(menu);
+          delete menu.dataset.portal;
+          menu.style.position = '';
+          if (menu._reposition) {
+            window.removeEventListener('scroll', menu._reposition, true);
+            window.removeEventListener('resize', menu._reposition);
+          }
+        }
+        btn.removeEventListener('hidden.bs.dropdown', cleanup);
+      };
+      btn.addEventListener('hidden.bs.dropdown', cleanup);
+
       menu.style.position = 'fixed';
       menu.style.transform = 'none';
       menu.removeAttribute('data-popper-placement');
@@ -495,8 +505,18 @@ class PriceListSearchApp {
           closeBtn.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
-            const inst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
-            inst?.hide();
+            try {
+              const inst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
+              inst?.hide();
+            } catch (err) {
+              // Если Bootstrap падает (this._menu is null), закрываем вручную
+              menu.classList.remove('show');
+              btn.classList.remove('show');
+              btn.setAttribute('aria-expanded', 'false');
+              btn.dispatchEvent(
+                new Event('hidden.bs.dropdown', { bubbles: true })
+              );
+            }
           });
         }
 

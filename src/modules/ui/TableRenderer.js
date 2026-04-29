@@ -93,19 +93,22 @@ export class TableRenderer {
         ? 'is-stock'
         : 'is-empty';
 
+    const dropdownId = `dd-${Math.random().toString(36).substring(2, 9)}`;
+
     return `
-      <div class="dropdown">
+      <div class="dropdown"
+           ${window.bootstrap ? 'data-bs-toggle="tooltip"' : ''}
+           ${window.bootstrap ? 'data-bs-title="' + escapeHTML(hint) + '"' : 'title="' + escapeHTML(hint) + '"'}>
         <span class="price-tag ${priceClass}"
               role="button"
               data-bs-toggle="dropdown"
+              data-bs-target="#${dropdownId}"
               data-bs-auto-close="true"
               aria-expanded="false"
-              aria-label="${escapeHTML(hint)}"
-              ${window.bootstrap ? '' : 'title="' + escapeHTML(hint) + '"'}
-              ${window.bootstrap ? 'data-bs-title="' + escapeHTML(hint) + '"' : ''}>
+              aria-label="${escapeHTML(hint)}">
           ${priceText}
         </span>
-        <div class="dropdown-menu price-menu">
+        <div class="dropdown-menu price-menu" id="${dropdownId}">
           <div class="price-menu-content">
             <input type="number" class="price-menu-input" value="1" min="1" max="9999">
             <span class="price-menu-arrow">→</span>
@@ -260,26 +263,31 @@ export class TableRenderer {
       });
     });
 
-    // Тултипы для цен
-    document.querySelectorAll('.price-tag[data-bs-title]').forEach(el => {
-      const t = window.bootstrap.Tooltip.getInstance(el);
-      if (t) t.dispose();
+    // Тултипы для цен (теперь на .dropdown обертке)
+    document
+      .querySelectorAll('.dropdown[data-bs-toggle="tooltip"]')
+      .forEach(el => {
+        const t = window.bootstrap.Tooltip.getInstance(el);
+        if (t) t.dispose();
 
-      const tt = new window.bootstrap.Tooltip(el, {
-        html: false,
-        placement: 'top',
-        trigger: 'hover',
-      });
+        const tt = new window.bootstrap.Tooltip(el, {
+          html: false,
+          placement: 'top',
+          trigger: 'hover',
+        });
 
-      // Отключаем тултип при открытии dropdown
-      el.addEventListener('show.bs.dropdown', () => {
-        tt.disable();
-        tt.hide();
+        // Отключаем тултип при открытии dropdown внутри
+        const btn = el.querySelector('[data-bs-toggle="dropdown"]');
+        if (btn) {
+          btn.addEventListener('show.bs.dropdown', () => {
+            tt.disable();
+            tt.hide();
+          });
+          btn.addEventListener('hidden.bs.dropdown', () => {
+            tt.enable();
+          });
+        }
       });
-      el.addEventListener('hidden.bs.dropdown', () => {
-        tt.enable();
-      });
-    });
 
     // Глобальные хендлеры ТОЛЬКО для поповеров .feat-info
     if (!window.__featPopoverGlobalHandlersAttached) {
