@@ -11,7 +11,7 @@ export class TableRenderer {
     const banner = document.getElementById('stateBanner');
 
     const total = results.length;
-    
+
     if (total === 0) {
       this._showEmptyState(resultsBody, banner);
       return;
@@ -23,31 +23,35 @@ export class TableRenderer {
     const slice = results.slice(0, end);
 
     const tooMany = total > 5000;
-    const rowsHtml = slice.map(item => this._renderRow(item, highlightTokens, tooMany)).join('');
+    const rowsHtml = slice
+      .map(item => this._renderRow(item, highlightTokens, tooMany))
+      .join('');
 
     resultsBody.innerHTML = rowsHtml;
     resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
-    
+
     this._initializeTooltips();
-    
+
     return end < total;
   }
 
   _renderRow(item, highlightTokens, tooMany) {
     const nameSafe = escapeHTML(item['Наименование'] || '');
     const artSafe = escapeHTML(item['Артикул'] || '');
-    
-    const nameHtml = tooMany || !highlightTokens.length 
-      ? nameSafe 
-      : this._highlightText(nameSafe, highlightTokens);
-    
-    const artHtml = tooMany || !highlightTokens.length
-      ? artSafe
-      : this._highlightText(artSafe, highlightTokens);
+
+    const nameHtml =
+      tooMany || !highlightTokens.length
+        ? nameSafe
+        : this._highlightText(nameSafe, highlightTokens);
+
+    const artHtml =
+      tooMany || !highlightTokens.length
+        ? artSafe
+        : this._highlightText(artSafe, highlightTokens);
 
     const docs = item.__docs || [];
     const docsHtml = this._renderDocs(docs, item);
-    
+
     const priceHtml = this._renderPrice(item);
     const infoBtn = this._renderInfoBtn(item);
 
@@ -78,18 +82,43 @@ export class TableRenderer {
 
     const hint = isWithdrawn
       ? 'Выведен из ассортимента'
-      : (inStock ? `В наличии ${q} ${pluralRu(q)}` : 'Нет в наличии');
+      : inStock
+        ? `В наличии ${q} ${pluralRu(q)}`
+        : 'Нет в наличии';
 
     const priceText = isWithdrawn ? 'Выведен' : item.__price;
-    const priceClass = isWithdrawn ? 'is-withdrawn' : (inStock ? 'is-stock' : 'is-empty');
+    const priceClass = isWithdrawn
+      ? 'is-withdrawn'
+      : inStock
+        ? 'is-stock'
+        : 'is-empty';
 
     return `
-      <span class="price-tag ${priceClass}"
-            aria-label="${escapeHTML(hint)}"
-            ${window.bootstrap ? 'data-bs-toggle="tooltip"' : 'title="'+escapeHTML(hint)+'"'}
-            ${window.bootstrap ? 'data-bs-title="'+escapeHTML(hint)+'"' : ''}>
-        ${priceText}
-      </span>
+      <div class="dropdown">
+        <span class="price-tag ${priceClass}"
+              role="button"
+              data-bs-toggle="dropdown"
+              data-bs-auto-close="outside"
+              aria-expanded="false"
+              aria-label="${escapeHTML(hint)}"
+              ${window.bootstrap ? '' : 'title="' + escapeHTML(hint) + '"'}
+              ${window.bootstrap ? 'data-bs-title="' + escapeHTML(hint) + '"' : ''}>
+          ${priceText}
+        </span>
+        <div class="dropdown-menu price-menu">
+          <div class="price-menu-content">
+            <input type="number" class="price-menu-input" value="1" min="1" max="9999">
+            <span class="price-menu-arrow">→</span>
+            <div class="price-menu-placeholder"></div>
+            <button type="button" class="price-menu-btn" title="Поиск">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   }
 
@@ -118,7 +147,7 @@ export class TableRenderer {
     }
   }
 
-    _renderDocs(docs, item) {
+  _renderDocs(docs, item) {
     if (!docs.length) return '—';
 
     const docsData = encodeURIComponent(JSON.stringify(docs));
@@ -148,27 +177,30 @@ export class TableRenderer {
     `;
   }
 
-
   _highlightText(escapedText, tokenPatterns) {
     if (!escapedText || !tokenPatterns.length) return escapedText;
-    const uniq = [...new Set(tokenPatterns)].sort((a, b) => b.length - a.length);
+    const uniq = [...new Set(tokenPatterns)].sort(
+      (a, b) => b.length - a.length
+    );
     const re = new RegExp(`(${uniq.join('|')})`, 'gi');
     return escapedText.replace(re, '<span class="highlight">$1</span>');
   }
 
   _showEmptyState(resultsBody, banner) {
     resultsBody.innerHTML = '';
-    
+
     const resultsCount = document.getElementById('resultsCount');
-if (resultsCount) resultsCount.textContent = 'Найдено: 0 результатов';
-    
+    if (resultsCount) resultsCount.textContent = 'Найдено: 0 результатов';
+
     if (document.body.classList.contains('is-filter-mode')) {
       this._renderFilterEmptyRow(resultsBody);
       if (banner) banner.style.display = 'none';
       return;
     }
 
-    const rawQuery = (document.getElementById('searchInput')?.value || '').trim();
+    const rawQuery = (
+      document.getElementById('searchInput')?.value || ''
+    ).trim();
     const isEmptyQuery = rawQuery.length === 0;
 
     if (banner) {
@@ -181,8 +213,11 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
         if (hintEl) hintEl.textContent = '';
       } else {
         banner.className = 'no-results text-center py-4';
-        if (titleEl) titleEl.textContent = 'По вашему запросу ничего не найдено';
-        if (hintEl) hintEl.textContent = 'Попробуйте изменить условия поиска или проверьте правописание';
+        if (titleEl)
+          titleEl.textContent = 'По вашему запросу ничего не найдено';
+        if (hintEl)
+          hintEl.textContent =
+            'Попробуйте изменить условия поиска или проверьте правописание';
       }
       banner.style.display = 'block';
     }
@@ -197,7 +232,7 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
     `;
   }
 
-    _initializeTooltips() {
+  _initializeTooltips() {
     if (!window.bootstrap?.Tooltip) return;
 
     // Убираем старые Tooltips на .feat-info (если где-то остались)
@@ -215,15 +250,29 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
         sanitize: false,
         placement: 'top',
         trigger: 'click',
-        container: 'body'
+        container: 'body',
       });
     });
 
     // Тултипы для цен
-    document.querySelectorAll('.price-tag[data-bs-toggle="tooltip"]').forEach(el => {
+    document.querySelectorAll('.price-tag[data-bs-title]').forEach(el => {
       const t = window.bootstrap.Tooltip.getInstance(el);
       if (t) t.dispose();
-      new window.bootstrap.Tooltip(el, { html: false, placement: 'top' });
+
+      const tt = new window.bootstrap.Tooltip(el, {
+        html: false,
+        placement: 'top',
+        trigger: 'hover',
+      });
+
+      // Отключаем тултип при открытии dropdown
+      el.addEventListener('show.bs.dropdown', () => {
+        tt.disable();
+        tt.hide();
+      });
+      el.addEventListener('hidden.bs.dropdown', () => {
+        tt.enable();
+      });
     });
 
     // Глобальные хендлеры ТОЛЬКО для поповеров .feat-info
@@ -242,7 +291,7 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
       //  - НЕ закрываем, если клик по самой .feat-info
       //  - НЕ закрываем, если клик внутри .popover
       //  - иначе закрываем все поповеры характеристик
-      document.addEventListener('click', (e) => {
+      document.addEventListener('click', e => {
         const target = e.target;
 
         // клик по "i" — отрабатывает сам Bootstrap (toggle), не мешаем
@@ -256,11 +305,13 @@ if (resultsCount) resultsCount.textContent = 'Найдено: 0 результа
       });
 
       // Любой скролл (внутри таблицы, страницы и т.д.) закрывает только поповеры характеристик
-      document.addEventListener('scroll', () => {
-        hideAllFeatPopovers();
-      }, { passive: true, capture: true });
+      document.addEventListener(
+        'scroll',
+        () => {
+          hideAllFeatPopovers();
+        },
+        { passive: true, capture: true }
+      );
     }
   }
-
 }
-
