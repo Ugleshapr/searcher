@@ -16,49 +16,49 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     environment:
-      name: github-pages        # <-- ОБЯЗАТЕЛЬНО
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      # 1) main в site/
+      # 1) Скачиваем main в site/
       - name: Checkout main into site/
         uses: actions/checkout@v4
         with:
           ref: main
           path: site
 
-      # 2) dev в dev-src/
+      # 2) Скачиваем dev в dev-src/
       - name: Checkout dev into dev-src/
         uses: actions/checkout@v4
         with:
           ref: dev
           path: dev-src
 
-      # 3) /dev поверх site/
+      # 3) Копируем dev в подпапку /dev
       - name: Copy dev into /dev
         run: |
           mkdir -p site/dev
           rsync -a --delete dev-src/ site/dev/
 
-     - name: Inject API Keys for Prod and Dev
+      # 4) Вставляем ключ в оба конфига (и для корня, и для dev)
+      - name: Inject API Keys for Prod and Dev
         env:
           KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
         run: |
-          # 1. Заменяем ключ в корневой (prod) версии
+          # Замена в корне (prod версия из main)
           if [ -f site/src/modules/utils/config.js ]; then
             sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" site/src/modules/utils/config.js
           fi
           
-          # 2. Заменяем ключ в dev-версии
+          # Замена в папке /dev (версия из dev)
           if [ -f site/dev/src/modules/utils/config.js ]; then
             sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" site/dev/src/modules/utils/config.js
           fi
 
-      # 4) деплой артефакта из папки site
+      # 5) Деплой
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
 
       - id: deployment
         uses: actions/deploy-pages@v4
-
