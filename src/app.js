@@ -497,29 +497,6 @@ class PriceListSearchApp {
       if (menu.classList.contains('price-menu') && !menu._logicAttached) {
         menu._logicAttached = true;
         const searchBtn = menu.querySelector('.price-menu-btn');
-        const closeBtn = menu.querySelector('.price-menu-close-btn');
-        const input = menu.querySelector('.price-menu-input');
-        const placeholder = menu.querySelector('.price-menu-placeholder');
-
-        if (closeBtn) {
-          closeBtn.addEventListener('click', e => {
-            e.preventDefault();
-            e.stopPropagation();
-            try {
-              const inst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
-              inst?.hide();
-            } catch (err) {
-              // Если Bootstrap падает (this._menu is null), закрываем вручную
-              menu.classList.remove('show');
-              btn.classList.remove('show');
-              btn.setAttribute('aria-expanded', 'false');
-              btn.dispatchEvent(
-                new Event('hidden.bs.dropdown', { bubbles: true })
-              );
-            }
-          });
-        }
-
         if (searchBtn && input && placeholder) {
           // Предварительно захватываем артикул из строки таблицы
           const row = dd.closest('tr');
