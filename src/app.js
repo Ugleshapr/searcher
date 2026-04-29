@@ -481,8 +481,16 @@ class PriceListSearchApp {
       if (menu.classList.contains('price-menu') && !menu._logicAttached) {
         menu._logicAttached = true;
         const searchBtn = menu.querySelector('.price-menu-btn');
+        const closeBtn = menu.querySelector('.price-menu-close-btn');
         const input = menu.querySelector('.price-menu-input');
         const placeholder = menu.querySelector('.price-menu-placeholder');
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
+            ddInst?.hide();
+          });
+        }
 
         if (searchBtn && input && placeholder) {
           // Предварительно захватываем артикул из строки таблицы
