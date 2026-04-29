@@ -22,7 +22,7 @@ export class AvailabilityService {
         },
         body: JSON.stringify({
           warehouse_id: 2,
-          product_id: productId,
+          product_id: parseInt(productId, 10),
           quantity: parseInt(quantity, 10) || 1
         })
       });

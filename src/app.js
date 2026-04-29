@@ -482,12 +482,25 @@ class PriceListSearchApp {
         const placeholder = menu.querySelector('.price-menu-placeholder');
 
         if (searchBtn && input && placeholder) {
+          // Предварительно захватываем артикул из строки таблицы
+          const row = dd.closest('tr');
+          const rawSku = row
+            ? row.dataset.sku || row.cells[1]?.textContent
+            : null;
+
           searchBtn.addEventListener('click', async () => {
             const qty = parseInt(input.value, 10) || 1;
-            const row = dd.closest('tr');
-            const productId = row ? row.dataset.sku : null;
+            let productId = (rawSku || '').toString().trim();
 
-            if (!productId) return;
+            if (!productId) {
+              placeholder.textContent = 'Ошибка';
+              return;
+            }
+
+            // Форматирование артикула: только цифры, строго 6 знаков (дополнение нулями слева)
+            productId = productId.replace(/\D/g, '');
+            if (productId.length > 6) productId = productId.slice(0, 6);
+            productId = productId.padStart(6, '0');
 
             placeholder.textContent = '...';
             placeholder.classList.add('is-loading');
@@ -501,13 +514,16 @@ class PriceListSearchApp {
               if (typeof days === 'number') {
                 placeholder.textContent = `${days} р. д.`;
               } else if (
-                days === 'Обратитесь в управление обслуживания покупателей'
+                days === 'Обратитесь в управление обслуживания покупателей' ||
+                !days ||
+                days === 'Нет срока'
               ) {
                 placeholder.textContent = 'Нет срока';
               } else {
-                placeholder.textContent = days || 'Нет срока';
+                placeholder.textContent = days;
               }
             } catch (err) {
+              console.error('Availability fetch error:', err);
               placeholder.textContent = 'Ошибка';
             } finally {
               placeholder.classList.remove('is-loading');
