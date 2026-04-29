@@ -11,20 +11,21 @@ export class AvailabilityService {
    * @returns {Promise<number|string>} - Returns number of days or a message if unavailable
    */
   async getAvailabilityPeriod(productId, quantity) {
-    const url = 'https://keaz.ru/restapi/catalog/service/availability_calculation_period.json';
+    const url =
+      'https://keaz.ru/restapi/catalog/service/availability_calculation_period.json';
 
     try {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Hash': API_CONFIG.HASH
+          Hash: API_CONFIG.HASH,
         },
         body: JSON.stringify({
           warehouse_id: 2,
-          product_id: parseInt(productId, 10),
-          quantity: parseInt(quantity, 10) || 1
-        })
+          product_id: productId,
+          quantity: parseInt(quantity, 10) || 1,
+        }),
       });
 
       if (!response.ok) {
@@ -34,7 +35,12 @@ export class AvailabilityService {
       const data = await response.json();
 
       // According to requirements: return period[0].days
-      if (data && data.period && Array.isArray(data.period) && data.period.length > 0) {
+      if (
+        data &&
+        data.period &&
+        Array.isArray(data.period) &&
+        data.period.length > 0
+      ) {
         const result = data.period[0].days;
         return result;
       }
