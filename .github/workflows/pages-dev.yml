@@ -40,10 +40,16 @@ jobs:
           mkdir -p site/dev
           rsync -a --delete dev-src/ site/dev/
 
-      # 4) деплой
+      - name: Inject API Key for Dev
+        run: |
+          # ВАЖНО: путь теперь внутри папки site/dev/
+          sed -i "s/__API_KEY_PLACEHOLDER__/${{ secrets.KEAZ_API_HASH }}/g" site/dev/src/modules/utils/config.js
+
+      # 4) деплой артефакта из папки site
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+
       - id: deployment
         uses: actions/deploy-pages@v4
 

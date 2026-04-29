@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru" data-app-version="V1.9" data-color-scheme="light">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Поиск по прайс-листу</title>
-  
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Поиск по прайс-листу</title>
 
-  <meta http-equiv="Content-Security-Policy"
-  content="
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
     default-src 'self';
     script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
     style-src  'self' https://cdn.jsdelivr.net 'unsafe-inline';
@@ -17,306 +17,462 @@
     frame-ancestors 'none';
     connect-src
       'self'
+      https://keaz.ru;
     upgrade-insecure-requests
-  ">
+  "
+    />
 
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
 
+    <link rel="stylesheet" href="style.css?v=prod-20250818" />
+    <link
+      rel="stylesheet"
+      href="src/addons/catalog/catalog.css?v=dev-catalog"
+    />
 
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
- 
-  <link rel="stylesheet" href="style.css?v=prod-20250818"/>
-  <link rel="stylesheet" href="src/addons/catalog/catalog.css?v=dev-catalog"/>
+    <!-- Иконки -->
+    <link rel="icon" href="favicon.ico?v=stg-1" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="icon-32.png?v=stg-1"
+      sizes="32x32"
+    />
+    <link rel="shortcut icon" href="favicon.ico?v=stg-1" />
+  </head>
 
-  <!-- Иконки -->
-  <link rel="icon" href="favicon.ico?v=stg-1" sizes="any">
-  <link rel="icon" type="image/png" href="icon-32.png?v=stg-1" sizes="32x32">
-  <link rel="shortcut icon" href="favicon.ico?v=stg-1">
-</head>
-
-<body>
-
- <!-- Глобальный лоадер при загрузке базы -->
-  <div id="globalLoader" class="global-loader" aria-live="polite" aria-busy="true">
-    <div class="global-loader__box">
-      <div class="global-loader__spinner"></div>
-      <div class="global-loader__text">
-        Загружаем прайс-лист…
-      </div>
-      <div class="global-loader__hint">
-        Это может занять несколько секунд
+  <body>
+    <!-- Глобальный лоадер при загрузке базы -->
+    <div
+      id="globalLoader"
+      class="global-loader"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div class="global-loader__box">
+        <div class="global-loader__spinner"></div>
+        <div class="global-loader__text">Загружаем прайс-лист…</div>
+        <div class="global-loader__hint">Это может занять несколько секунд</div>
       </div>
     </div>
-  </div>
 
-  <!-- Небольшой бейдж, чтобы не перепутать среду -->
-  
+    <!-- Небольшой бейдж, чтобы не перепутать среду -->
 
-  <div class="container py-4">
+    <div class="container py-4">
+      <!-- Секция поиска -->
+      <div class="card mb-3" id="searchSection" style="display: none">
+        <div class="card__body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0" id="searchTitle">
+              Поиск по
+              <span
+                id="rzdToggle"
+                class="mode-chip mode-chip--dropdown"
+                role="button"
+                aria-haspopup="menu"
+                aria-expanded="false"
+                >прайс-листу</span
+              >
+            </h3>
+            <span
+              id="datasetInfo"
+              class="text-secondary"
+              style="display: inline-flex; align-items: center; gap: 8px"
+            >
+              <span class="copy-inline-title">COPY</span>
+              <input type="checkbox" id="copyModeSwitch" />
+              <label
+                for="copyModeSwitch"
+                class="copy-switch copy-switch--compact"
+              >
+                <span class="copy-knob"></span>
+              </label>
 
-    <!-- Секция поиска -->
-    <div class="card mb-3" id="searchSection" style="display:none;">
-      <div class="card__body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h3 class="mb-0" id="searchTitle">Поиск по <span id="rzdToggle" class="mode-chip mode-chip--dropdown" role="button" aria-haspopup="menu" aria-expanded="false">прайс-листу</span></h3>
-          <span id="datasetInfo" class="text-secondary" style="display:inline-flex;align-items:center;gap:8px;">
-  <span class="copy-inline-title">COPY</span>
-  <input type="checkbox" id="copyModeSwitch" />
-  <label for="copyModeSwitch" class="copy-switch copy-switch--compact">
-    <span class="copy-knob"></span>
-  </label>
+              <button
+                type="button"
+                id="settingsBtn"
+                class="settings-btn"
+                aria-haspopup="true"
+                aria-expanded="false"
+                title="Настройки"
+              >
+                <svg
+                  class="settings-icon"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <!-- центральный круг -->
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  />
 
-  <button
-  type="button"
-  id="settingsBtn"
-  class="settings-btn"
-  aria-haspopup="true"
-  aria-expanded="false"
-  title="Настройки"
->
-  <svg
-  class="settings-icon"
-  viewBox="0 0 24 24"
-  aria-hidden="true"
-  focusable="false"
->
-  <!-- центральный круг -->
-  <circle
-    cx="12"
-    cy="12"
-    r="3"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="1.8"
-  />
+                  <!-- зубцы -->
+                  <line
+                    x1="12"
+                    y1="2.8"
+                    x2="12"
+                    y2="6"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="12"
+                    y1="18"
+                    x2="12"
+                    y2="21.2"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
 
-  <!-- зубцы -->
-  <line x1="12" y1="2.8"  x2="12" y2="6"   stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-  <line x1="12" y1="18"   x2="12" y2="21.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <line
+                    x1="2.8"
+                    y1="12"
+                    x2="6"
+                    y2="12"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="18"
+                    y1="12"
+                    x2="21.2"
+                    y2="12"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
 
-  <line x1="2.8" y1="12"  x2="6"  y2="12"  stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-  <line x1="18"  y1="12"  x2="21.2" y2="12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <line
+                    x1="6.1"
+                    y1="6.1"
+                    x2="8.2"
+                    y2="8.2"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="15.8"
+                    y1="15.8"
+                    x2="17.9"
+                    y2="17.9"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
 
-  <line x1="6.1" y1="6.1" x2="8.2" y2="8.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-  <line x1="15.8" y1="15.8" x2="17.9" y2="17.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <line
+                    x1="6.1"
+                    y1="17.9"
+                    x2="8.2"
+                    y2="15.8"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="15.8"
+                    y1="8.2"
+                    x2="17.9"
+                    y2="6.1"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+            </span>
+          </div>
 
-  <line x1="6.1" y1="17.9" x2="8.2" y2="15.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-  <line x1="15.8" y1="8.2"  x2="17.9" y2="6.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-</svg>
+          <!-- Растянутое поле поиска -->
+          <div class="search-controls">
+            <div class="form-group mb-0">
+              <div class="search-input-container">
+                <input
+                  type="text"
+                  id="searchInput"
+                  class="form-control"
+                  placeholder="Введите запрос для поиска..."
+                  autocomplete="off"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                />
+                <button
+                  type="button"
+                  id="clearSearch"
+                  class="search-clear-btn"
+                  aria-label="Очистить"
+                  title="Очистить"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-</button>
+      <!-- ВЫПАДАЮЩЕЕ МЕНЮ НАСТРОЕК -->
+      <div id="settingsMenu" class="settings-menu" hidden>
+        <div class="settings-menu-header">Настройки</div>
 
-</span>
+        <div class="settings-menu-row">
+          <label for="accentColorInput" class="settings-menu-label"
+            >Цвет интерфейса (HEX)</label
+          >
+          <input
+            id="accentColorInput"
+            type="text"
+            class="form-control form-control-sm"
+            placeholder="#21808d"
+            autocomplete="off"
+          />
         </div>
 
-    
-        <!-- Растянутое поле поиска -->
-        <div class="search-controls">
-          <div class="form-group mb-0">
-            <div class="search-input-container">
-             <input
-  type="text"
-  id="searchInput"
-  class="form-control"
-  placeholder="Введите запрос для поиска..."
-  autocomplete="off"
-  autocapitalize="off"
-  autocorrect="off"
-  spellcheck="false"
-/>
-<button type="button" id="clearSearch"
-        class="search-clear-btn"
-        aria-label="Очистить"
-        title="Очистить">×</button>
+        <div class="settings-menu-row settings-menu-row--checkbox">
+          <label for="addArtLabel" class="settings-menu-label"
+            >Добавлять слово «Артикул:»</label
+          >
+          <input id="addArtLabel" type="checkbox" class="form-check-input" />
+        </div>
+
+        <div class="settings-menu-row settings-menu-row--checkbox">
+          <label for="relaxedSearch" class="settings-menu-label"
+            >Relaxed-поиск</label
+          >
+          <input id="relaxedSearch" type="checkbox" class="form-check-input" />
+        </div>
+
+        <div class="settings-menu-actions">
+          <button
+            type="button"
+            id="accentColorApply"
+            class="btn btn--primary btn--sm"
+          >
+            Применить
+          </button>
+          <button
+            type="button"
+            id="accentColorReset"
+            class="btn btn--secondary btn--sm"
+          >
+            Сбросить
+          </button>
+        </div>
+        <div
+          class="settings-menu-error"
+          id="accentColorError"
+          aria-live="polite"
+        ></div>
+      </div>
+
+      <!-- Каталог по категориям -->
+      <div class="card mb-3" id="catalogSection" style="display: none">
+        <div class="card__body">
+          <div
+            class="d-flex justify-content-between align-items-center gap-3 flex-wrap"
+          >
+            <div class="d-flex flex-column gap-1">
+              <div class="catalog-breadcrumb" id="catalogBreadcrumb"></div>
+            </div>
+            <div class="catalog-actions">
+              <button
+                type="button"
+                id="catalogGoRoot"
+                class="btn btn--secondary btn--sm"
+              >
+                В корень
+              </button>
+              <button
+                type="button"
+                id="catalogGoUp"
+                class="btn btn--outline btn--sm"
+              >
+                Назад
+              </button>
+            </div>
+          </div>
+
+          <div class="catalog-grid mt-3" id="catalogCategoriesGrid"></div>
+          <div
+            class="state-banner text-center py-4"
+            id="catalogCategoriesEmpty"
+            style="display: none"
+          ></div>
+        </div>
+      </div>
+
+      <!-- COPY: панель действий (показывается только в режиме COPY) -->
+      <div id="copyPanel" class="copy-panel hidden" aria-hidden="true">
+        <div class="copy-panel-left">
+          <span id="copyCount" class="copy-count">Выбрано: 0</span>
+          <div
+            id="copyList"
+            class="copy-list hidden"
+            role="menu"
+            aria-hidden="true"
+          ></div>
+        </div>
+        <div class="copy-panel-right">
+          <button id="copySelectAll" class="btn">Выбрать все</button>
+          <button id="copyDo" class="btn btn-primary">
+            Копировать N строк
+          </button>
+          <button id="copyClear" class="btn btn-ghost" title="Очистить выбор">
+            🗑<span class="sr-only">Очистить выбор</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Результаты поиска -->
+      <div class="card" id="resultsSection" style="display: none">
+        <div class="card__body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h3 class="mb-0">Результаты поиска</h3>
+            <div class="results-actions d-flex align-items-center gap-2">
+              <span id="resultsCount" class="text-secondary">Показаны: 0</span>
+              <button
+                type="button"
+                id="filterToggle"
+                class="btn btn--ghost btn--sm"
+                title="Включить фильтр"
+              >
+                Фильтр
+              </button>
+            </div>
+          </div>
+
+          <div id="resultsFlex">
+            <div class="table-responsive">
+              <table class="table table-striped table-hover" id="resultsTable">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Наименование</th>
+                    <th>Артикул</th>
+                    <th>Цена</th>
+                    <th>Документы</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+            <aside id="filterPanel" style="display: none"></aside>
+          </div>
+
+          <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
+          <div
+            class="state-banner text-center py-4"
+            id="stateBanner"
+            style="display: none"
+          >
+            <p class="mb-1" id="stateBannerTitle"></p>
+            <small id="stateBannerHint"></small>
+          </div>
+
+          <div
+            id="resultsShowMore"
+            style="display: flex; justify-content: center; padding: 12px"
+          ></div>
+        </div>
+      </div>
+
+      <!-- Модальное окно ошибок -->
+      <div class="modal fade" id="errorModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Ошибка</h5>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+              ></button>
+            </div>
+            <div class="modal-body" id="errorMessage"></div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn--secondary"
+                data-bs-dismiss="modal"
+              >
+                Закрыть
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
-    
-      <!-- ВЫПАДАЮЩЕЕ МЕНЮ НАСТРОЕК -->
-  <div id="settingsMenu" class="settings-menu" hidden>
-    <div class="settings-menu-header">Настройки</div>
 
-    <div class="settings-menu-row">
-      <label for="accentColorInput" class="settings-menu-label">Цвет интерфейса (HEX)</label>
-      <input
-        id="accentColorInput"
-        type="text"
-        class="form-control form-control-sm"
-        placeholder="#21808d"
-        autocomplete="off"
-      />
-    </div>
+    <!-- Скрипты -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <div class="settings-menu-row settings-menu-row--checkbox">
-  <label for="addArtLabel" class="settings-menu-label">Добавлять слово «Артикул:»</label>
-  <input
-    id="addArtLabel"
-    type="checkbox"
-    class="form-check-input"
-  />
-</div>
+    <!-- сторонние аддоны, не зависящие от App -->
+    <script src="src/addons/tips.js"></script>
+    <script src="src/addons/copy-mode.js"></script>
+    <script src="src/addons/rzd-search.js"></script>
+    <script src="src/addons/catalog/catalog-addon.js"></script>
+    <script type="module" src="./src/app.js"></script>
+    <script src="src/modules/utils/settings.js"></script>
+    <script src="src/addons/filter-addon.js"></script>
+    <script src="src/addons/filter-range.js"></script>
+    <script src="src/addons/filter-panel.js"></script>
+    <script src="src/addons/withdrawn.js"></script>
+    <script src="src/addons/accessories.js"></script>
 
-<div class="settings-menu-row settings-menu-row--checkbox">
-  <label for="relaxedSearch" class="settings-menu-label">Relaxed-поиск</label>
-  <input
-    id="relaxedSearch"
-    type="checkbox"
-    class="form-check-input"
-  />
-</div>
-
-<div class="settings-menu-actions">
-  <button type="button" id="accentColorApply" class="btn btn--primary btn--sm">Применить</button>
-  <button type="button" id="accentColorReset" class="btn btn--secondary btn--sm">Сбросить</button>
-</div>
-    <div class="settings-menu-error" id="accentColorError" aria-live="polite"></div>
-  </div>
-
-    
-    
-
-
-    <!-- Каталог по категориям -->
-    <div class="card mb-3" id="catalogSection" style="display:none;">
-      <div class="card__body">
-        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
-          <div class="d-flex flex-column gap-1">
-            <div class="catalog-breadcrumb" id="catalogBreadcrumb"></div>
-          </div>
-          <div class="catalog-actions">
-  <button type="button" id="catalogGoRoot" class="btn btn--secondary btn--sm">В корень</button>
-  <button type="button" id="catalogGoUp" class="btn btn--outline btn--sm">Назад</button>
-</div>
-        </div>
-
-        <div class="catalog-grid mt-3" id="catalogCategoriesGrid"></div>
-        <div class="state-banner text-center py-4" id="catalogCategoriesEmpty" style="display:none;"></div>
-      </div>
-    </div>
-
-<!-- COPY: панель действий (показывается только в режиме COPY) -->
-<div id="copyPanel" class="copy-panel hidden" aria-hidden="true">
-  <div class="copy-panel-left">
-    <span id="copyCount" class="copy-count">Выбрано: 0</span>
-    <div id="copyList" class="copy-list hidden" role="menu" aria-hidden="true"></div>
-  </div>
-  <div class="copy-panel-right">
-  <button id="copySelectAll" class="btn">Выбрать все</button>
-  <button id="copyDo" class="btn btn-primary">Копировать N строк</button>
-  <button id="copyClear" class="btn btn-ghost" title="Очистить выбор"> 🗑<span class="sr-only">Очистить выбор</span></button>
- </div>
-</div>
-
-
-    <!-- Результаты поиска -->
-    <div class="card" id="resultsSection" style="display:none;">
-      <div class="card__body">
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <h3 class="mb-0">Результаты поиска</h3>
-          <div class="results-actions d-flex align-items-center gap-2">
-            <span id="resultsCount" class="text-secondary">Показаны: 0</span>
-                <button type="button" id="filterToggle" class="btn btn--ghost btn--sm" title="Включить фильтр">Фильтр</button>
-        </div>
-        </div>
-
-        <div id="resultsFlex">
-        <div class="table-responsive">
-          <table class="table table-striped table-hover" id="resultsTable">
-            <thead class="table-dark">
-              <tr>
-                <th>Наименование</th>
-                <th>Артикул</th>
-                <th>Цена</th>
-                 <th>Документы</th>  
-              </tr>
-            </thead>
-            <tbody id="resultsBody"></tbody>
-          </table>
-        </div>
-        <aside id="filterPanel" style="display:none;"></aside>
-        </div>
-
-        <!-- Универсальный баннер состояний: пустой поиск (зелёный) / нет результатов (красный) -->
-<div class="state-banner text-center py-4" id="stateBanner" style="display:none;">
-  <p class="mb-1" id="stateBannerTitle"></p>
-  <small id="stateBannerHint"></small>
-</div>
-
-        <div id="resultsShowMore" style="display:flex; justify-content:center; padding:12px;"></div>
-      </div>
-    </div>
-
-    <!-- Модальное окно ошибок -->
-    <div class="modal fade" id="errorModal" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
+    <!-- Modal: Что нового -->
+    <div class="modal fade" id="whatsnewModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0 shadow-lg">
           <div class="modal-header">
-            <h5 class="modal-title">Ошибка</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <h5 class="modal-title d-flex align-items-center gap-2">
+              <span class="badge text-bg-primary" id="whatsnewVersionBadge"
+                >v0.0.0</span
+              >
+              <span id="whatsnewTitle">Что нового</span>
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              id="whatsnewCloseX"
+              aria-label="Закрыть"
+            ></button>
           </div>
-          <div class="modal-body" id="errorMessage"></div>
+          <div class="modal-body" id="whatsnewBody">Загрузка заметок…</div>
           <div class="modal-footer">
-            <button type="button" class="btn btn--secondary" data-bs-dismiss="modal">Закрыть</button>
+            <button type="button" class="btn btn-primary" id="whatsnewOkBtn">
+              Понятно
+            </button>
           </div>
         </div>
       </div>
     </div>
-
-  </div>
-
-  <!-- Скрипты -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- сторонние аддоны, не зависящие от App -->
-<script src="src/addons/tips.js"></script>
-<script src="src/addons/copy-mode.js"></script>
-<script src="src/addons/rzd-search.js"></script>
-<script src="src/addons/catalog/catalog-addon.js"></script>
-<script type="module" src="./src/app.js"></script>
-<script src="src/modules/utils/settings.js"></script>
-<script src="src/addons/filter-addon.js"></script>
-<script src="src/addons/filter-range.js"></script>
-<script src="src/addons/filter-panel.js"></script>
-<script src="src/addons/withdrawn.js"></script>
-<script src="src/addons/accessories.js"></script>
-
-
-
-  <!-- Modal: Что нового -->
-<div class="modal fade" id="whatsnewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header">
-        <h5 class="modal-title d-flex align-items-center gap-2">
-          <span class="badge text-bg-primary" id="whatsnewVersionBadge">v0.0.0</span>
-          <span id="whatsnewTitle">Что нового</span>
-        </h5>
-        <button type="button" class="btn-close" id="whatsnewCloseX" aria-label="Закрыть"></button>
-      </div>
-      <div class="modal-body" id="whatsnewBody">Загрузка заметок…</div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="whatsnewOkBtn">Понятно</button>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  const v = document.documentElement.getAttribute('data-app-version');
-  if (!v) return;
-  document.querySelectorAll('script[src],link[href]').forEach(el=>{
-    const attr = el.tagName==='LINK' ? 'href' : 'src';
-    const val = el.getAttribute(attr);
-    if (!val) return;
-    // только локальные файлы, не https://
-    if (/^https?:/.test(val)) return;
-    if (val.includes('?')) return; // уже есть query
-    el.setAttribute(attr, val + '?v=' + encodeURIComponent(v));
-  });
-})();
-</script>
-
-</body>
+    <script>
+      (function () {
+        const v = document.documentElement.getAttribute('data-app-version');
+        if (!v) return;
+        document.querySelectorAll('script[src],link[href]').forEach(el => {
+          const attr = el.tagName === 'LINK' ? 'href' : 'src';
+          const val = el.getAttribute(attr);
+          if (!val) return;
+          // только локальные файлы, не https://
+          if (/^https?:/.test(val)) return;
+          if (val.includes('?')) return; // уже есть query
+          el.setAttribute(attr, val + '?v=' + encodeURIComponent(v));
+        });
+      })();
+    </script>
+  </body>
 </html>
-
