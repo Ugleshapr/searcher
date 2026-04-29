@@ -497,6 +497,8 @@ class PriceListSearchApp {
       if (menu.classList.contains('price-menu') && !menu._logicAttached) {
         menu._logicAttached = true;
         const searchBtn = menu.querySelector('.price-menu-btn');
+        const input = menu.querySelector('.price-menu-input');
+        const placeholder = menu.querySelector('.price-menu-placeholder');
         if (searchBtn && input && placeholder) {
           // Предварительно захватываем артикул из строки таблицы
           const row = dd.closest('tr');
