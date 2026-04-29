@@ -98,7 +98,7 @@ export class TableRenderer {
         <span class="price-tag ${priceClass}"
               role="button"
               data-bs-toggle="dropdown"
-              data-bs-auto-close="outside"
+              data-bs-auto-close="true"
               aria-expanded="false"
               aria-label="${escapeHTML(hint)}"
               ${window.bootstrap ? '' : 'title="' + escapeHTML(hint) + '"'}

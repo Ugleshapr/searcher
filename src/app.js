@@ -452,7 +452,6 @@ class PriceListSearchApp {
       const dd = e.target.closest('.dropdown');
       if (!dd || !dd.closest('#resultsSection')) return;
 
-      dd.setAttribute('data-bs-auto-close', 'outside');
       const menu = dd.querySelector('.dropdown-menu');
       const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
       if (!menu || !btn) return;
