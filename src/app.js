@@ -528,7 +528,7 @@ class PriceListSearchApp {
               );
 
               if (typeof days === 'number') {
-                placeholder.textContent = `${days} р. д.`;
+                placeholder.textContent = `${days} раб. дн.`;
               } else if (
                 days === 'Обратитесь в управление обслуживания покупателей' ||
                 !days ||
@@ -538,6 +538,26 @@ class PriceListSearchApp {
               } else {
                 placeholder.textContent = days;
               }
+              // Добавляем обработчик копирования по клику
+              placeholder.onclick = () => {
+                if (
+                  placeholder.textContent &&
+                  placeholder.textContent !== 'Нет срока'
+                ) {
+                  navigator.clipboard.writeText(placeholder.textContent).then(
+                    () => {
+                      console.log(
+                        'Текст скопирован: ',
+                        placeholder.textContent
+                      );
+                      // Опционально: показать временное сообщение об успешном копировании
+                    },
+                    err => {
+                      console.error('Не удалось скопировать текст: ', err);
+                    }
+                  );
+                }
+              };
             } catch (err) {
               console.error('Availability fetch error:', err);
               placeholder.textContent = 'Ошибка';
