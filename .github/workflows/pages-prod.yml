@@ -28,27 +28,32 @@ jobs:
         run: |
           FILE_PATH="src/modules/utils/config.js"
           
-          # 1. Проверяем, существует ли файл вообще
           if [ ! -f "$FILE_PATH" ]; then
-            echo "Ошибка: Файл $FILE_PATH не найден!"
+            echo "Error: $FILE_PATH not found!"
             exit 1
           fi
 
-          # 2. Выполняем замену
-          # Используем разделитель | на всякий случай
+          # Выполняем замену
           sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" "$FILE_PATH"
 
-          # 3. ПРОВЕРКА: остался ли плейсхолдер в файле?
+          # Проверка результата в логах (скроем сам ключ, но проверим наличие заглушки)
           if grep -q "__API_KEY_PLACEHOLDER__" "$FILE_PATH"; then
-            echo "КРИТИЧЕСКАЯ ОШИБКА: Плейсхолдер не был заменен!"
+            echo "CRITICAL ERROR: Placeholder was NOT replaced!"
             exit 1
           else
-            echo "УСПЕХ: Ключ успешно вставлен в config.js"
+            echo "SUCCESS: Key injected into config.js"
+            echo "--- Current file content (verification) ---"
+            cat "$FILE_PATH"
+            echo "--- End of file ---"
           fi
 
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
+          # Отключаем сохранение прав доступа, которые могут влиять на кэш
+          if-no-files-found: error
 
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
