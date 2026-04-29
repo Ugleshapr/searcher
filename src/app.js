@@ -458,6 +458,12 @@ class PriceListSearchApp {
       const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
       if (!menu || !btn) return;
 
+      // Присваиваем ID, чтобы Bootstrap не терял меню при перемещении в body
+      if (!menu.id) {
+        menu.id = 'dropdown-' + Math.random().toString(36).substr(2, 9);
+      }
+      btn.setAttribute('data-bs-target', '#' + menu.id);
+
       menu.dataset.portal = '1';
       document.body.appendChild(menu);
       menu.style.position = 'fixed';
@@ -489,29 +495,8 @@ class PriceListSearchApp {
           closeBtn.addEventListener('click', e => {
             e.preventDefault();
             e.stopPropagation();
-            try {
-              // Используем getInstance, чтобы избежать конфликтов с тултипом
-              const inst = window.bootstrap?.Dropdown?.getInstance(btn);
-              if (inst) {
-                inst.hide();
-              } else {
-                // Если инстанс не найден, пробуем нативный клик
-                btn.click();
-              }
-            } catch (err) {
-              // Если Bootstrap падает (например, из-за перемещения меню в портал), закрываем вручную
-              menu.classList.remove('show');
-              btn.classList.remove('show');
-              btn.setAttribute('aria-expanded', 'false');
-              if (menu.dataset.portal === '1') {
-                dd.appendChild(menu);
-                delete menu.dataset.portal;
-              }
-              // Оповещаем систему о закрытии
-              btn.dispatchEvent(
-                new Event('hidden.bs.dropdown', { bubbles: true })
-              );
-            }
+            const inst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
+            inst?.hide();
           });
         }
 
