@@ -486,9 +486,32 @@ class PriceListSearchApp {
         const placeholder = menu.querySelector('.price-menu-placeholder');
 
         if (closeBtn) {
-          closeBtn.addEventListener('click', () => {
-            const ddInst = window.bootstrap?.Dropdown?.getOrCreateInstance(btn);
-            ddInst?.hide();
+          closeBtn.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+              // Используем getInstance, чтобы избежать конфликтов с тултипом
+              const inst = window.bootstrap?.Dropdown?.getInstance(btn);
+              if (inst) {
+                inst.hide();
+              } else {
+                // Если инстанс не найден, пробуем нативный клик
+                btn.click();
+              }
+            } catch (err) {
+              // Если Bootstrap падает (например, из-за перемещения меню в портал), закрываем вручную
+              menu.classList.remove('show');
+              btn.classList.remove('show');
+              btn.setAttribute('aria-expanded', 'false');
+              if (menu.dataset.portal === '1') {
+                dd.appendChild(menu);
+                delete menu.dataset.portal;
+              }
+              // Оповещаем систему о закрытии
+              btn.dispatchEvent(
+                new Event('hidden.bs.dropdown', { bubbles: true })
+              );
+            }
           });
         }
 
