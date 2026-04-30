@@ -2216,6 +2216,7 @@ body.rzd-mode .form-control:focus {
   justify-content: center;
   min-width: 60px;
   width: auto;
+  min-height: 24px;
   padding: 2px 8px;
   background: var(--color-gray-200);
   border-radius: 999px;
@@ -2225,6 +2226,17 @@ body.rzd-mode .form-control:focus {
   color: var(--color-text-secondary);
   text-align: center;
   border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.price-menu-placeholder:empty {
+  min-height: 6px;
+  height: 6px;
+  padding: 0;
+  min-width: 80px;
+  background: rgba(var(--color-slate-500-rgb), 0.1);
 }
 
 .price-menu-placeholder.is-success {
@@ -2248,29 +2260,74 @@ body.rzd-mode .form-control:focus {
   cursor: default;
 }
 
-.price-menu-placeholder.is-loading::after {
-  content: '';
-  display: inline-block;
-  width: 1.2em;
-  text-align: left;
-  animation: price-dots 2s steps(4, end) infinite;
-  font-weight: bold;
+.price-menu-placeholder.is-loading {
+  min-height: 6px;
+  height: 6px;
+  padding: 0;
+  background: rgba(var(--color-slate-500-rgb), 0.1);
 }
 
-@keyframes price-dots {
-  0%,
-  20% {
-    content: '';
+.price-menu-placeholder.is-loading::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  animation: price-loading-fill 4.5s infinite linear;
+}
+
+@keyframes price-loading-fill {
+  0% {
+    width: 0;
+    background-color: #1f6f1f;
+    opacity: 1;
   }
-  40% {
-    content: '.';
+  30% {
+    width: 100%;
+    background-color: #1f6f1f;
+    opacity: 1;
   }
-  60% {
-    content: '..';
+  32% {
+    width: 100%;
+    background-color: #1f6f1f;
+    opacity: 0;
   }
-  80%,
+  33% {
+    width: 0;
+    background-color: #856404;
+    opacity: 1;
+  }
+  63% {
+    width: 100%;
+    background-color: #856404;
+    opacity: 1;
+  }
+  65% {
+    width: 100%;
+    background-color: #856404;
+    opacity: 0;
+  }
+  66% {
+    width: 0;
+    background-color: #c0152f;
+    opacity: 1;
+  }
+  96% {
+    width: 100%;
+    background-color: #c0152f;
+    opacity: 1;
+  }
+  98% {
+    width: 100%;
+    background-color: #c0152f;
+    opacity: 0;
+  }
   100% {
-    content: '...';
+    width: 0;
+    background-color: #c0152f;
+    opacity: 0;
   }
 }
 
