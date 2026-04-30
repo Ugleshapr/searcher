@@ -4,7 +4,7 @@ import { SearchEngine } from './modules/core/SearchEngine.js';
 import { TableRenderer } from './modules/ui/TableRenderer.js';
 import { WhatsNew } from './modules/ui/WhatsNew.js';
 import { AvailabilityService } from './addons/AvailabilityService.js';
-import { debounce } from './modules/utils/helpers.js';
+import { debounce, pluralRu } from './modules/utils/helpers.js';
 import {
   RANK_RULES,
   PAGE_SIZE,
@@ -524,44 +524,92 @@ class PriceListSearchApp {
             placeholder.classList.add('is-loading');
 
             try {
-              const days = await this.availabilityService.getAvailabilityPeriod(
-                productId,
-                qty
-              );
+              const periods =
+                await this.availabilityService.getAvailabilityPeriod(
+                  productId,
+                  qty
+                );
 
-              if (typeof days === 'number') {
-                placeholder.textContent = `${days} раб. дн.`;
-              } else if (
-                days === 'Обратитесь в управление обслуживания покупателей' ||
-                !days ||
-                days === 'Нет срока'
-              ) {
-                placeholder.textContent = 'Нет срока';
-              } else {
-                placeholder.textContent = days;
-              }
-              // Добавляем обработчик копирования по клику
-              placeholder.onclick = () => {
-                if (
-                  placeholder.textContent &&
-                  placeholder.textContent !== 'Нет срока'
-                ) {
-                  navigator.clipboard.writeText(placeholder.textContent).then(
-                    () => {
-                      console.log(
-                        'Текст скопирован: ',
-                        placeholder.textContent
-                      );
-                      // Опционально: показать временное сообщение об успешном копировании
-                    },
-                    err => {
-                      console.error('Не удалось скопировать текст: ', err);
-                    }
-                  );
+              placeholder.classList.remove(
+                'is-success',
+                'is-warning',
+                'is-error',
+                'is-loading'
+              );
+              placeholder.removeAttribute('title');
+
+              const existingTooltip =
+                window.bootstrap?.Tooltip?.getInstance(placeholder);
+              if (existingTooltip) existingTooltip.dispose();
+
+              placeholder.onclick = null;
+              let copyText = '';
+
+              if (Array.isArray(periods) && periods.length > 0) {
+                if (periods.length === 1) {
+                  const days = periods[0].days;
+                  const daysWord = pluralRu(days, [
+                    'раб. день',
+                    'раб. дня',
+                    'раб. дней',
+                  ]);
+                  placeholder.textContent = `${days} ${daysWord}`;
+                  placeholder.classList.add('is-success');
+                  copyText = placeholder.textContent;
+                } else {
+                  const maxDays = Math.max(...periods.map(p => p.days));
+                  const daysWord = pluralRu(maxDays, [
+                    'раб. день',
+                    'раб. дня',
+                    'раб. дней',
+                  ]);
+                  placeholder.textContent = `${maxDays} ${daysWord}`;
+                  placeholder.classList.add('is-warning');
+
+                  const lines = periods.map(p => {
+                    const qWord = pluralRu(p.quantity, [
+                      'штука',
+                      'штуки',
+                      'штук',
+                    ]);
+                    const dWord = pluralRu(p.days, [
+                      'раб. день',
+                      'раб. дня',
+                      'раб. дней',
+                    ]);
+                    return `${p.quantity} ${qWord} - ${p.days} ${dWord}`;
+                  });
+
+                  const copyTextFormatted = lines.join('\n');
+                  const tooltipHtml = lines.join('<br>');
+
+                  placeholder.setAttribute('title', tooltipHtml);
+                  if (window.bootstrap?.Tooltip) {
+                    new window.bootstrap.Tooltip(placeholder, {
+                      placement: 'top',
+                      trigger: 'hover',
+                      container: 'body',
+                      html: true,
+                    });
+                  }
+                  copyText = copyTextFormatted;
                 }
-              };
-            } catch (err) {
-              console.error('Availability fetch error:', err);
+              } else {
+                placeholder.textContent = 'Нет срока';
+                placeholder.classList.add('is-error');
+              }
+
+              if (copyText) {
+                placeholder.onclick = e => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(copyText).then(
+                    () => console.log('Текст скопирован: ', copyText),
+                    err => console.error('Не удалось скопировать: ', err)
+                  );
+                };
+              }
+            } catch (error) {
+              console.error('Availability fetch error:', error);
               placeholder.textContent = 'Ошибка';
             } finally {
               placeholder.classList.remove('is-loading');
