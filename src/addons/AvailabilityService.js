@@ -34,18 +34,16 @@ export class AvailabilityService {
 
       const data = await response.json();
 
-      // According to requirements: return period[0].days
       if (
         data &&
         data.period &&
         Array.isArray(data.period) &&
         data.period.length > 0
       ) {
-        const result = data.period[0].days;
-        return result;
+        return data.period;
       }
 
-      return 'Нет срока';
+      return null;
     } catch (error) {
       console.error('AvailabilityService Error:', error);
       throw error;

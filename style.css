@@ -2227,6 +2227,27 @@ body.rzd-mode .form-control:focus {
   border: 1px solid transparent;
 }
 
+.price-menu-placeholder.is-success {
+  background: #eaf7ea;
+  color: #1f6f1f;
+  border-color: #d4efd4;
+  cursor: pointer;
+}
+
+.price-menu-placeholder.is-warning {
+  background: #fff9e6;
+  color: #856404;
+  border-color: #ffeeba;
+  cursor: pointer;
+}
+
+.price-menu-placeholder.is-error {
+  background: #fdeaea;
+  color: #c0152f;
+  border-color: #f9d2d2;
+  cursor: default;
+}
+
 .price-menu-placeholder.is-loading::after {
   content: '';
   display: inline-block;
