@@ -259,17 +259,18 @@ class PriceListSearchApp {
       const rawName = (cell.getAttribute('data-name') || '').trim();
       const article = (cell.getAttribute('data-sku') || '').trim();
 
-      if (!rawName || !article) return;
+      if (!article) return;
 
-      const addLabel =
-        window.AppSettings &&
-        typeof window.AppSettings.addArtLabel === 'boolean'
-          ? window.AppSettings.addArtLabel
-          : false;
-
-      const tsv = addLabel
-        ? `${rawName}\tартикул: ${article}`
-        : `${rawName}\t${article}`;
+      let tsv = '';
+      if (window.AppSettings?.opreshMode === true) {
+        tsv = article;
+      } else {
+        if (!rawName) return;
+        const addLabel = window.AppSettings?.addArtLabel === true;
+        tsv = addLabel
+          ? `${rawName}\tартикул: ${article}`
+          : `${rawName}\t${article}`;
+      }
 
       try {
         await navigator.clipboard.writeText(tsv);
