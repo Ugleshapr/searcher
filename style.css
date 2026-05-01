@@ -2270,64 +2270,43 @@ body.rzd-mode .form-control:focus {
 .price-menu-placeholder.is-loading::after {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 0;
+  inset: 0;
+  width: 100%;
   border-radius: 999px;
-  animation: price-loading-fill 4.5s infinite linear;
+  background-image: linear-gradient(
+    to right,
+    #1f6f1f 20%,
+    #c0152f 20%,
+    #c0152f 40%,
+    #856404 40%,
+    #856404 60%,
+    #1f6f1f 60%,
+    #1f6f1f 80%,
+    transparent 80%
+  );
+  background-size: 500% 100%;
+  background-position: 100% 0;
+  background-repeat: no-repeat;
+  animation:
+    price-fill-start 1.5s linear forwards,
+    price-fill-loop 4.5s 1.5s linear infinite;
 }
 
-@keyframes price-loading-fill {
-  0% {
-    width: 0;
-    background-color: #1f6f1f;
-    opacity: 1;
+@keyframes price-fill-start {
+  from {
+    background-position: 100% 0;
   }
-  30% {
-    width: 100%;
-    background-color: #1f6f1f;
-    opacity: 1;
+  to {
+    background-position: 75% 0;
   }
-  32% {
-    width: 100%;
-    background-color: #1f6f1f;
-    opacity: 0;
+}
+
+@keyframes price-fill-loop {
+  from {
+    background-position: 75% 0;
   }
-  33% {
-    width: 0;
-    background-color: #856404;
-    opacity: 1;
-  }
-  63% {
-    width: 100%;
-    background-color: #856404;
-    opacity: 1;
-  }
-  65% {
-    width: 100%;
-    background-color: #856404;
-    opacity: 0;
-  }
-  66% {
-    width: 0;
-    background-color: #c0152f;
-    opacity: 1;
-  }
-  96% {
-    width: 100%;
-    background-color: #c0152f;
-    opacity: 1;
-  }
-  98% {
-    width: 100%;
-    background-color: #c0152f;
-    opacity: 0;
-  }
-  100% {
-    width: 0;
-    background-color: #c0152f;
-    opacity: 0;
+  to {
+    background-position: 0% 0;
   }
 }
 
