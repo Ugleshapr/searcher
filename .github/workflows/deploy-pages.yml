@@ -1,0 +1,86 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  # Этот триггер гарантирует пересборку, если внешний скрипт обновил данные в корне
+  repository_dispatch:
+    types: [webhook_update]
+  workflow_dispatch: # Позволит запустить деплой вручную кнопкой, если что-то пойдет не так
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Запрещаем параллельные деплои, чтобы они не затирали друг друга. 
+# Ставим cancel-in-progress: false, чтобы сборки вставали в очередь и дев/прод не терялись.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      # 1) Выкачиваем актуальный main (он всегда будет корнем сайта)
+      - name: Checkout main (Production Root)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: workspace
+
+      # 2) Выкачиваем ветку dev для подпапки
+      - name: Checkout dev (Development Branch)
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          path: dev-src
+
+      # 3) Собираем бутерброд: копируем dev в workspace/dev
+      - name: Prepare dev folder
+        run: |
+          mkdir -p workspace/dev
+          rsync -a --delete dev-src/ workspace/dev/
+
+      # 4) Инжектим хэш KEAZ в оба конфига
+      - name: Inject API Keys
+        env:
+          KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
+        run: |
+          PROD_CONFIG="workspace/src/modules/utils/config.js"
+          DEV_CONFIG="workspace/dev/src/modules/utils/config.js"
+
+          # Замена для продакшена
+          if [ -f "$PROD_CONFIG" ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" "$PROD_CONFIG"
+            echo "SUCCESS: Key injected into Prod config"
+          else
+            echo "WARNING: Prod config not found!"
+          fi
+          
+          # Замена для дева
+          if [ -f "$DEV_CONFIG" ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" "$DEV_CONFIG"
+            echo "SUCCESS: Key injected into Dev config"
+          else
+            echo "WARNING: Dev config not found!"
+          fi
+
+      # 5) Загружаем итоговый артефакт (содержит обновленный CSV, весь прод и папку /dev)
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: workspace
+          if-no-files-found: error
+
+      # 6) Публикуем на GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

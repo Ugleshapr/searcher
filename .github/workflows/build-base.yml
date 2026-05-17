@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write # ОБЯЗАТЕЛЬНО: даем право запускать другие воркфлоу
 
 jobs:
   build:
@@ -35,13 +36,23 @@ jobs:
         run: mv -f automation/base.csv ./base.csv
 
       - name: Commit if changed
+        id: commit_step
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add base.csv
           if git diff --cached --quiet; then
             echo "No changes."
+            echo "changed=false" >> $GITHUB_OUTPUT
             exit 0
           fi
           git commit -m "auto: update base.csv"
           git push
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+      # ПИНАЕМ ДЕПЛОЙ PAGES: Сработает только если CSV реально обновился
+      - name: Trigger Pages Deployment
+        if: steps.commit_step.outputs.changed == 'true'
+        run: gh workflow run "Deploy to GitHub Pages" --ref main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
