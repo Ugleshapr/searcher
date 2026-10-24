@@ -110,22 +110,56 @@
 
     menu.innerHTML = '';
     for (const it of items){
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'mode-menu__item';
-      btn.textContent = it.label;
-      btn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+      const a = document.createElement('a');
+      a.className = 'mode-menu__item';
+      a.textContent = it.label;
+      a.setAttribute('role', 'menuitem');
+
+      let targetUrl = '';
+      if (it.key === 'optibox') {
+        targetUrl = 'OptiBoxM/index.html';
+      } else if (it.key === 'base') {
+        targetUrl = 'index.html';
+      } else {
+        targetUrl = `index.html?mode=${it.key}`;
+      }
+      a.href = targetUrl;
+
+      const activate = async (openInNewTab = false) => {
         menu.hidden = true;
-        chip.setAttribute('aria-expanded','false');
-        if (it.key === 'optibox') {
-          window.location.href = 'OptiBoxM/index.html';
+        chip.setAttribute('aria-expanded', 'false');
+        if (openInNewTab) {
+          window.open(targetUrl, '_blank');
+        } else {
+          if (it.key === 'optibox') {
+            window.location.href = targetUrl;
+          } else {
+            await switchMode(it.key);
+          }
+        }
+      };
+
+      a.addEventListener('click', async (e) => {
+        // Если зажат Ctrl / Cmd / Shift — браузер сам откроет в новой вкладке по href
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+          menu.hidden = true;
+          chip.setAttribute('aria-expanded', 'false');
           return;
         }
-        await switchMode(it.key);
+        e.preventDefault();
+        e.stopPropagation();
+        await activate(false);
       });
-      menu.appendChild(btn);
+
+      // Клик средней кнопкой (колесиком) мыши (button === 1)
+      a.addEventListener('auxclick', (e) => {
+        if (e.button === 1) {
+          menu.hidden = true;
+          chip.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      menu.appendChild(a);
     }
 
     requestAnimationFrame(() => positionMenu(menu, chip));
@@ -570,6 +604,15 @@ if (mode === 'catalog') {
 
     // initial menu
     renderMenu();
+
+    // Поддержка открытия режимов по query-параметру ?mode=catalog или ?mode=rzd
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get('mode');
+      if (urlMode === 'catalog' || urlMode === 'rzd') {
+        setTimeout(() => switchMode(urlMode), 100);
+      }
+    } catch {}
   }
 
   document.addEventListener('DOMContentLoaded', init);
