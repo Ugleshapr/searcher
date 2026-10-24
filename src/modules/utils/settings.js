@@ -18,6 +18,9 @@
 
     const rgb = hexToRgbObj(hex);
     if (rgb) {
+      root.style.setProperty('--color-primary-rgb', `${rgb.r}, ${rgb.g}, ${rgb.b}`);
+      root.style.setProperty('--color-primary-light', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`);
+
       const hsl = rgbToHsl(rgb);
       const hoverHsl = { ...hsl, l: Math.min(hsl.l + 0.12, 1) }; // чуть светлее
       const hoverHex = hslToHex(hoverHsl);
