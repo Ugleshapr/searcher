@@ -106,6 +106,7 @@
     if (mode !== 'rzd') items.push({ key:'rzd', label:'Прайс-листу РЖД' });
     if (mode !== 'base') items.push({ key:'base', label:'Прайс-листу' });
     if (mode !== 'catalog') items.push({ key:'catalog', label:'Каталог' });
+    items.push({ key:'optibox', label:'OptiBox M' });
 
     menu.innerHTML = '';
     for (const it of items){
@@ -118,6 +119,10 @@
         e.stopPropagation();
         menu.hidden = true;
         chip.setAttribute('aria-expanded','false');
+        if (it.key === 'optibox') {
+          window.location.href = 'OptiBoxM/index.html';
+          return;
+        }
         await switchMode(it.key);
       });
       menu.appendChild(btn);

@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конфигуратор OptiBox M | КЭАЗ</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+  <div class="top-bar">
+    <div class="top-title">
+      Конфигуратор оболочки <span class="badge-tag">OptiBox M</span>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Левая колонка -->
+    <div class="card">
+      <div class="mode-pills">
+        <button type="button" class="mode-pill active" id="btn-mode-basic" onclick="setMode('basic')">Базовый</button>
+        <button type="button" class="mode-pill" id="btn-mode-pro" onclick="setMode('pro')">Продвинутый</button>
+      </div>
+
+      <div class="card-header" style="margin-bottom: 0.85rem;">
+        Габариты шкафа
+      </div>
+
+      <div class="form-group">
+        <label>Высота (мм)</label>
+        <select id="sel-h" onchange="onDimensionChange()"></select>
+      </div>
+
+      <div class="form-group">
+        <label>Ширина (мм)</label>
+        <select id="sel-w" onchange="onWidthChange()"></select>
+      </div>
+
+      <div class="form-group">
+        <label>Глубина (мм)</label>
+        <select id="sel-d" onchange="onDimensionChange()"></select>
+      </div>
+
+      <div class="form-group">
+        <label>Высота цоколя</label>
+        <select id="sel-plinth" onchange="onPlinthChange()">
+          <option value="100">100 мм</option>
+          <option value="200">200 мм</option>
+          <option value="0">Без цоколя</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        <label class="checkbox-item" id="chk-mp-wrap">
+          <input type="checkbox" id="chk-mp" checked onchange="render()">
+          <span>Монтажная панель</span>
+        </label>
+        <label class="checkbox-item">
+          <input type="checkbox" id="chk-sides" checked onchange="onSidesChange()">
+          <span>Крайний шкаф (боковые панели)</span>
+        </label>
+        <div id="sub-inter-cabinet" style="display: none; margin-top: 0.35rem; padding-left: 0.5rem; border-left: 2px solid var(--border);">
+          <label class="checkbox-item">
+            <input type="checkbox" id="chk-inter-mp" onchange="render()">
+            <span>Промежуточная монтажная панель</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="chk-inter-transport" onchange="render()">
+            <span>Транспортировочные кронштейны линейки</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Аккордеоны PRO-режима -->
+      <div class="pro-accordions" id="pro-accordions" style="display: none;">
+        <!-- 1. Двери и сейсмостойкость -->
+        <div class="accordion-item open">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>1. Двери и сейсмостойкость</span>
+            <i class="fa-solid fa-chevron-down acc-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label>Тип двери</label>
+              <select id="sel-door-type" onchange="onDoorTypeChange()">
+                <option value="solid">Глухая (стандарт)</option>
+                <option value="glass">Обзорная со стеклом</option>
+                <option value="part_glass">Частичное остекление</option>
+                <option value="double">Двустворчатая</option>
+                <option value="front_panels">Наружные лицевые панели (открытый блочный щит)</option>
+                <option value="sectional">Секционные двери (без общей двери)</option>
+                <option value="none">Без внешней двери</option>
+              </select>
+            </div>
+            <label class="checkbox-item" id="lbl-seismic-plinth">
+              <input type="checkbox" id="chk-seismic-plinth" onchange="onSeismicPlinthChange()">
+              <span>Сейсмоцоколь 100 мм</span>
+            </label>
+            <label class="checkbox-item" id="lbl-seismic-amp">
+              <input type="checkbox" id="chk-seismic-amp" onchange="render()">
+              <span>Сейсмоусилители каркаса (В=2000)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Внутренний монтаж -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>2. Внутренний монтаж</span>
+            <i class="fa-solid fa-chevron-down acc-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label>Тип внутреннего монтажа</label>
+              <select id="sel-mounting-type" onchange="onMountingTypeChange()">
+                <option value="mp_2mm" selected>Монтажная панель 2 мм</option>
+                <option value="mp_3mm">Усиленная панель 3 мм</option>
+                <option value="modular">Модульная пластронная система</option>
+                <option value="none">Без внутреннего монтажа</option>
+              </select>
+            </div>
+
+            <!-- Опции для монтажных панелей (2 мм и 3 мм) -->
+            <div id="sub-mp" style="display: block;">
+              <label class="checkbox-item">
+                <input type="checkbox" id="chk-mp-traverses" onchange="render()">
+                <span>Траверсы по глубине с фиксаторами</span>
+              </label>
+              <div id="mp-acb-notice" style="display: none; font-size: 0.73rem; color: #1e40af; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.4rem 0.6rem; margin-top: 0.45rem; line-height: 1.35;">
+                <i class="fa-solid fa-circle-info"></i> Установлен отсек OptiMat A: цельная МП заменена на частичные монтажные платы.
+              </div>
+            </div>
+
+            <!-- Опции для модульной пластронной системы -->
+            <div id="sub-modular" style="display: none;">
+              <div class="form-group" style="margin-bottom: 0.65rem;">
+                <label>Компенсационные пластроны</label>
+                <select id="sel-comp-type" onchange="render()">
+                  <option value="blind" selected>Глухие пластроны</option>
+                  <option value="perf">Перфорированные пластроны</option>
+                </select>
+              </div>
+
+              <!-- Шкала полезной высоты секций -->
+              <div class="height-indicator-box" style="margin-bottom: 0.65rem;">
+                <div class="height-indicator-text" id="height-indicator-text">
+                  <span>Занято: <strong>0</strong> из <strong>1850</strong> мм</span>
+                  <span>0%</span>
+                </div>
+                <div class="height-bar-wrap">
+                  <div class="height-bar" id="height-bar" style="width: 0%;"></div>
+                </div>
+                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.25rem;" id="height-subtext">
+                  (с учетом обязательных компенсаторов 65+85 мм)
+                </div>
+                <div class="height-warning" id="height-warning" style="display: none;">
+                  <i class="fa-solid fa-triangle-exclamation"></i> Превышена полезная высота шкафа!
+                </div>
+              </div>
+
+              <!-- Емкость OptiDin -->
+              <div id="din-capacity-box" style="margin-bottom: 0.75rem; padding: 0.35rem 0.6rem; background: rgba(37, 99, 235, 0.08); border-radius: 6px; border: 1px solid rgba(37, 99, 235, 0.18); font-size: 0.76rem; font-weight: 600; color: #1d4ed8; display: flex; align-items: center; gap: 0.4rem;">
+                <i class="fa-solid fa-microchip" style="color: #2563eb;"></i>
+                <span id="din-capacity-text">Суммарная емкость: 0 модулей</span>
+              </div>
+
+              <!-- Кнопки быстрого добавления ярусов -->
+              <div style="margin-bottom: 0.75rem;">
+                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--text); margin-bottom: 0.35rem;">
+                  Добавить ярус:
+                </label>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin-bottom: 0.45rem;">
+                  <button type="button" class="btn-tier-add" onclick="addModularTier('din150')">
+                    <i class="fa-solid fa-plus"></i> DIN 150 мм
+                  </button>
+                  <button type="button" class="btn-tier-add" onclick="addModularTier('din200')">
+                    <i class="fa-solid fa-plus"></i> DIN 200 мм
+                  </button>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.45rem;">
+                  <select id="sel-tier-plastron-type" style="flex: 1.1; font-size: 0.75rem; padding: 0.38rem 0.45rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                    <option value="blind" selected>Глухой</option>
+                    <option value="perf">Перфорированный</option>
+                  </select>
+                  <select id="sel-tier-blind-h" style="flex: 1; font-size: 0.75rem; padding: 0.38rem 0.45rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                    <option value="150">H = 150 мм</option>
+                    <option value="200" selected>H = 200 мм</option>
+                    <option value="250">H = 250 мм</option>
+                    <option value="300">H = 300 мм</option>
+                    <option value="350">H = 350 мм</option>
+                    <option value="400">H = 400 мм</option>
+                    <option value="450">H = 450 мм</option>
+                    <option value="500">H = 500 мм</option>
+                    <option value="550">H = 550 мм</option>
+                    <option value="600">H = 600 мм</option>
+                  </select>
+                  <button type="button" class="btn-tier-add" style="flex: 1.6;" onclick="addModularTier('plastron')">
+                    <i class="fa-solid fa-plus"></i> Пластрон
+                  </button>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.45rem;">
+                  <select id="sel-tier-sect-door-h" style="flex: 1.1; font-size: 0.75rem; padding: 0.38rem 0.45rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                    <option value="150">H = 150 мм</option>
+                    <option value="200" selected>H = 200 мм</option>
+                    <option value="250">H = 250 мм</option>
+                    <option value="300">H = 300 мм</option>
+                    <option value="350">H = 350 мм</option>
+                    <option value="400">H = 400 мм</option>
+                    <option value="450">H = 450 мм</option>
+                    <option value="500">H = 500 мм</option>
+                    <option value="550">H = 550 мм</option>
+                    <option value="600">H = 600 мм</option>
+                  </select>
+                  <button type="button" class="btn-tier-add" style="flex: 1.9;" onclick="addModularTier('sectional_door')">
+                    <i class="fa-solid fa-plus"></i> Секционная дверь
+                  </button>
+                </div>
+
+                <div style="display: flex; gap: 0.4rem; margin-bottom: 0.55rem;">
+                  <select id="sel-tier-partial-mp-h" style="flex: 1.1; font-size: 0.75rem; padding: 0.38rem 0.45rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                    <option value="150">H = 150 мм</option>
+                    <option value="200" selected>H = 200 мм</option>
+                    <option value="300">H = 300 мм</option>
+                    <option value="400">H = 400 мм</option>
+                  </select>
+                  <button type="button" class="btn-tier-add" style="flex: 1.9;" onclick="addModularTier('partial_mp')">
+                    <i class="fa-solid fa-plus"></i> Частичная монтажная плата
+                  </button>
+                </div>
+
+                <button type="button" class="btn-tier-fill" onclick="autoFillRemainingPlastrons()">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Заполнить остаток глухими пластронами
+                </button>
+              </div>
+
+              <!-- Список набранных ярусов -->
+              <div style="margin-bottom: 0.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                  <span style="font-size: 0.75rem; font-weight: 600; color: var(--text);">Набранные ярусы:</span>
+                  <button type="button" id="btn-clear-tiers" style="display: none; background: none; border: none; font-size: 0.7rem; color: var(--keaz-red); cursor: pointer; text-decoration: underline; padding: 0;" onclick="clearAllTiers()">
+                    Очистить все
+                  </button>
+                </div>
+                <div id="tier-stack-list" class="tier-stack-list"></div>
+              </div>
+            </div>
+
+            <!-- Независимый отсек OptiMat A -->
+            <div class="acb-box" id="box-acb" style="margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px dashed var(--border);">
+              <label class="checkbox-item" id="lbl-acb">
+                <input type="checkbox" id="chk-acb" onchange="onAcbToggle()">
+                <span style="font-weight: 600;">Установить отсек выключателя OptiMat A</span>
+              </label>
+              <div id="acb-depth-hint" style="display: none; font-size: 0.72rem; color: var(--keaz-red); margin-top: 0.25rem; font-weight: 600;">
+                <i class="fa-solid fa-circle-exclamation"></i> Отсек OptiMat A требует ширины и глубины от 600 мм
+              </div>
+
+              <div id="acb-options" style="display: none; margin-top: 0.5rem; padding-left: 1.6rem;">
+                <div class="form-group" style="margin-bottom: 0.4rem;">
+                  <label style="font-size: 0.74rem;">Высота отсека выключателя</label>
+                  <select id="sel-acb-height" onchange="onAcbHeightChange()" style="font-size: 0.75rem; padding: 0.38rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                    <option value="600" selected>Высота отсека 600 мм (до 4000 А)</option>
+                    <option value="450">Высота отсека 450 мм (до 1600 А)</option>
+                  </select>
+                </div>
+                <div style="font-size: 0.71rem; color: var(--text-muted); line-height: 1.3;">
+                  <i class="fa-solid fa-info-circle" style="color: #2563eb;"></i> Комплектуется: полка выключателя, комплект зонирования, стойки ФБ и боковые панели выключателя.
+                </div>
+              </div>
+            </div>
+
+            <!-- Полка разделительная -->
+            <label class="checkbox-item" id="lbl-divider-shelf" style="display: none; margin-top: 0.65rem; padding-top: 0.5rem; border-top: 1px dashed var(--border);">
+              <input type="checkbox" id="chk-divider-shelf" onchange="render()">
+              <span>Полка разделительная (отделение силового/учетного отсека)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. Ввод кабеля и заземление -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>3. Ввод кабеля и заземление</span>
+            <i class="fa-solid fa-chevron-down acc-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label>Ввод кабеля (дно)</label>
+              <select id="sel-cable-entry" onchange="onCableEntryChange()">
+                <option value="standard">Стандартное дно</option>
+                <option value="brush">Щеточный ввод</option>
+                <option value="gland">Панель сальников</option>
+              </select>
+            </div>
+            <div id="sub-cable-glands" style="display: none; margin-bottom: 0.75rem;">
+              <label style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Комплект сальников</label>
+              <select id="sel-gland-type" onchange="render()" style="width: 100%; font-size: 0.75rem; padding: 0.38rem 0.45rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff;">
+                <option value="1">Сальники: на 1 ввод (25 шт)</option>
+                <option value="3" selected>Сальники: на 3 ввода (25 шт)</option>
+                <option value="8">Сальники: на 8 вводов (25 шт)</option>
+              </select>
+            </div>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-cable-tray" onchange="render()">
+              <span>Кабельная трасса (лоток)</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-emc-rail" onchange="render()">
+              <span>Рейка ЭМС</span>
+            </label>
+            <label class="checkbox-item" id="lbl-busbar-rails">
+              <input type="checkbox" id="chk-busbar-rails" onchange="render()">
+              <span>Комплект реек шинодержателя N/PE под глубину шкафа</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-pe-bus" onchange="render()">
+              <span>Кронштейны шины PE</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-ground-point" onchange="render()">
+              <span>Центральная точка заземления М8</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. Аксессуары двери -->
+        <div class="accordion-item">
+          <div class="accordion-header" onclick="toggleAccordion(this)">
+            <span>4. Аксессуары двери</span>
+            <i class="fa-solid fa-chevron-down acc-icon"></i>
+          </div>
+          <div class="accordion-body">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label>Карман для документации</label>
+              <select id="sel-doc-pocket" onchange="render()">
+                <option value="none">Нет</option>
+                <option value="plastic">Пластиковый карман</option>
+                <option value="metal">Металлический карман</option>
+              </select>
+            </div>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-handle" onchange="render()">
+              <span>Поворотная ручка с замком</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-limiter" onchange="render()">
+              <span>Ограничитель открывания двери</span>
+            </label>
+            <label class="checkbox-item">
+              <input type="checkbox" id="chk-door-rails" onchange="render()">
+              <span>Дверные рейки</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-main" onclick="copyFullSpec()">
+        <i class="fa-regular fa-copy"></i> Скопировать спецификацию
+      </button>
+    </div>
+
+    <!-- Правая колонка: спецификация и эскиз -->
+    <div class="right-column">
+      <div class="card">
+        <div class="card-header">
+          <span>Результаты комплектации</span>
+          <span class="counter-badge" id="items-count">Позиций: 0</span>
+        </div>
+
+        <div class="table-container" id="spec-table-wrap">
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Наименование</th>
+                  <th style="width: 25%;">Артикул</th>
+                  <th class="qty-col">Кол-во</th>
+                </tr>
+              </thead>
+              <tbody id="spec-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="spec-empty" style="display: none; text-align: center; padding: 2.5rem; color: var(--text-muted);"></div>
+      </div>
+
+      <!-- Карточка эскиза оболочки -->
+      <div class="card" id="preview-card">
+        <div class="card-header" style="margin-bottom: 0.85rem;">
+          <span>Эскиз оболочки</span>
+          <button type="button"
+                  id="preview-mode-toggle"
+                  class="preview-mode-switch"
+                  title="Вид: Фасад"
+                  onclick="togglePreviewMode()"
+                  aria-label="Вид: Фасад"></button>
+        </div>
+        <div id="cabinet-preview-root" style="width: 100%; min-height: 420px; display: flex; justify-content: center; align-items: center; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem 1rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Скопировано в буфер обмена!</div>
+
+  <script src="./data.js"></script>
+  <script src="./preview.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
