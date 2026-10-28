@@ -872,23 +872,7 @@ function updateStatusBar() {
     dimEl.innerText = `${h}×${w}×${d}${plinthStr}`;
   }
 
-  // 2. Степень защиты IP
-  const ipEl = document.getElementById('status-ip');
-  if (ipEl) {
-    let ip = 'IP55';
-    if (currentMode === 'pro') {
-      const doorType = document.getElementById('sel-door-type')?.value;
-      const compType = document.getElementById('sel-comp-type')?.value;
-      if (doorType === 'none') {
-        ip = 'IP30';
-      } else if (doorType === 'front_panels' || doorType === 'sectional') {
-        ip = (compType === 'perf') ? 'IP31' : 'IP55';
-      }
-    }
-    ipEl.innerText = ip;
-  }
-
-  // 3. Высота и 4. Модули
+  // 2. Высота и 3. Модули
   const heightEl = document.getElementById('status-height');
   const modEl = document.getElementById('status-modules');
 
@@ -1421,7 +1405,7 @@ function render() {
         <button type="button" class="btn-block-action btn-block-copy"
         id="copy-btn-${group.id}"
         title="Скопировать ${group.title}"
-        onclick="onBlockCopyClick('${group.id}')">
+        onclick="onBlockCopyClick('${group.id}', event)">
         <i class="fa-regular fa-copy"></i>
         </button>
         <button type="button" class="btn-block-action btn-block-check"
@@ -1485,11 +1469,12 @@ function updateMultiSelectUI() {
     }
 }
 
-function onBlockCopyClick(blockId) {
+function onBlockCopyClick(blockId, ev) {
+  const btn = ev?.currentTarget || ev?.target?.closest('button') || document.getElementById('copy-btn-' + blockId);
   if (selectedBlocks.size > 0) {
-    copySelectedBlocks();
+    copySelectedBlocks(btn);
   } else {
-    copySection(blockId);
+    copySection(blockId, btn);
   }
 }
 
@@ -1520,7 +1505,7 @@ function formatSpecItems(items) {
   }).join('\n');
 }
 
-function copySelectedBlocks() {
+function copySelectedBlocks(btn) {
   if (!selectedBlocks.size) return;
 
   const order = ['base', 'mounting', 'plinth', 'accessories'];
@@ -1533,7 +1518,7 @@ function copySelectedBlocks() {
 
   if (!allItems.length) return;
   const text = formatSpecItems(allItems);
-  doClipboardCopy(text);
+  doClipboardCopy(text, btn || document.getElementById('copy-btn-base'));
   resetMultiSelect();
 }
 
@@ -1542,14 +1527,15 @@ function resetMultiSelect() {
   updateMultiSelectUI();
 }
 
-function copySection(sectionKey) {
+function copySection(sectionKey, btn) {
   const items = currentSections[sectionKey];
   if (!items || !items.length) return;
   const text = formatSpecItems(items);
-  doClipboardCopy(text);
+  doClipboardCopy(text, btn || document.getElementById('copy-btn-' + sectionKey));
 }
 
-function copyFullSpec() {
+function copyFullSpec(ev) {
+  const btn = (ev instanceof HTMLElement) ? ev : (ev?.currentTarget || ev?.target?.closest('button') || document.querySelector('.btn-main'));
   const allItems = [
     ...currentSections.base,
     ...currentSections.mounting,
@@ -1558,19 +1544,59 @@ function copyFullSpec() {
   ];
   if (!allItems.length) return;
   const text = formatSpecItems(allItems);
-  doClipboardCopy(text);
+  doClipboardCopy(text, btn);
 }
 
-function doClipboardCopy(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    const isOpresh = document.getElementById('chk-opresh')?.checked;
-    const toast = document.getElementById('toast');
-    if (toast) {
-      toast.innerText = isOpresh ? 'Скопировано в буфер (формат ОПРЕШ)!' : 'Скопировано в буфер обмена!';
-      toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 2000);
+function triggerCopyAnimation(btn) {
+  if (!btn || btn.classList.contains('is-copied')) return;
+  btn.classList.add('is-copied');
+  const origHtml = btn.innerHTML;
+
+  if (btn.classList.contains('btn-main')) {
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Скопировано!';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+  }
+
+  setTimeout(() => {
+    btn.classList.remove('is-copied');
+    btn.innerHTML = origHtml;
+  }, 1200);
+}
+
+function doClipboardCopy(text, btn) {
+  const onDone = () => {
+    if (btn) {
+      triggerCopyAnimation(btn);
+    } else {
+      const active = document.activeElement?.closest('button');
+      if (active) triggerCopyAnimation(active);
     }
-  });
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onDone).catch(() => {
+      fallbackCopy(text);
+      onDone();
+    });
+  } else {
+    fallbackCopy(text);
+    onDone();
+  }
+}
+
+function fallbackCopy(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.top = '-9999px';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+  } catch (e) {}
+  document.body.removeChild(ta);
 }
 
 window.onload = init;

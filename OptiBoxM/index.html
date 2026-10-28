@@ -76,12 +76,12 @@
         <!-- Блок управления реечным конструктивом базового режима -->
         <div id="sub-basic-rails" style="display: none; margin-top: 0.65rem; padding: 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;">
           
-          <!-- Выбор типа/профиля реек по каталогу КЭАЗ (стр. 13) -->
+          <!-- Выбор типа/профиля реек -->
           <div class="form-group" style="margin-bottom: 0.65rem;">
-            <label style="font-size: 0.76rem; font-weight: 600;">Профиль реек (каталог КЭАЗ стр. 13)</label>
+            <label style="font-size: 0.76rem; font-weight: 600;">Профиль реек</label>
             <select id="sel-rail-profile" onchange="render()" style="font-size: 0.78rem; padding: 0.35rem 0.5rem;">
-              <option value="49" selected>49 мм — стандартный (оборудование, кабели)</option>
-              <option value="74">74 мм — усиленный (силовые аппараты, ACB)</option>
+              <option value="49" selected>49 мм (стандартный)</option>
+              <option value="74">74 мм (усиленный)</option>
             </select>
           </div>
 
@@ -96,9 +96,9 @@
             Комплекты монтажных реек:
           </div>
 
-          <!-- Боковые рейки по глубине D -->
+          <!-- Боковые рейки -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <span style="font-size: 0.76rem;">Боковые по глубине D (компл. 2 шт):</span>
+            <span style="font-size: 0.76rem;">Боковые:</span>
             <div style="display: flex; align-items: center; gap: 0.35rem;">
               <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('side', -1)">-</button>
               <span id="basic-side-rails-qty" style="font-size: 0.82rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
@@ -106,9 +106,9 @@
             </div>
           </div>
 
-          <!-- Поперечные рейки по ширине W -->
+          <!-- Поперечные рейки -->
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.76rem;">Поперечные по ширине W (компл. 2 шт):</span>
+            <span style="font-size: 0.76rem;">Поперечные:</span>
             <div style="display: flex; align-items: center; gap: 0.35rem;">
               <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('cross', -1)">-</button>
               <span id="basic-cross-rails-qty" style="font-size: 0.82rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
@@ -420,7 +420,7 @@
         </div>
       </div>
 
-      <button class="btn-main" onclick="copyFullSpec()">
+      <button class="btn-main" onclick="copyFullSpec(event)">
         <i class="fa-regular fa-copy"></i> Скопировать спецификацию
       </button>
     </div>
@@ -482,11 +482,6 @@
             <i class="fa-solid fa-ruler-combined"></i>
             <span class="status-chip-label">Габариты:</span>
             <span class="status-chip-val" id="status-dim">2000×800×600</span>
-          </div>
-          <div class="status-chip" id="chip-ip" title="Степень защиты оболочки">
-            <i class="fa-solid fa-shield-halved"></i>
-            <span class="status-chip-label">Защита:</span>
-            <span class="status-chip-val" id="status-ip">IP55</span>
           </div>
           <div class="status-chip" id="chip-height" title="Полезная высота модульного монтажа">
             <i class="fa-solid fa-arrows-up-down"></i>
