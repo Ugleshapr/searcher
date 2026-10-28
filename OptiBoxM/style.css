@@ -90,6 +90,138 @@ body {
   background: var(--color-primary-light);
 }
 
+/* Переключатель режима ОПРЕШ */
+.toggle-opresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  padding: 0.28rem 0.65rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+.toggle-opresh:hover {
+  border-color: var(--color-primary);
+  color: var(--text);
+}
+.toggle-opresh-label {
+  letter-spacing: 0.5px;
+}
+.toggle-opresh-input {
+  display: none;
+}
+.toggle-opresh-slider {
+  position: relative;
+  display: inline-block;
+  width: 32px;
+  height: 18px;
+  background: #cbd5e1;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+.toggle-opresh-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.toggle-opresh-input:checked + .toggle-opresh-slider {
+  background: var(--color-primary);
+}
+.toggle-opresh-input:checked + .toggle-opresh-slider::after {
+  transform: translateX(14px);
+}
+.toggle-opresh:has(.toggle-opresh-input:checked) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+/* Табы переключения вида правой колонки */
+.view-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background: var(--card-bg);
+  padding: 0.35rem 0.45rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  margin-bottom: 0.85rem;
+  box-shadow: var(--shadow-sm);
+}
+.view-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 0.45rem 0.75rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.view-tab:hover {
+  color: var(--text);
+  background: rgba(var(--color-brown-600-rgb), 0.05);
+}
+.view-tab.active {
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+/* Статус-бар над эскизом */
+.preview-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  align-items: center;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  padding: 0.22rem 0.55rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+}
+.status-chip i {
+  color: var(--color-primary);
+  font-size: 0.75rem;
+}
+.status-chip-label {
+  font-weight: 550;
+}
+.status-chip-val {
+  font-weight: 700;
+  color: var(--text);
+}
+
 .main-grid {
   max-width: 1400px;
   margin: 0 auto;
@@ -404,6 +536,51 @@ select:focus {
 .btn-tier-del:hover {
   color: #c0152f;
   background: rgba(192, 21, 47, 0.1);
+}
+
+.tier-num-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  min-width: 22px;
+  text-align: center;
+}
+
+.tier-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  flex-shrink: 0;
+}
+
+.btn-tier-action {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.74rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.btn-tier-action:hover:not(:disabled) {
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+}
+
+.btn-tier-action:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
 }
 
 /* Блоки визуального разделения спецификации */

@@ -99,35 +99,22 @@ function changeBasicRailQty(type, delta) {
   render();
 }
 
-function quickAssembleAcbTier() {
-  const w = parseInt(document.getElementById('sel-w').value);
-  const d = parseInt(document.getElementById('sel-d').value);
-  if (w < 600 || d < 600) return;
-
-  basicSideRailsQty = 1;
-  basicCrossRailsQty = 1;
-  const sideEl = document.getElementById('basic-side-rails-qty');
-  if (sideEl) sideEl.innerText = basicSideRailsQty;
-  const crossEl = document.getElementById('basic-cross-rails-qty');
-  if (crossEl) crossEl.innerText = basicCrossRailsQty;
-
-  const chkAcb = document.getElementById('chk-basic-acb-shelf');
-  if (chkAcb) chkAcb.checked = true;
-
-  render();
-}
-
-function clearBasicRails() {
-  basicSideRailsQty = 0;
-  basicCrossRailsQty = 0;
-  const sideEl = document.getElementById('basic-side-rails-qty');
-  if (sideEl) sideEl.innerText = 0;
-  const crossEl = document.getElementById('basic-cross-rails-qty');
-  if (crossEl) crossEl.innerText = 0;
-
-  const chkAcb = document.getElementById('chk-basic-acb-shelf');
-  if (chkAcb) chkAcb.checked = false;
-
+function onBasicAcbShelfChange() {
+  const chk = document.getElementById('chk-basic-acb-shelf');
+  if (chk && chk.checked) {
+    // Согласно стр. 27 каталога КЭАЗ, для установки полки необходим комплект поперечных реек
+    // и комплект боковых направляющих глубины. Если счетчики были на 0 - явно выставляем рекомендованный минимум.
+    if (basicCrossRailsQty === 0) {
+      basicCrossRailsQty = 1;
+      const el = document.getElementById('basic-cross-rails-qty');
+      if (el) el.innerText = basicCrossRailsQty;
+    }
+    if (basicSideRailsQty === 0) {
+      basicSideRailsQty = 1;
+      const el = document.getElementById('basic-side-rails-qty');
+      if (el) el.innerText = basicSideRailsQty;
+    }
+  }
   render();
 }
 
@@ -152,7 +139,6 @@ function updateBasicRailsAvailability() {
   const isAcbAllowed = (w >= 600 && d >= 600);
   const chkAcb = document.getElementById('chk-basic-acb-shelf');
   const lblAcb = document.getElementById('lbl-basic-acb-shelf');
-  const btnQuick = document.getElementById('btn-quick-acb-tier');
 
   if (chkAcb) {
     chkAcb.disabled = !isAcbAllowed;
@@ -163,11 +149,6 @@ function updateBasicRailsAvailability() {
   if (lblAcb) {
     lblAcb.style.opacity = isAcbAllowed ? '1' : '0.5';
     lblAcb.title = isAcbAllowed ? '' : 'Требуются габариты Ш >= 600 и Г >= 600 мм';
-  }
-  if (btnQuick) {
-    btnQuick.disabled = !isAcbAllowed;
-    btnQuick.style.opacity = isAcbAllowed ? '1' : '0.5';
-    btnQuick.style.pointerEvents = isAcbAllowed ? 'auto' : 'none';
   }
 }
 
@@ -635,6 +616,50 @@ function autoFillRemainingPlastrons() {
 
 let draggedTierIndex = null;
 
+function moveModularTier(index, delta) {
+  const targetIndex = index + delta;
+  if (targetIndex < 0 || targetIndex >= modularTiers.length) return;
+  const item = modularTiers.splice(index, 1)[0];
+  modularTiers.splice(targetIndex, 0, item);
+  renderTierList();
+  renderCabinetPreview();
+  render();
+}
+
+function duplicateModularTier(id) {
+  const index = modularTiers.findIndex(t => t.id === id);
+  if (index === -1) return;
+  const tier = modularTiers[index];
+
+  const hEl = document.getElementById('sel-h');
+  const h = parseInt(hEl?.value) || 2000;
+  const maxUsefulH = h - 150;
+  const currentUsed = modularTiers.reduce((sum, t) => sum + t.height, 0);
+
+  if (currentUsed + tier.height > maxUsefulH) {
+    const toast = document.getElementById('toast');
+    if (toast) {
+      toast.innerText = 'Недостаточно свободной высоты для дублирования яруса!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2200);
+    }
+    return;
+  }
+
+  const cloned = {
+    id: nextTierId++,
+    type: tier.type,
+    height: tier.height,
+    name: tier.name,
+    badgeCls: tier.badgeCls
+  };
+
+  modularTiers.splice(index + 1, 0, cloned);
+  renderTierList();
+  updateModularHeightIndicator();
+  render();
+}
+
 function renderTierList() {
   const listEl = document.getElementById('tier-stack-list');
   const clearBtn = document.getElementById('btn-clear-tiers');
@@ -659,13 +684,25 @@ function renderTierList() {
   ondrop="onTierDrop(event, ${index})"
   ondragend="onTierDragEnd(event)">
   <div style="display: flex; align-items: center; gap: 0.45rem; min-width: 0; overflow: hidden;">
-  <i class="fa-solid fa-grip-vertical tier-drag-handle" title="Потяните для изменения порядка"></i>
-  <span class="tier-badge ${t.badgeCls}">${t.height} мм</span>
-  <span class="tier-title" title="${t.name}">${t.type === 'acb' ? '<strong>' + t.name + '</strong>' : t.name}</span>
+    <i class="fa-solid fa-grip-vertical tier-drag-handle" title="Потяните для изменения порядка"></i>
+    <span class="tier-num-badge">#${index + 1}</span>
+    <span class="tier-badge ${t.badgeCls}">${t.height} мм</span>
+    <span class="tier-title" title="${t.name}">${t.type === 'acb' ? '<strong>' + t.name + '</strong>' : t.name}</span>
   </div>
-  <button type="button" class="btn-tier-del" onclick="removeModularTier(${t.id})" title="Удалить ярус">
-  <i class="fa-solid fa-xmark"></i>
-  </button>
+  <div class="tier-actions">
+    <button type="button" class="btn-tier-action" onclick="moveModularTier(${index}, -1)" title="Переместить выше" ${index === 0 ? 'disabled' : ''}>
+      <i class="fa-solid fa-chevron-up"></i>
+    </button>
+    <button type="button" class="btn-tier-action" onclick="moveModularTier(${index}, 1)" title="Переместить ниже" ${index === modularTiers.length - 1 ? 'disabled' : ''}>
+      <i class="fa-solid fa-chevron-down"></i>
+    </button>
+    <button type="button" class="btn-tier-action" onclick="duplicateModularTier(${t.id})" title="Клонировать ярус">
+      <i class="fa-regular fa-clone"></i>
+    </button>
+    <button type="button" class="btn-tier-del" onclick="removeModularTier(${t.id})" title="Удалить ярус">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
   </div>
   `).join('');
 }
@@ -794,6 +831,117 @@ function updateModularHeightIndicator() {
   }
 }
 
+var currentRightView = 'both';
+
+function setRightView(view) {
+  currentRightView = view;
+  const specCard = document.getElementById('spec-card');
+  const previewCard = document.getElementById('preview-card');
+
+  document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+  const activeBtn = document.getElementById(`tab-view-${view}`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  if (view === 'both') {
+    if (specCard) specCard.style.display = 'block';
+    if (previewCard) previewCard.style.display = 'block';
+  } else if (view === 'preview') {
+    if (specCard) specCard.style.display = 'none';
+    if (previewCard) previewCard.style.display = 'block';
+  } else if (view === 'spec') {
+    if (specCard) specCard.style.display = 'block';
+    if (previewCard) previewCard.style.display = 'none';
+  }
+}
+
+function updateStatusBar() {
+  const hEl = document.getElementById('sel-h');
+  const wEl = document.getElementById('sel-w');
+  const dEl = document.getElementById('sel-d');
+  const plinthEl = document.getElementById('sel-plinth');
+
+  const h = hEl ? hEl.value : '2000';
+  const w = wEl ? wEl.value : '800';
+  const d = dEl ? dEl.value : '600';
+  const plinth = plinthEl ? plinthEl.value : '100';
+
+  // 1. Габариты
+  const dimEl = document.getElementById('status-dim');
+  if (dimEl) {
+    const plinthStr = (plinth && plinth !== '0') ? ` (+${plinth})` : '';
+    dimEl.innerText = `${h}×${w}×${d}${plinthStr}`;
+  }
+
+  // 2. Степень защиты IP
+  const ipEl = document.getElementById('status-ip');
+  if (ipEl) {
+    let ip = 'IP55';
+    if (currentMode === 'pro') {
+      const doorType = document.getElementById('sel-door-type')?.value;
+      const compType = document.getElementById('sel-comp-type')?.value;
+      if (doorType === 'none') {
+        ip = 'IP30';
+      } else if (doorType === 'front_panels' || doorType === 'sectional') {
+        ip = (compType === 'perf') ? 'IP31' : 'IP55';
+      }
+    }
+    ipEl.innerText = ip;
+  }
+
+  // 3. Высота и 4. Модули
+  const heightEl = document.getElementById('status-height');
+  const modEl = document.getElementById('status-modules');
+
+  if (currentMode === 'pro') {
+    const mountType = document.getElementById('sel-mounting-type')?.value;
+    if (mountType === 'modular') {
+      const maxH = Math.max(parseInt(h) - 150, 0);
+      const usedH = modularTiers.reduce((acc, t) => acc + t.height, 0);
+      if (heightEl) heightEl.innerText = `${usedH} / ${maxH} мм`;
+
+      let modulesPerRow = 0;
+      const widthVal = parseInt(w);
+      if (widthVal === 600) modulesPerRow = 24;
+      else if (widthVal === 800) modulesPerRow = 35;
+      else if (widthVal === 1000) modulesPerRow = 46;
+
+      const dinCount = modularTiers.filter(t => t.type === 'din150' || t.type === 'din200').length;
+      const totalMods = dinCount * modulesPerRow;
+      if (modEl) modEl.innerText = `${totalMods} мод.`;
+    } else if (mountType === 'mp_2mm' || mountType === 'mp_3mm') {
+      if (heightEl) heightEl.innerText = (mountType === 'mp_3mm') ? 'МП 3 мм' : 'Сплошная МП';
+      if (modEl) modEl.innerText = '—';
+    } else {
+      if (heightEl) heightEl.innerText = 'Без монтажа';
+      if (modEl) modEl.innerText = '—';
+    }
+  } else {
+    // Basic mode
+    const basicMounting = document.getElementById('sel-basic-mounting')?.value;
+    if (basicMounting === 'mp') {
+      if (heightEl) heightEl.innerText = (w === '300') ? '—' : 'Сплошная МП';
+    } else if (basicMounting === 'rails') {
+      const chkAcb = document.getElementById('chk-basic-acb-shelf')?.checked;
+      const railProfile = document.getElementById('sel-rail-profile')?.value || '49';
+      const sQty = basicSideRailsQty;
+      const cQty = basicCrossRailsQty;
+      let desc = [];
+      if (chkAcb) desc.push('Полка ACB');
+      if (sQty) desc.push(`${sQty} бок.`);
+      if (cQty) desc.push(`${cQty} попер.`);
+      if (desc.length) {
+        desc.push(`(${railProfile} мм)`);
+        if (heightEl) heightEl.innerText = desc.join(' ');
+      } else {
+        if (heightEl) heightEl.innerText = 'Рейки (0)';
+      }
+    } else {
+      if (heightEl) heightEl.innerText = 'Без монтажа';
+    }
+    if (modEl) modEl.innerText = '—';
+  }
+}
+
 function updateMountingOptionsAvailability() {
   const wEl = document.getElementById('sel-w');
   const hEl = document.getElementById('sel-h');
@@ -890,6 +1038,7 @@ function render() {
     emptyEl.innerText = `Типоразмер ${key} отсутствует в каталоге OptiBox M`;
     document.getElementById('items-count').innerText = 'Позиций: 0';
     renderCabinetPreview();
+    updateStatusBar();
     return;
   }
 
@@ -947,22 +1096,35 @@ function render() {
         }
       }
     } else if (basicMounting === 'rails') {
-      const sideRailsMap = {
-        '400': '419728',
-        '500': '419729',
-        '600': '419730',
-        '800': '419731',
-        '1000': '419732',
-        '1200': '419727'
+      const railProfile = document.getElementById('sel-rail-profile')?.value || '49';
+      const sideRailsMap49 = {
+        '400': '419728', '500': '419729', '600': '419730',
+        '800': '419731', '1000': '419732', '1200': '419727'
       };
+      const sideRailsMap74 = {
+        '400': '419733', '500': '419734', '600': '419735',
+        '800': '419736', '1000': '419737', '1200': '419738'
+      };
+      const crossRailsMap49 = {
+        '400': '419739', '500': '419978', '600': '419740',
+        '800': '419741', '1000': '419742', '1200': '419743'
+      };
+      const crossRailsMap74 = {
+        '400': '419744', '500': '419984', '600': '419745',
+        '800': '419746', '1000': '419747', '1200': '419748'
+      };
+
+      const sideMap = (railProfile === '74') ? sideRailsMap74 : sideRailsMap49;
+      const crossMap = (railProfile === '74') ? crossRailsMap74 : crossRailsMap49;
+
       if (basicSideRailsQty > 0) {
-        const railArt = sideRailsMap[d];
+        const railArt = sideMap[d];
         if (railArt) {
           currentSections.mounting.push({ art: railArt, name: getName(railArt), qty: basicSideRailsQty });
         }
       }
       if (basicCrossRailsQty > 0) {
-        const crossRailArt = DB?.cross_rails?.[w];
+        const crossRailArt = crossMap[w];
         if (crossRailArt) {
           currentSections.mounting.push({ art: crossRailArt, name: getName(crossRailArt), qty: basicCrossRailsQty });
         }
@@ -1279,6 +1441,7 @@ function render() {
   tbody.innerHTML = rowsHtml;
   document.getElementById('items-count').innerText = `Позиций: ${totalItems}`;
   renderCabinetPreview();
+  updateStatusBar();
 }
 
 let selectedBlocks = new Set();
@@ -1341,12 +1504,19 @@ function formatQty(n) {
 
 function formatSpecItems(items) {
   if (!items || !items.length) return '';
+  const isOpresh = document.getElementById('chk-opresh')?.checked;
   return items.map(i => {
     const qty = parseInt(i.qty) || 1;
-    if (qty > 1) {
-      return `${i.art}\t${i.name} (${formatQty(qty)})`;
+    if (isOpresh) {
+      // Формат ОПРЕШ: Наименование / Количество (только цифра) / Оболочка / Артикул
+      return `${i.name}\t${qty}\tОболочка\t${i.art}`;
+    } else {
+      // Стандартный формат: Наименование первым, затем Артикул
+      if (qty > 1) {
+        return `${i.name} (${formatQty(qty)})\t${i.art}`;
+      }
+      return `${i.name}\t${i.art}`;
     }
-    return `${i.art}\t${i.name}`;
   }).join('\n');
 }
 
@@ -1393,9 +1563,13 @@ function copyFullSpec() {
 
 function doClipboardCopy(text) {
   navigator.clipboard.writeText(text).then(() => {
+    const isOpresh = document.getElementById('chk-opresh')?.checked;
     const toast = document.getElementById('toast');
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2000);
+    if (toast) {
+      toast.innerText = isOpresh ? 'Скопировано в буфер (формат ОПРЕШ)!' : 'Скопировано в буфер обмена!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2000);
+    }
   });
 }
 

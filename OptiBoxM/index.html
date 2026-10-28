@@ -17,9 +17,16 @@
     <div class="top-title">
       Конфигуратор оболочки <span class="badge-tag">OptiBox M</span>
     </div>
-    <a href="../index.html" class="top-nav-link">
-      <i class="fa-solid fa-arrow-left"></i> На главную
-    </a>
+    <div style="display: flex; align-items: center; gap: 0.85rem;">
+      <label class="toggle-opresh" id="lbl-opresh" title="Формат копирования: Наименование / Количество (цифра) / Оболочка / Артикул">
+        <span class="toggle-opresh-label">ОПРЕШ</span>
+        <input type="checkbox" id="chk-opresh" class="toggle-opresh-input">
+        <span class="toggle-opresh-slider"></span>
+      </label>
+      <a href="../index.html" class="top-nav-link">
+        <i class="fa-solid fa-arrow-left"></i> На главную
+      </a>
+    </div>
   </div>
 
   <div class="main-grid">
@@ -67,48 +74,47 @@
         </select>
 
         <!-- Блок управления реечным конструктивом базового режима -->
-        <div id="sub-basic-rails" style="display: none; margin-top: 0.65rem; padding: 0.65rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
-          <!-- Боковые рейки -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-            <span style="font-size: 0.76rem; font-weight: 600; color: var(--text);">Боковые рейки (глубина D):</span>
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('side', -1)">-</button>
-              <span id="basic-side-rails-qty" style="font-size: 0.8rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
-              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('side', 1)" title="Добавить комплект">+</button>
-            </div>
+        <div id="sub-basic-rails" style="display: none; margin-top: 0.65rem; padding: 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 8px;">
+          
+          <!-- Выбор типа/профиля реек по каталогу КЭАЗ (стр. 13) -->
+          <div class="form-group" style="margin-bottom: 0.65rem;">
+            <label style="font-size: 0.76rem; font-weight: 600;">Профиль реек (каталог КЭАЗ стр. 13)</label>
+            <select id="sel-rail-profile" onchange="render()" style="font-size: 0.78rem; padding: 0.35rem 0.5rem;">
+              <option value="49" selected>49 мм — стандартный (оборудование, кабели)</option>
+              <option value="74">74 мм — усиленный (силовые аппараты, ACB)</option>
+            </select>
           </div>
-          <button type="button" class="btn-tier-add" style="width: 100%; margin-bottom: 0.6rem; font-size: 0.74rem;" onclick="changeBasicRailQty('side', 1)">
-            <i class="fa-solid fa-plus"></i> Комплект боковых реек (2 шт. по глубине D)
-          </button>
 
-          <!-- Поперечные рейки -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-            <span style="font-size: 0.76rem; font-weight: 600; color: var(--text);">Поперечные рейки (ширина W):</span>
-            <div style="display: flex; align-items: center; gap: 0.35rem;">
-              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('cross', -1)">-</button>
-              <span id="basic-cross-rails-qty" style="font-size: 0.8rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
-              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('cross', 1)" title="Добавить комплект">+</button>
-            </div>
-          </div>
-          <button type="button" class="btn-tier-add" style="width: 100%; margin-bottom: 0.6rem; font-size: 0.74rem;" onclick="changeBasicRailQty('cross', 1)">
-            <i class="fa-solid fa-plus"></i> Комплект поперечных реек (2 шт. по ширине W)
-          </button>
-
-          <!-- Чекбокс полки OptiMat A -->
-          <label class="checkbox-item" id="lbl-basic-acb-shelf" style="margin-bottom: 0.55rem;">
-            <input type="checkbox" id="chk-basic-acb-shelf" onchange="render()">
-            <span>Полка воздушного выключателя OptiMat A</span>
+          <!-- Полка воздушного выключателя OptiMat A -->
+          <label class="checkbox-item" id="lbl-basic-acb-shelf" style="margin-bottom: 0.75rem; padding-bottom: 0.65rem; border-bottom: 1px dashed var(--border);">
+            <input type="checkbox" id="chk-basic-acb-shelf" onchange="onBasicAcbShelfChange()">
+            <span style="font-weight: 600;">Полка воздушного выключателя OptiMat A</span>
           </label>
 
-          <!-- Кнопка быстрой сборки яруса OptiMat A -->
-          <button type="button" id="btn-quick-acb-tier" class="btn-tier-fill" style="width: 100%; margin-bottom: 0.45rem; font-size: 0.73rem; padding: 0.45rem 0.4rem; text-align: center; line-height: 1.25;" onclick="quickAssembleAcbTier()">
-            <i class="fa-solid fa-bolt"></i> Собрать монтажный ярус OptiMat A (2 боковые рейки + 2 поперечные рейки + полка)
-          </button>
+          <!-- Независимый выбор реек каркаса -->
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+            Комплекты монтажных реек:
+          </div>
 
-          <!-- Кнопка сброса/очистки -->
-          <button type="button" style="width: 100%; background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 0.35rem; font-size: 0.72rem; color: var(--text-muted); cursor: pointer;" onclick="clearBasicRails()">
-            <i class="fa-solid fa-rotate-left"></i> Сбросить рейки и полку
-          </button>
+          <!-- Боковые рейки по глубине D -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="font-size: 0.76rem;">Боковые по глубине D (компл. 2 шт):</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('side', -1)">-</button>
+              <span id="basic-side-rails-qty" style="font-size: 0.82rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
+              <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('side', 1)">+</button>
+            </div>
+          </div>
+
+          <!-- Поперечные рейки по ширине W -->
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.76rem;">Поперечные по ширине W (компл. 2 шт):</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('cross', -1)">-</button>
+              <span id="basic-cross-rails-qty" style="font-size: 0.82rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
+              <button type="button" class="btn-tier-add" style="padding: 0.2rem 0.55rem;" onclick="changeBasicRailQty('cross', 1)">+</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="form-group" style="margin-top: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
@@ -421,7 +427,21 @@
 
     <!-- Правая колонка: спецификация и эскиз -->
     <div class="right-column">
-      <div class="card">
+      <!-- Табы переключения вида правой колонки -->
+      <div class="view-tabs" id="right-view-tabs">
+        <button type="button" class="view-tab active" id="tab-view-both" onclick="setRightView('both')">
+          <i class="fa-solid fa-table-columns"></i> Эскиз и спецификация
+        </button>
+        <button type="button" class="view-tab" id="tab-view-preview" onclick="setRightView('preview')">
+          <i class="fa-solid fa-image"></i> Только эскиз
+        </button>
+        <button type="button" class="view-tab" id="tab-view-spec" onclick="setRightView('spec')">
+          <i class="fa-solid fa-list-check"></i> Только спецификация
+        </button>
+      </div>
+
+      <!-- Карточка спецификации -->
+      <div class="card" id="spec-card">
         <div class="card-header">
           <span>Результаты комплектации</span>
           <span class="counter-badge" id="items-count">Позиций: 0</span>
@@ -446,7 +466,7 @@
 
       <!-- Карточка эскиза оболочки -->
       <div class="card" id="preview-card">
-        <div class="card-header" style="margin-bottom: 0.85rem;">
+        <div class="card-header" style="margin-bottom: 0.65rem;">
           <span>Эскиз оболочки</span>
           <button type="button"
                   id="preview-mode-toggle"
@@ -455,6 +475,31 @@
                   onclick="togglePreviewMode()"
                   aria-label="Вид: Фасад"></button>
         </div>
+
+        <!-- Информационный статус-бар эскиза -->
+        <div class="preview-status-bar" id="preview-status-bar">
+          <div class="status-chip" id="chip-dimensions" title="Габариты В×Ш×Г (мм)">
+            <i class="fa-solid fa-ruler-combined"></i>
+            <span class="status-chip-label">Габариты:</span>
+            <span class="status-chip-val" id="status-dim">2000×800×600</span>
+          </div>
+          <div class="status-chip" id="chip-ip" title="Степень защиты оболочки">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span class="status-chip-label">Защита:</span>
+            <span class="status-chip-val" id="status-ip">IP55</span>
+          </div>
+          <div class="status-chip" id="chip-height" title="Полезная высота модульного монтажа">
+            <i class="fa-solid fa-arrows-up-down"></i>
+            <span class="status-chip-label">Высота:</span>
+            <span class="status-chip-val" id="status-height">—</span>
+          </div>
+          <div class="status-chip" id="chip-modules" title="Суммарная емкость DIN-модулей">
+            <i class="fa-solid fa-cubes"></i>
+            <span class="status-chip-label">Модулей:</span>
+            <span class="status-chip-val" id="status-modules">—</span>
+          </div>
+        </div>
+
         <div id="cabinet-preview-root" style="width: 100%; min-height: 420px; display: flex; justify-content: center; align-items: center; background: #fafbfc; border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem 1rem;"></div>
       </div>
     </div>

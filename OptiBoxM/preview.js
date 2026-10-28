@@ -439,6 +439,8 @@ function renderCabinetPreview() {
             const crossQty = (typeof basicCrossRailsQty !== 'undefined') ? basicCrossRailsQty : 0;
             const chkAcb = document.getElementById('chk-basic-acb-shelf');
             const hasAcbShelf = (w >= 600 && d >= 600) && (chkAcb ? chkAcb.checked : false);
+            const railProfile = document.getElementById('sel-rail-profile')?.value || '49';
+            const isHeavyRail = (railProfile === '74');
 
             const acbShelfH = 450;
             const shelfBottomOffset = 480;
@@ -447,16 +449,16 @@ function renderCabinetPreview() {
 
             if (sideQty === 0 && crossQty === 0 && !hasAcbShelf) {
                 interiorSvg += `
-                <text x="${offX + w / 2}" y="${offY + h / 2}" fill="#94a3b8" font-size="24" font-family="sans-serif" font-weight="700" text-anchor="middle">
-                    Монтаж на рейках (добавьте боковые или поперечные рейки)
+                <text x="${offX + w / 2}" y="${offY + h / 2}" fill="#94a3b8" font-size="22" font-family="sans-serif" font-weight="600" text-anchor="middle">
+                    Монтаж на рейках (выберите полку OptiMat A или добавьте рейки)
                 </text>
                 `;
             }
 
-            // 1. Боковые рейки 49 мм (по глубине шкафа)
+            // 1. Боковые рейки (по глубине шкафа, 49 мм или 74 мм)
             if (sideQty > 0) {
-                const railW = 45;
-                const railH = 24;
+                const railW = 48;
+                const railH = isHeavyRail ? 34 : 24;
                 const positions = [];
                 if (hasAcbShelf) {
                     positions.push(shelfY + 4);
@@ -481,26 +483,26 @@ function renderCabinetPreview() {
                     interiorSvg += `
                     <g>
                         <rect x="${offX + 16}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="1.5" rx="2"/>
-                        <rect x="${offX + 22}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
-                        <rect x="${offX + 36}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
-                        <rect x="${offX + 50}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + 22}" y="${ry + 6}" width="8" height="${isHeavyRail ? 20 : 12}" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + 36}" y="${ry + 6}" width="8" height="${isHeavyRail ? 20 : 12}" fill="#1e293b" rx="1"/>
+                        ${isHeavyRail ? `<rect x="${offX + 44}" y="${ry + 6}" width="4" height="20" fill="#94a3b8" rx="1"/>` : ''}
                     </g>
                     `;
                     // Правая рейка
                     interiorSvg += `
                     <g>
                         <rect x="${offX + w - 16 - railW}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="1.5" rx="2"/>
-                        <rect x="${offX + w - 16 - railW + 6}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
-                        <rect x="${offX + w - 16 - railW + 20}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
-                        <rect x="${offX + w - 16 - railW + 34}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + w - 16 - railW + 6}" y="${ry + 6}" width="8" height="${isHeavyRail ? 20 : 12}" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + w - 16 - railW + 20}" y="${ry + 6}" width="8" height="${isHeavyRail ? 20 : 12}" fill="#1e293b" rx="1"/>
+                        ${isHeavyRail ? `<rect x="${offX + w - 16 - railW + 34}" y="${ry + 6}" width="8" height="20" fill="#1e293b" rx="1"/>` : ''}
                     </g>
                     `;
                 });
             }
 
-            // 2. Поперечные рейки 49 мм (по ширине шкафа)
+            // 2. Поперечные рейки (по ширине шкафа, 49 мм или 74 мм)
             if (crossQty > 0) {
-                const railH = 26;
+                const railH = isHeavyRail ? 34 : 26;
                 const railX = offX + 20;
                 const railW = w - 40;
                 const crossPositions = [];
@@ -525,13 +527,18 @@ function renderCabinetPreview() {
                 crossPositions.forEach((ry) => {
                     let perfRects = '';
                     for (let px = railX + 30; px < railX + railW - 30; px += 45) {
-                        perfRects += `<rect x="${px}" y="${ry + 7}" width="10" height="12" fill="#1e293b" rx="1"/>`;
+                        if (isHeavyRail) {
+                            perfRects += `<rect x="${px}" y="${ry + 6}" width="10" height="9" fill="#1e293b" rx="1"/>`;
+                            perfRects += `<rect x="${px}" y="${ry + 18}" width="10" height="9" fill="#1e293b" rx="1"/>`;
+                        } else {
+                            perfRects += `<rect x="${px}" y="${ry + 7}" width="10" height="12" fill="#1e293b" rx="1"/>`;
+                        }
                     }
                     interiorSvg += `
                     <g>
-                        <!-- Поперечная рейка 49 мм -->
+                        <!-- Поперечная рейка ${railProfile} мм -->
                         <rect x="${railX}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="2" rx="2"/>
-                        <rect x="${railX + 6}" y="${ry + 5}" width="${railW - 12}" height="5" fill="#94a3b8"/>
+                        <rect x="${railX + 6}" y="${ry + 4}" width="${railW - 12}" height="${isHeavyRail ? 7 : 5}" fill="#94a3b8"/>
                         ${perfRects}
                     </g>
                     `;
