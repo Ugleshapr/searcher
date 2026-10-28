@@ -39,14 +39,15 @@ function updateDimensions() {
 
   const plinthSelect = document.getElementById('sel-plinth');
   if (w === 300 && plinthSelect.value === '200') plinthSelect.value = '100';
-  const mpCheck = document.getElementById('chk-mp');
-  if (w === 300) { mpCheck.checked = false; mpCheck.disabled = true; } else { mpCheck.disabled = false; }
 
+  updateBasicRailsAvailability();
   updateProOptionsAvailability();
 }
 
 var currentMode = 'basic';
 var previewMode = 'front';
+var basicSideRailsQty = 0;
+var basicCrossRailsQty = 0;
 
 function setMode(mode) {
   if (currentMode === mode) return;
@@ -55,19 +56,119 @@ function setMode(mode) {
   document.getElementById('btn-mode-basic').classList.toggle('active', mode === 'basic');
   document.getElementById('btn-mode-pro').classList.toggle('active', mode === 'pro');
 
-  const chkMpWrap = document.getElementById('chk-mp-wrap');
+  const wrapBasicMount = document.getElementById('wrap-basic-mounting');
+  const subBasicRails = document.getElementById('sub-basic-rails');
+  const selBasicMount = document.getElementById('sel-basic-mounting');
   const proAccs = document.getElementById('pro-accordions');
 
   if (mode === 'pro') {
-    chkMpWrap.style.display = 'none';
+    if (wrapBasicMount) wrapBasicMount.style.display = 'none';
     proAccs.style.display = 'flex';
   } else {
-    chkMpWrap.style.display = 'flex';
+    if (wrapBasicMount) wrapBasicMount.style.display = 'block';
+    if (subBasicRails) {
+      subBasicRails.style.display = (selBasicMount && selBasicMount.value === 'rails') ? 'block' : 'none';
+    }
     proAccs.style.display = 'none';
   }
 
   updateProOptionsAvailability();
   render();
+}
+
+function onBasicMountingChange() {
+  const sel = document.getElementById('sel-basic-mounting');
+  const subRails = document.getElementById('sub-basic-rails');
+  if (subRails) {
+    subRails.style.display = (sel && sel.value === 'rails') ? 'block' : 'none';
+  }
+  updateBasicRailsAvailability();
+  render();
+}
+
+function changeBasicRailQty(type, delta) {
+  if (type === 'side') {
+    basicSideRailsQty = Math.max(0, basicSideRailsQty + delta);
+    const el = document.getElementById('basic-side-rails-qty');
+    if (el) el.innerText = basicSideRailsQty;
+  } else if (type === 'cross') {
+    basicCrossRailsQty = Math.max(0, basicCrossRailsQty + delta);
+    const el = document.getElementById('basic-cross-rails-qty');
+    if (el) el.innerText = basicCrossRailsQty;
+  }
+  render();
+}
+
+function quickAssembleAcbTier() {
+  const w = parseInt(document.getElementById('sel-w').value);
+  const d = parseInt(document.getElementById('sel-d').value);
+  if (w < 600 || d < 600) return;
+
+  basicSideRailsQty = 1;
+  basicCrossRailsQty = 1;
+  const sideEl = document.getElementById('basic-side-rails-qty');
+  if (sideEl) sideEl.innerText = basicSideRailsQty;
+  const crossEl = document.getElementById('basic-cross-rails-qty');
+  if (crossEl) crossEl.innerText = basicCrossRailsQty;
+
+  const chkAcb = document.getElementById('chk-basic-acb-shelf');
+  if (chkAcb) chkAcb.checked = true;
+
+  render();
+}
+
+function clearBasicRails() {
+  basicSideRailsQty = 0;
+  basicCrossRailsQty = 0;
+  const sideEl = document.getElementById('basic-side-rails-qty');
+  if (sideEl) sideEl.innerText = 0;
+  const crossEl = document.getElementById('basic-cross-rails-qty');
+  if (crossEl) crossEl.innerText = 0;
+
+  const chkAcb = document.getElementById('chk-basic-acb-shelf');
+  if (chkAcb) chkAcb.checked = false;
+
+  render();
+}
+
+function updateBasicRailsAvailability() {
+  const wEl = document.getElementById('sel-w');
+  const dEl = document.getElementById('sel-d');
+  if (!wEl || !dEl) return;
+  const w = parseInt(wEl.value);
+  const d = parseInt(dEl.value);
+
+  const selBasicMount = document.getElementById('sel-basic-mounting');
+  if (selBasicMount) {
+    const optMp = selBasicMount.querySelector('option[value="mp"]');
+    if (optMp) optMp.disabled = (w === 300);
+    if (selBasicMount.value === 'mp' && w === 300) {
+      selBasicMount.value = 'rails';
+      const subRails = document.getElementById('sub-basic-rails');
+      if (subRails) subRails.style.display = 'block';
+    }
+  }
+
+  const isAcbAllowed = (w >= 600 && d >= 600);
+  const chkAcb = document.getElementById('chk-basic-acb-shelf');
+  const lblAcb = document.getElementById('lbl-basic-acb-shelf');
+  const btnQuick = document.getElementById('btn-quick-acb-tier');
+
+  if (chkAcb) {
+    chkAcb.disabled = !isAcbAllowed;
+    if (!isAcbAllowed && chkAcb.checked) {
+      chkAcb.checked = false;
+    }
+  }
+  if (lblAcb) {
+    lblAcb.style.opacity = isAcbAllowed ? '1' : '0.5';
+    lblAcb.title = isAcbAllowed ? '' : 'Требуются габариты Ш >= 600 и Г >= 600 мм';
+  }
+  if (btnQuick) {
+    btnQuick.disabled = !isAcbAllowed;
+    btnQuick.style.opacity = isAcbAllowed ? '1' : '0.5';
+    btnQuick.style.pointerEvents = isAcbAllowed ? 'auto' : 'none';
+  }
 }
 
 function toggleAccordion(headerEl) {
@@ -134,6 +235,7 @@ function onCableEntryChange() {
 }
 
 function onDimensionChange() {
+  updateBasicRailsAvailability();
   updateProOptionsAvailability();
   render();
 }
@@ -711,6 +813,9 @@ function updateMountingOptionsAvailability() {
   const hasMp3 = DB?.internal_mounting?.mp_3mm?.[h]?.[w] !== undefined;
   const hasMod = (w === 600 || w === 800 || w === 1000) && h >= 1800;
 
+  // Базовый селект монтажа и доступность рейки / полки ACB
+  updateBasicRailsAvailability();
+
   if (optMp2) optMp2.disabled = !hasMp2;
   if (optMp3) optMp3.disabled = !hasMp3;
   if (optMod) optMod.disabled = !hasMod;
@@ -762,7 +867,6 @@ function render() {
   const w = document.getElementById('sel-w').value;
   const d = document.getElementById('sel-d').value;
   const plinth = document.getElementById('sel-plinth').value;
-  const hasMp = document.getElementById('chk-mp').checked;
   const hasSides = document.getElementById('chk-sides').checked;
 
   const key = `${h}x${w}x${d}`;
@@ -833,11 +937,42 @@ function render() {
   }
 
   if (currentMode === 'basic') {
-    if (hasMp && w !== '300') {
-      const mpArt = DB.mounting_plates[`${h}x${w}`];
-      if (mpArt) {
-        currentSections.mounting.push({ art: mpArt, name: getName(mpArt), qty: 1 });
-        currentSections.mounting.push({ art: DB.accessories.plate_brackets, name: getName(DB.accessories.plate_brackets), qty: 1 });
+    const basicMounting = document.getElementById('sel-basic-mounting')?.value || 'mp';
+    if (basicMounting === 'mp') {
+      if (w !== '300') {
+        const mpArt = DB.mounting_plates[`${h}x${w}`];
+        if (mpArt) {
+          currentSections.mounting.push({ art: mpArt, name: getName(mpArt), qty: 1 });
+          currentSections.mounting.push({ art: DB.accessories.plate_brackets, name: getName(DB.accessories.plate_brackets), qty: 1 });
+        }
+      }
+    } else if (basicMounting === 'rails') {
+      const sideRailsMap = {
+        '400': '419728',
+        '500': '419729',
+        '600': '419730',
+        '800': '419731',
+        '1000': '419732',
+        '1200': '419727'
+      };
+      if (basicSideRailsQty > 0) {
+        const railArt = sideRailsMap[d];
+        if (railArt) {
+          currentSections.mounting.push({ art: railArt, name: getName(railArt), qty: basicSideRailsQty });
+        }
+      }
+      if (basicCrossRailsQty > 0) {
+        const crossRailArt = DB?.cross_rails?.[w];
+        if (crossRailArt) {
+          currentSections.mounting.push({ art: crossRailArt, name: getName(crossRailArt), qty: basicCrossRailsQty });
+        }
+      }
+      const chkAcb = document.getElementById('chk-basic-acb-shelf');
+      if (chkAcb && chkAcb.checked && parseInt(w) >= 600 && parseInt(d) >= 600) {
+        const shelfArt = DB?.internal_mounting?.acb?.shelf?.[w];
+        if (shelfArt) {
+          currentSections.mounting.push({ art: shelfArt, name: getName(shelfArt), qty: 1 });
+        }
       }
     }
   } else {

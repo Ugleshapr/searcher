@@ -58,11 +58,60 @@
         </select>
       </div>
 
-      <div class="form-group" style="margin-top: 1.1rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
-        <label class="checkbox-item" id="chk-mp-wrap">
-          <input type="checkbox" id="chk-mp" checked onchange="render()">
-          <span>Монтажная панель</span>
-        </label>
+      <div class="form-group" id="wrap-basic-mounting" style="margin-top: 0.85rem;">
+        <label>Внутренний монтаж (базовый)</label>
+        <select id="sel-basic-mounting" onchange="onBasicMountingChange()">
+          <option value="mp" selected>Сплошная монтажная панель</option>
+          <option value="rails">Монтаж на рейках</option>
+          <option value="none">Без внутреннего монтажа (пустой каркас)</option>
+        </select>
+
+        <!-- Блок управления реечным конструктивом базового режима -->
+        <div id="sub-basic-rails" style="display: none; margin-top: 0.65rem; padding: 0.65rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px;">
+          <!-- Боковые рейки -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <span style="font-size: 0.76rem; font-weight: 600; color: var(--text);">Боковые рейки (глубина D):</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('side', -1)">-</button>
+              <span id="basic-side-rails-qty" style="font-size: 0.8rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
+              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('side', 1)" title="Добавить комплект">+</button>
+            </div>
+          </div>
+          <button type="button" class="btn-tier-add" style="width: 100%; margin-bottom: 0.6rem; font-size: 0.74rem;" onclick="changeBasicRailQty('side', 1)">
+            <i class="fa-solid fa-plus"></i> Комплект боковых реек (2 шт. по глубине D)
+          </button>
+
+          <!-- Поперечные рейки -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <span style="font-size: 0.76rem; font-weight: 600; color: var(--text);">Поперечные рейки (ширина W):</span>
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('cross', -1)">-</button>
+              <span id="basic-cross-rails-qty" style="font-size: 0.8rem; font-weight: 700; min-width: 1.4rem; text-align: center;">0</span>
+              <button type="button" class="btn-tier-add" style="padding: 0.15rem 0.45rem; min-width: 22px; font-weight: 700;" onclick="changeBasicRailQty('cross', 1)" title="Добавить комплект">+</button>
+            </div>
+          </div>
+          <button type="button" class="btn-tier-add" style="width: 100%; margin-bottom: 0.6rem; font-size: 0.74rem;" onclick="changeBasicRailQty('cross', 1)">
+            <i class="fa-solid fa-plus"></i> Комплект поперечных реек (2 шт. по ширине W)
+          </button>
+
+          <!-- Чекбокс полки OptiMat A -->
+          <label class="checkbox-item" id="lbl-basic-acb-shelf" style="margin-bottom: 0.55rem;">
+            <input type="checkbox" id="chk-basic-acb-shelf" onchange="render()">
+            <span>Полка воздушного выключателя OptiMat A</span>
+          </label>
+
+          <!-- Кнопка быстрой сборки яруса OptiMat A -->
+          <button type="button" id="btn-quick-acb-tier" class="btn-tier-fill" style="width: 100%; margin-bottom: 0.45rem; font-size: 0.73rem; padding: 0.45rem 0.4rem; text-align: center; line-height: 1.25;" onclick="quickAssembleAcbTier()">
+            <i class="fa-solid fa-bolt"></i> Собрать монтажный ярус OptiMat A (2 боковые рейки + 2 поперечные рейки + полка)
+          </button>
+
+          <!-- Кнопка сброса/очистки -->
+          <button type="button" style="width: 100%; background: none; border: 1px dashed var(--border); border-radius: 4px; padding: 0.35rem; font-size: 0.72rem; color: var(--text-muted); cursor: pointer;" onclick="clearBasicRails()">
+            <i class="fa-solid fa-rotate-left"></i> Сбросить рейки и полку
+          </button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top: 0.85rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
         <label class="checkbox-item">
           <input type="checkbox" id="chk-sides" checked onchange="onSidesChange()">
           <span>Крайний шкаф (боковые панели)</span>

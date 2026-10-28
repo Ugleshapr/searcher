@@ -15,16 +15,20 @@ function togglePreviewMode() {
 }
 
 // Вспомогательная функция отрисовки ячейки выкатного выключателя OptiMat A
-function drawAcbCompartmentSvg(x, y, w, h) {
+function drawAcbCompartmentSvg(x, y, w, h, showZoning = true) {
     const vW = (w >= 1000) ? 440 : 390;
     const vH = (h === 450) ? 360 : 440;
     const vX = x + (w - vW) / 2;
     const vY = y + (h - vH) / 2 + 10;
 
-    return `
+    const zoningMetaSvg = showZoning ? `
     <!-- Металлоконструкция отсека зонирования КЭАЗ -->
     <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#e2e8f0" stroke="#334155" stroke-width="2.5"/>
     <text x="${x + 20}" y="${y + 36}" fill="#0f172a" font-size="32" font-family="sans-serif" font-weight="800">Отсек OptiMat A (${h} мм)</text>
+    ` : '';
+
+    return `
+    ${zoningMetaSvg}
 
     <!-- Направляющие шасси корзины по бокам -->
     <rect x="${vX - 22}" y="${vY - 10}" width="${vW + 44}" height="${vH + 20}" fill="#94a3b8" stroke="#475569" stroke-width="2" rx="4"/>
@@ -125,7 +129,15 @@ function renderCabinetPreview() {
     }
 
     const doorType = (currentMode === 'pro') ? (document.getElementById('sel-door-type')?.value || 'solid') : 'solid';
-    const mountType = (currentMode === 'pro') ? (document.getElementById('sel-mounting-type')?.value || 'mp_2mm') : (document.getElementById('chk-mp')?.checked ? 'mp_2mm' : 'none');
+    const basicMounting = (currentMode === 'basic') ? (document.getElementById('sel-basic-mounting')?.value || 'mp') : null;
+    let mountType = 'none';
+    if (currentMode === 'pro') {
+        mountType = document.getElementById('sel-mounting-type')?.value || 'mp_2mm';
+    } else {
+        if (basicMounting === 'mp') mountType = 'mp_2mm';
+        else if (basicMounting === 'rails') mountType = 'basic_rails';
+        else mountType = 'none';
+    }
     const hasDividerShelf = (currentMode === 'pro') && document.getElementById('chk-divider-shelf')?.checked;
 
     const totalH = h + plinthH;
@@ -421,6 +433,127 @@ function renderCabinetPreview() {
             <rect x="${tierX}" y="${bottomBorderY}" width="${tierW}" height="65" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
             <text x="${tierX + tierW / 2}" y="${bottomBorderY + 42}" fill="#334155" font-size="28" font-family="sans-serif" font-weight="700" text-anchor="middle">Компенсатор 65 мм (нижний)</text>
             `;
+        } else if (mountType === 'basic_rails') {
+            // Базовый режим: Монтаж на рейках (боковые, поперечные, полка OptiMat A)
+            const sideQty = (typeof basicSideRailsQty !== 'undefined') ? basicSideRailsQty : 0;
+            const crossQty = (typeof basicCrossRailsQty !== 'undefined') ? basicCrossRailsQty : 0;
+            const chkAcb = document.getElementById('chk-basic-acb-shelf');
+            const hasAcbShelf = (w >= 600 && d >= 600) && (chkAcb ? chkAcb.checked : false);
+
+            const acbShelfH = 450;
+            const shelfBottomOffset = 480;
+            const shelfY = offY + h - shelfBottomOffset;
+            const acbY = shelfY - acbShelfH + 50;
+
+            if (sideQty === 0 && crossQty === 0 && !hasAcbShelf) {
+                interiorSvg += `
+                <text x="${offX + w / 2}" y="${offY + h / 2}" fill="#94a3b8" font-size="24" font-family="sans-serif" font-weight="700" text-anchor="middle">
+                    Монтаж на рейках (добавьте боковые или поперечные рейки)
+                </text>
+                `;
+            }
+
+            // 1. Боковые рейки 49 мм (по глубине шкафа)
+            if (sideQty > 0) {
+                const railW = 45;
+                const railH = 24;
+                const positions = [];
+                if (hasAcbShelf) {
+                    positions.push(shelfY + 4);
+                    const remaining = sideQty - 1;
+                    if (remaining > 0) {
+                        const topAreaH = shelfY - offY - 140;
+                        const step = topAreaH / (remaining + 1);
+                        for (let i = 1; i <= remaining; i++) {
+                            positions.push(offY + 80 + i * step);
+                        }
+                    }
+                } else {
+                    const usableH = h - 180;
+                    const step = usableH / (sideQty + 1);
+                    for (let i = 1; i <= sideQty; i++) {
+                        positions.push(offY + 80 + i * step);
+                    }
+                }
+
+                positions.forEach((ry) => {
+                    // Левая рейка
+                    interiorSvg += `
+                    <g>
+                        <rect x="${offX + 16}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="1.5" rx="2"/>
+                        <rect x="${offX + 22}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + 36}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + 50}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                    </g>
+                    `;
+                    // Правая рейка
+                    interiorSvg += `
+                    <g>
+                        <rect x="${offX + w - 16 - railW}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="1.5" rx="2"/>
+                        <rect x="${offX + w - 16 - railW + 6}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + w - 16 - railW + 20}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                        <rect x="${offX + w - 16 - railW + 34}" y="${ry + 6}" width="8" height="12" fill="#1e293b" rx="1"/>
+                    </g>
+                    `;
+                });
+            }
+
+            // 2. Поперечные рейки 49 мм (по ширине шкафа)
+            if (crossQty > 0) {
+                const railH = 26;
+                const railX = offX + 20;
+                const railW = w - 40;
+                const crossPositions = [];
+                if (hasAcbShelf) {
+                    crossPositions.push(shelfY - 4);
+                    const remaining = crossQty - 1;
+                    if (remaining > 0) {
+                        const topAreaH = shelfY - offY - 160;
+                        const step = topAreaH / (remaining + 1);
+                        for (let i = 1; i <= remaining; i++) {
+                            crossPositions.push(offY + 90 + i * step);
+                        }
+                    }
+                } else {
+                    const usableH = h - 200;
+                    const step = usableH / (crossQty + 1);
+                    for (let i = 1; i <= crossQty; i++) {
+                        crossPositions.push(offY + 90 + i * step);
+                    }
+                }
+
+                crossPositions.forEach((ry) => {
+                    let perfRects = '';
+                    for (let px = railX + 30; px < railX + railW - 30; px += 45) {
+                        perfRects += `<rect x="${px}" y="${ry + 7}" width="10" height="12" fill="#1e293b" rx="1"/>`;
+                    }
+                    interiorSvg += `
+                    <g>
+                        <!-- Поперечная рейка 49 мм -->
+                        <rect x="${railX}" y="${ry}" width="${railW}" height="${railH}" fill="#64748b" stroke="#334155" stroke-width="2" rx="2"/>
+                        <rect x="${railX + 6}" y="${ry + 5}" width="${railW - 12}" height="5" fill="#94a3b8"/>
+                        ${perfRects}
+                    </g>
+                    `;
+                });
+            }
+
+            // 3. Металлическая полка и выключатель OptiMat A (при наличии)
+            if (hasAcbShelf) {
+                const shelfX = offX + 22;
+                const shelfW = w - 44;
+                interiorSvg += `
+                <!-- Горизонтальная металлическая полка OptiMat A -->
+                <rect x="${shelfX}" y="${shelfY}" width="${shelfW}" height="22" fill="#475569" stroke="#1e293b" stroke-width="2" rx="3"/>
+                <rect x="${shelfX + 8}" y="${shelfY + 4}" width="${shelfW - 16}" height="5" fill="#94a3b8"/>
+                <text x="${shelfX + shelfW / 2}" y="${shelfY + 40}" fill="#475569" font-size="20" font-family="sans-serif" font-weight="700" text-anchor="middle">
+                    Полка OptiMat A на рейках (без МП)
+                </text>
+                `;
+
+                // Выключатель OptiMat A (открытый, без зонирования)
+                interiorSvg += drawAcbCompartmentSvg(offX + 25, acbY, w - 50, acbShelfH, false);
+            }
         }
 
         // Вертикальные стойки
