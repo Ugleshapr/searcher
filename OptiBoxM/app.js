@@ -14,11 +14,21 @@ async function init() {
   const wSelect = document.getElementById('sel-w');
   wSelect.innerHTML = widths.map(w => `<option value="${w}" ${w === 800 ? 'selected' : ''}>${w}</option>`).join('');
 
+  const sEl = document.getElementById('basic-side-rails-qty');
+  const cEl = document.getElementById('basic-cross-rails-qty');
+  if (sEl) sEl.innerText = basicSideRailsQty;
+  if (cEl) cEl.innerText = basicCrossRailsQty;
+
   updateDimensions();
   render();
 }
 
 function onWidthChange() {
+  const sEl = document.getElementById('basic-side-rails-qty');
+  const cEl = document.getElementById('basic-cross-rails-qty');
+  if (sEl) sEl.innerText = basicSideRailsQty;
+  if (cEl) cEl.innerText = basicCrossRailsQty;
+
   updateDimensions();
   render();
 }
@@ -46,8 +56,8 @@ function updateDimensions() {
 
 var currentMode = 'basic';
 var previewMode = 'front';
-var basicSideRailsQty = 0;
-var basicCrossRailsQty = 0;
+var basicSideRailsQty = 4;
+var basicCrossRailsQty = 2;
 
 function setMode(mode) {
   if (currentMode === mode) return;
@@ -80,7 +90,16 @@ function onBasicMountingChange() {
   const sel = document.getElementById('sel-basic-mounting');
   const subRails = document.getElementById('sub-basic-rails');
   if (subRails) {
-    subRails.style.display = (sel && sel.value === 'rails') ? 'block' : 'none';
+    const isRails = (sel && sel.value === 'rails');
+    subRails.style.display = isRails ? 'block' : 'none';
+    if (isRails && basicSideRailsQty === 0 && basicCrossRailsQty === 0) {
+      basicSideRailsQty = 4;
+      basicCrossRailsQty = 2;
+      const sEl = document.getElementById('basic-side-rails-qty');
+      const cEl = document.getElementById('basic-cross-rails-qty');
+      if (sEl) sEl.innerText = basicSideRailsQty;
+      if (cEl) cEl.innerText = basicCrossRailsQty;
+    }
   }
   updateBasicRailsAvailability();
   render();
@@ -1040,9 +1059,13 @@ function render() {
     if (doorType === 'none' || doorType === 'front_panels' || doorType === 'sectional') {
       doorArt = null;
       if (doorType === 'front_panels' || doorType === 'sectional') {
-        const compType = document.getElementById('sel-comp-type')?.value || 'blind';
+        // Правило 4: по умолчанию перфорированные компенсационные панели
+        const compType = document.getElementById('sel-comp-type')?.value || 'perf';
         const compArt = (compType === 'perf') ? DB?.external_facades?.comp_front_perf?.[w] : DB?.external_facades?.comp_front_blind?.[w];
         if (compArt) currentSections.base.push({ art: compArt, name: getName(compArt), qty: 1 });
+        // Правило 7: для внешней модульной системы по умолчанию подбирается одна перфорированная панель 200 мм для шинной сборки
+        const busbarFacadeArt = DB?.external_facades?.busbar_facade_200?.[w];
+        if (busbarFacadeArt) currentSections.base.push({ art: busbarFacadeArt, name: getName(busbarFacadeArt), qty: 1 });
       }
     } else if (w === '1200' || doorType === 'double') {
       doorArt = DB?.doors?.double?.[w]?.[h] || frame.door;
@@ -1076,6 +1099,11 @@ function render() {
         const mpArt = DB.mounting_plates[`${h}x${w}`];
         if (mpArt) {
           currentSections.mounting.push({ art: mpArt, name: getName(mpArt), qty: 1 });
+          // Траверса монтажная 2 шт (согласно Листу 1 R16)
+          const travArt = DB?.internal_mounting?.traverses?.[d];
+          if (travArt) {
+            currentSections.mounting.push({ art: travArt, name: getName(travArt), qty: 1 });
+          }
           currentSections.mounting.push({ art: DB.accessories.plate_brackets, name: getName(DB.accessories.plate_brackets), qty: 1 });
         }
       }
@@ -1189,16 +1217,49 @@ function render() {
         currentSections.mounting.push({ art: fixArt, name: getName(fixArt), qty: 1 });
       }
     } else if (mountType === 'modular') {
+      const doorType = document.getElementById('sel-door-type')?.value || 'solid';
+      const isExternalFacade = (doorType === 'front_panels' || doorType === 'sectional');
+
+      // 1. Стойки пластронной системы (для внутренней модульной системы)
       const postArt = DB?.internal_mounting?.plastron_posts?.[h];
       if (postArt) currentSections.mounting.push({ art: postArt, name: getName(postArt), qty: 1 });
 
-      const compType = document.getElementById('sel-comp-type')?.value || 'blind';
+      // 2. Компенсационные пластроны (Правило 4: по умолчанию перфорированные)
+      const compType = document.getElementById('sel-comp-type')?.value || 'perf';
       const compArt = (compType === 'perf') ? DB?.internal_mounting?.comp_perf?.[w] : DB?.internal_mounting?.comp_blind?.[w];
       if (compArt) currentSections.mounting.push({ art: compArt, name: getName(compArt), qty: 1 });
 
+      // 3. Доборы пластронной системы
       const doborArt = DB?.internal_mounting?.dobors?.[w];
       if (doborArt) currentSections.mounting.push({ art: doborArt, name: getName(doborArt), qty: 1 });
 
+      // 4. Правило 8: для внутренней модульной системы — перфорированный пластрон 200 мм для шинной сборки
+      if (!isExternalFacade) {
+        const busbarPlastronArt = DB?.internal_mounting?.busbar_plastron_200?.[w];
+        if (busbarPlastronArt) currentSections.mounting.push({ art: busbarPlastronArt, name: getName(busbarPlastronArt), qty: 1 });
+      }
+
+      // 5. Правила 9 и 10: Стойки функционального блока вертикальные
+      // Пластронная система: стойка ФБ с остатком 250 мм (Правило 9: 419231 для 2000 мм)
+      // Внешняя система: стойка ФБ с остатком 300 мм (Правило 10: 419232 для 2000 мм)
+      const fbPostCategory = isExternalFacade ? '300' : '250';
+      const fbPostArt = DB?.internal_mounting?.fb_posts?.[fbPostCategory]?.[h];
+      if (fbPostArt) {
+        currentSections.mounting.push({ art: fbPostArt, name: getName(fbPostArt), qty: 1 });
+        // Правило 1: Рейка поперечная 49 мм для установки стойки функционального блока
+        const fbRailArt = DB?.cross_rails?.[w] || DB?.cross_rails?.['600'];
+        if (fbRailArt) {
+          currentSections.mounting.push({ art: fbRailArt, name: getName(fbRailArt), qty: 1 });
+        }
+      }
+
+      // 6. Ограждение верхнее ФБ (отделение шинной сборки от функциональных блоков, Лист 2 R31)
+      const upperGuardArt = DB?.internal_mounting?.fb_guards?.upper?.[w]?.[d] || DB?.internal_mounting?.fb_guards?.upper?.[w]?.['400'];
+      if (upperGuardArt) {
+        currentSections.mounting.push({ art: upperGuardArt, name: getName(upperGuardArt), qty: 1 });
+      }
+
+      // Карта боковых панелей функциональных блоков 150-400 мм (Правило 11)
       const fbSidePanelMap = {
         150: { 400: '419063', 600: '419064' },
         200: { 400: '419065', 600: '419066' },
@@ -1210,30 +1271,22 @@ function render() {
 
       const tierMap = new Map();
       const fbSideMap = new Map();
+      let sectionalDoorCount = 0;
+      let fbBlocksCount = 0;
 
       for (const tier of modularTiers) {
         let art = null;
         if (tier.type === 'din150') {
           art = DB?.internal_mounting?.din_kits?.['150']?.[w];
-        } else if (tier.type === 'din200') {
-          art = DB?.internal_mounting?.din_kits?.['200']?.[w];
-        } else if (tier.type === 'blind') {
-          art = DB?.blind_plastrons?.[w]?.[tier.height];
-        } else if (tier.type === 'perf') {
-          art = DB?.perf_plastrons?.[w]?.[tier.height];
-        } else if (tier.type === 'sectional_door') {
-          art = DB?.external_facades?.sectional_doors?.[w]?.[tier.height];
-          const baffleArt = DB?.external_facades?.sectional_baffle?.[w];
-          if (baffleArt) {
-            if (!tierMap.has(baffleArt)) {
-              tierMap.set(baffleArt, { art: baffleArt, name: getName(baffleArt), qty: 1 });
-            } else {
-              tierMap.get(baffleArt).qty += 1;
-            }
+          // Правило 16: DIN-рейка оцинкованная 1000 мм КЭАЗ для каждого комплекта модульных АВ
+          const dinRailArt = '234389';
+          if (!tierMap.has(dinRailArt)) {
+            tierMap.set(dinRailArt, { art: dinRailArt, name: getName(dinRailArt), qty: 1 });
+          } else {
+            tierMap.get(dinRailArt).qty += 1;
           }
-        } else if (tier.type === 'partial_mp') {
-          art = DB?.partial_mounting_plates?.[w]?.[tier.height];
-          const fbSideArt = fbSidePanelMap[tier.height]?.[d] || fbSidePanelMap[tier.height]?.[600] || (d === '400' ? '419065' : '419066');
+          // Панель боковая и монтажная для закрытия функционального блока с модульным оборудованием
+          const fbSideArt = fbSidePanelMap[150]?.[d] || fbSidePanelMap[150]?.[600] || (d === '400' ? '419063' : '419064');
           if (fbSideArt && DB?.catalog?.[fbSideArt]) {
             if (!fbSideMap.has(fbSideArt)) {
               fbSideMap.set(fbSideArt, { art: fbSideArt, name: getName(fbSideArt), qty: 1 });
@@ -1241,6 +1294,62 @@ function render() {
               fbSideMap.get(fbSideArt).qty += 1;
             }
           }
+          fbBlocksCount++;
+        } else if (tier.type === 'din200') {
+          art = DB?.internal_mounting?.din_kits?.['200']?.[w];
+          // Правило 16: DIN-рейка оцинкованная 1000 мм КЭАЗ
+          const dinRailArt = '234389';
+          if (!tierMap.has(dinRailArt)) {
+            tierMap.set(dinRailArt, { art: dinRailArt, name: getName(dinRailArt), qty: 1 });
+          } else {
+            tierMap.get(dinRailArt).qty += 1;
+          }
+          // Панель боковая функционального блока 200 мм (Лист 2 R35)
+          const fbSideArt = fbSidePanelMap[200]?.[d] || fbSidePanelMap[200]?.[600] || (d === '400' ? '419065' : '419066');
+          if (fbSideArt && DB?.catalog?.[fbSideArt]) {
+            if (!fbSideMap.has(fbSideArt)) {
+              fbSideMap.set(fbSideArt, { art: fbSideArt, name: getName(fbSideArt), qty: 1 });
+            } else {
+              fbSideMap.get(fbSideArt).qty += 1;
+            }
+          }
+          // Панель монтажная глухая В200хШ (Лист 2 R36)
+          const fbMpArt = DB?.partial_mounting_plates?.[w]?.['200'];
+          if (fbMpArt) {
+            if (!tierMap.has(fbMpArt)) {
+              tierMap.set(fbMpArt, { art: fbMpArt, name: getName(fbMpArt), qty: 1 });
+            } else {
+              tierMap.get(fbMpArt).qty += 1;
+            }
+          }
+          fbBlocksCount++;
+        } else if (tier.type === 'blind') {
+          art = DB?.blind_plastrons?.[w]?.[tier.height];
+        } else if (tier.type === 'perf') {
+          art = DB?.perf_plastrons?.[w]?.[tier.height];
+        } else if (tier.type === 'sectional_door') {
+          art = DB?.external_facades?.sectional_doors?.[w]?.[tier.height];
+          sectionalDoorCount++;
+          fbBlocksCount++;
+        } else if (tier.type === 'partial_mp') {
+          art = DB?.partial_mounting_plates?.[w]?.[tier.height];
+          // Правила 11 и 12: для блоков 150-400 мм боковые панели ФБ, для 400-600 мм боковые панели релейных отсеков
+          let fbSideArt = null;
+          if (tier.height <= 350) {
+            fbSideArt = fbSidePanelMap[tier.height]?.[d] || fbSidePanelMap[tier.height]?.[600] || (d === '400' ? '419065' : '419066');
+          } else {
+            // Релейный отсек 400 - 600 мм (Правило 12)
+            const hKey = String(tier.height);
+            fbSideArt = DB?.internal_mounting?.relay_side_panels?.[hKey]?.[d] || DB?.internal_mounting?.relay_side_panels?.[hKey]?.[600] || (d === '400' ? '419083' : '419084');
+          }
+          if (fbSideArt && DB?.catalog?.[fbSideArt]) {
+            if (!fbSideMap.has(fbSideArt)) {
+              fbSideMap.set(fbSideArt, { art: fbSideArt, name: getName(fbSideArt), qty: 1 });
+            } else {
+              fbSideMap.get(fbSideArt).qty += 1;
+            }
+          }
+          fbBlocksCount++;
         }
 
         if (art) {
@@ -1251,6 +1360,35 @@ function render() {
           }
         }
       }
+
+      // Перемычки секционные: кол-во дверей + 1 (Лист 2 R55)
+      if (sectionalDoorCount > 0) {
+        const baffleArt = DB?.external_facades?.sectional_baffle?.[w];
+        if (baffleArt) {
+          tierMap.set(baffleArt, { art: baffleArt, name: getName(baffleArt), qty: sectionalDoorCount + 1 });
+        }
+      }
+
+      // Ограждение нижнее ФБ (разделение функц. блоков между собой, Лист 2 R32)
+      // Количество нижних ограждений равно количеству функциональных блоков
+      const lowerGuardArt = DB?.internal_mounting?.fb_guards?.lower?.[w]?.[d] || DB?.internal_mounting?.fb_guards?.lower?.[w]?.['400'];
+      if (lowerGuardArt && fbBlocksCount > 0) {
+        tierMap.set(lowerGuardArt, { art: lowerGuardArt, name: getName(lowerGuardArt), qty: fbBlocksCount });
+      }
+
+      // Внутренний кабельный отсек / шинный опуск (Правило 15, Лист 2 R40-R42)
+      const cableCompWidth = document.getElementById('sel-cable-comp')?.value;
+      if (cableCompWidth && cableCompWidth !== 'none') {
+        const cabPostArt = DB?.cable_compartment?.posts?.[h]?.[d] || DB?.cable_compartment?.posts?.[h]?.['600'];
+        if (cabPostArt) {
+          currentSections.mounting.push({ art: cabPostArt, name: getName(cabPostArt), qty: 1 });
+        }
+        const cabDoorArt = DB?.cable_compartment?.doors?.[h]?.[cableCompWidth];
+        if (cabDoorArt) {
+          currentSections.mounting.push({ art: cabDoorArt, name: getName(cabDoorArt), qty: 1 });
+        }
+      }
+
       for (const item of tierMap.values()) {
         currentSections.mounting.push(item);
       }

@@ -199,8 +199,8 @@
               <div class="form-group" style="margin-bottom: 0.65rem;">
                 <label>Компенсационные пластроны</label>
                 <select id="sel-comp-type" onchange="render()">
-                  <option value="blind" selected>Глухие пластроны</option>
-                  <option value="perf">Перфорированные пластроны</option>
+                  <option value="perf" selected>Перфорированные пластроны (по каталогу)</option>
+                  <option value="blind">Глухие пластроны</option>
                 </select>
               </div>
 
@@ -332,6 +332,19 @@
                 <div style="font-size: 0.71rem; color: var(--text-muted); line-height: 1.3;">
                   <i class="fa-solid fa-info-circle" style="color: #2563eb;"></i> Комплектуется: полка выключателя, комплект зонирования, стойки ФБ и боковые панели выключателя.
                 </div>
+              </div>
+            </div>
+
+            <!-- Внутренний кабельный отсек (Правило 15) -->
+            <div class="form-group" id="box-cable-comp" style="margin-top: 0.75rem; padding-top: 0.65rem; border-top: 1px dashed var(--border);">
+              <label style="font-size: 0.75rem; font-weight: 600;">Внутренний кабельный отсек / шинный опуск</label>
+              <select id="sel-cable-comp" onchange="render()" style="font-size: 0.75rem; padding: 0.38rem 0.5rem; border-radius: 6px; border: 1px solid var(--border); background: #ffffff; color: var(--text);">
+                <option value="none" selected>Не требуется</option>
+                <option value="200">Отсек шириной 200 мм (полноразмерная секционная дверь)</option>
+                <option value="400">Отсек шириной 400 мм (полноразмерная секционная дверь)</option>
+              </select>
+              <div style="font-size: 0.70rem; color: var(--text-muted); margin-top: 0.25rem;">
+                <i class="fa-solid fa-circle-info" style="color: #2563eb;"></i> Внутренний отсек шириной 600 мм не предусмотрен каталогом OptiBox M.
               </div>
             </div>
 
