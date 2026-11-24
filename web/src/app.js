@@ -165,7 +165,23 @@ class PriceListSearchApp {
       return;
     }
 
-    if (this._wasmReady) {
+    const isRzd = Boolean(window.RZDMode && typeof window.RZDMode.isOn === 'function' && window.RZDMode.isOn());
+
+    if (isRzd) {
+      // Режим поиска по прайс-листу РЖД (поиск строго по rzd.csv)
+      const smartMode = Boolean(
+        window.AppSettings?.smartSearch ??
+        window.AppSettings?.relaxedSearch ??
+        document.getElementById('relaxedSearch')?.checked
+      );
+      this.filteredData = this.searchEngine.search(this.data, query, { relaxed: smartMode });
+      this.totalMatches = this.filteredData.length;
+      this.matchingArticles = this.filteredData.map(it => it['Артикул']);
+      if (window.App) {
+        window.App.totalMatches = this.totalMatches;
+        window.App.matchingArticles = this.matchingArticles;
+      }
+    } else if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
       const smartMode = Boolean(
         window.AppSettings?.smartSearch ??
@@ -201,6 +217,12 @@ class PriceListSearchApp {
     this._page = 1;
     if (window.Withdrawn) {
       await window.Withdrawn.augment(this, query);
+      this.totalMatches = this.filteredData.length;
+      this.matchingArticles = this.filteredData.map(it => it['Артикул']);
+      if (window.App) {
+        window.App.totalMatches = this.totalMatches;
+        window.App.matchingArticles = this.matchingArticles;
+      }
     }
     this.displayResults();
   }

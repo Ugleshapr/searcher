@@ -37,7 +37,7 @@ export class DataLoader {
       delimiter: ';',
       skipEmptyLines: true,
       // без worker: true
-      transformHeader: h => h.trim()
+      transformHeader: h => h.trim().replace(/^\ufeff/, '')
     });
 
     if (result.errors && result.errors.length) {

@@ -88,28 +88,34 @@
     if (!Array.isArray(rows) || !rows.length) throw new Error('Файл rzd.csv пустой');
 
     const first = rows[0] || {};
-    const need = ['Наименование', 'Артикул'];
-    const miss = need.filter(k => !(k in first));
-    if (miss.length) throw new Error(`В rzd.csv отсутствуют колонки: ${miss.join(', ')}`);
+    const hasName = 'Наименование' in first || '\ufeffНаименование' in first;
+    const hasArt = 'Артикул' in first;
+    if (!hasName || !hasArt) throw new Error(`В rzd.csv отсутствуют колонки: Наименование, Артикул`);
 
-    // Приводим к формату, который ожидает app.js (часть полей уже подготовлена DataLoader'ом)
-    App.data = rows.map(r => ({
-      ...r,
-      __name: r.__name ?? App.normalizeForFuzzySearch(r['Наименование'] || ''),
-      __article: r.__article ?? App.normalizeForFuzzySearch(r['Артикул'] || ''),
-      __name_delim: r.__name_delim ?? App.canonKeepDelims(r['Наименование'] || ''),
-      __article_delim: r.__article_delim ?? App.canonKeepDelims(r['Артикул'] || ''),
+    // Приводим к формату, который ожидает app.js
+    App.data = rows.map(r => {
+      const rawName = String(r['Наименование'] ?? r['\ufeffНаименование'] ?? '').trim();
+      const rawArt = String(r['Артикул'] ?? '').trim();
+      return {
+        ...r,
+        'Наименование': rawName,
+        'Артикул': rawArt,
+        __name: App.normalizeForFuzzySearch(rawName),
+        __article: App.normalizeForFuzzySearch(rawArt),
+        __name_delim: App.canonKeepDelims(rawName),
+        __article_delim: App.canonKeepDelims(rawArt),
 
-      'Цена': r['Цена'] ?? '',
-      __price: r.__price ?? '—',
-      'Документы': r['Документы'] ?? '',
-      __docs: r.__docs ?? [],
-      'Характеристики': r['Характеристики'] ?? '',
-      __featHtml: r.__featHtml ?? null,
-      'Количество': r['Количество'] ?? '',
-      __qty: r.__qty ?? 0,
-      __qtyHint: r.__qtyHint ?? null
-    }));
+        'Цена': r['Цена'] ?? '',
+        __price: r.__price ?? '—',
+        'Документы': r['Документы'] ?? '',
+        __docs: r.__docs ?? [],
+        'Характеристики': r['Характеристики'] ?? '',
+        __featHtml: r.__featHtml ?? null,
+        'Количество': r['Количество'] ?? '',
+        __qty: r.__qty ?? 0,
+        __qtyHint: r.__qtyHint ?? null
+      };
+    });
 
     App._updateInfoTooltip?.();
     document.body.classList.add('rzd-mode');
