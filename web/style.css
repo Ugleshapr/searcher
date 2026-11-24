@@ -2825,3 +2825,203 @@ html[data-theme="dark"] .theme-icon--moon {
   border-color: rgba(255, 255, 255, 0.05) !important;
   color: rgba(255, 255, 255, 0.3) !important;
 }
+
+/* ===================================================================
+   Dark Theme: Dropdown Menus, Docs Modal, Accessories, Popovers, Price Menu
+   =================================================================== */
+
+/* Все выпадающие меню (Документы, Аксессуары, Меню расчета цен) */
+[data-theme="dark"] .dropdown-menu {
+  background: rgba(18, 20, 25, 0.96) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75) !important;
+}
+
+[data-theme="dark"] .docs-modal {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dm-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+[data-theme="dark"] .dm-back {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dm-back:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Вкладки "Документы" / "Аксессуары" */
+[data-theme="dark"] .dm-tab {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .dm-tab:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dm-tab--active {
+  background: rgba(var(--color-primary-rgb, 88, 163, 102), 0.25) !important;
+  border-color: var(--color-primary, #58A366) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 8px rgba(var(--color-primary-rgb, 88, 163, 102), 0.35) !important;
+}
+
+[data-theme="dark"] .dm-body {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dm-section-title {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Ссылки на документы (Паспорта, Руководства, Сертификаты) */
+[data-theme="dark"] .dm-link {
+  color: var(--color-primary, #58A366) !important;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+[data-theme="dark"] .dm-link:hover {
+  color: #82c88f !important;
+  text-decoration: underline;
+}
+
+[data-theme="dark"] .dm-empty {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Список аксессуаров */
+[data-theme="dark"] .dm-acc {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .dm-acc-name {
+  color: rgba(255, 255, 255, 0.9) !important;
+  transition: color 0.15s ease;
+}
+
+[data-theme="dark"] .dm-acc-name:hover {
+  color: var(--color-primary, #58A366) !important;
+}
+
+[data-theme="dark"] .dm-acc-art--stock {
+  color: var(--color-primary, #58A366) !important;
+}
+
+[data-theme="dark"] .dm-acc-art--empty {
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+[data-theme="dark"] .dm-acc-art--withdrawn {
+  color: #ff5459 !important;
+}
+
+/* Пункты меню документов (если отображаются списком .dropdown-item) */
+[data-theme="dark"] .docs-menu .dropdown-item {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+[data-theme="dark"] .docs-menu .dropdown-item:hover,
+[data-theme="dark"] .docs-menu .dropdown-item:focus {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+/* Меню расчета цен (price-menu) */
+[data-theme="dark"] .price-menu {
+  background: rgba(18, 20, 25, 0.96) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+[data-theme="dark"] .price-menu-content {
+  background: transparent !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .price-menu-input {
+  background-color: rgba(12, 14, 18, 0.9) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .price-menu-placeholder {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+[data-theme="dark"] .price-menu-btn,
+[data-theme="dark"] .price-menu-close-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Всплывающие окна Popover (Характеристики товара) */
+[data-theme="dark"] .popover {
+  background: rgba(18, 20, 25, 0.96) !important;
+  backdrop-filter: blur(28px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.28) !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8) !important;
+}
+
+[data-theme="dark"] .popover-header {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .popover-body {
+  color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-theme="dark"] .bs-popover-auto[data-popper-placement^=top] > .popover-arrow::after,
+[data-theme="dark"] .bs-popover-top > .popover-arrow::after {
+  border-top-color: rgba(18, 20, 25, 0.96) !important;
+}
+
+[data-theme="dark"] .bs-popover-auto[data-popper-placement^=bottom] > .popover-arrow::after,
+[data-theme="dark"] .bs-popover-bottom > .popover-arrow::after {
+  border-bottom-color: rgba(18, 20, 25, 0.96) !important;
+}
+
+[data-theme="dark"] .bs-popover-auto[data-popper-placement^=left] > .popover-arrow::after,
+[data-theme="dark"] .bs-popover-left > .popover-arrow::after {
+  border-left-color: rgba(18, 20, 25, 0.96) !important;
+}
+
+[data-theme="dark"] .bs-popover-auto[data-popper-placement^=right] > .popover-arrow::after,
+[data-theme="dark"] .bs-popover-right > .popover-arrow::after {
+  border-right-color: rgba(18, 20, 25, 0.96) !important;
+}
+
+/* Тултипы Bootstrap */
+[data-theme="dark"] .tooltip-inner {
+  background: rgba(14, 16, 20, 0.96) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+}
