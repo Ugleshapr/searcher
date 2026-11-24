@@ -13,9 +13,10 @@ jobs:
   build-and-pack:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout rust-wasm branch
         uses: actions/checkout@v4
         with:
+          ref: rust-wasm
           fetch-depth: 0
 
       - name: Set up Python 3.11
@@ -55,7 +56,7 @@ jobs:
             exit 0
           fi
           git commit -m "auto: update base.bin.br and base.csv [skip ci]"
-          git push
+          git push origin rust-wasm
           echo "changed=true" >> $GITHUB_OUTPUT
 
       # ПИНАЕМ ДЕПЛОЙ PAGES: Сработает, когда бинарник обновился
