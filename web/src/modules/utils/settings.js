@@ -113,7 +113,9 @@
   };
   const loadStoredRelaxed = appSettings => {
     const stored = localStorage.getItem(RELAXED_KEY);
-    appSettings.relaxedSearch = stored === '1';
+    const val = stored === '1';
+    appSettings.relaxedSearch = val;
+    appSettings.smartSearch = val;
   };
   const loadStoredOpresh = appSettings => {
     const stored = localStorage.getItem(OPRESH_KEY);
@@ -175,10 +177,14 @@
       relaxedCheckbox.addEventListener('change', () => {
         const value = relaxedCheckbox.checked;
         appSettings.relaxedSearch = value;
+        appSettings.smartSearch = value;
         if (value) {
           localStorage.setItem(RELAXED_KEY, '1');
         } else {
           localStorage.removeItem(RELAXED_KEY);
+        }
+        if (window.App && typeof window.App.performSearch === 'function') {
+          window.App.performSearch();
         }
       });
     }

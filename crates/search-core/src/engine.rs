@@ -1,5 +1,6 @@
 use crate::model::{Item, SearchResult, SearchResponse};
-use crate::normalizer::{apply_uz_aliases, normalize_for_fuzzy_search};
+use crate::normalizer::{apply_uz_aliases, normalize_for_fuzzy_search, swap_keyboard_layout};
+use crate::fuzzy::matches_in_item_delim;
 use once_cell::sync::Lazy;
 use fancy_regex::Regex;
 
@@ -48,7 +49,7 @@ impl SearchEngine {
         Self { items }
     }
 
-    pub fn search(&self, query: &str, limit: usize) -> SearchResponse {
+    pub fn search(&self, query: &str, limit: usize, smart_mode: bool) -> SearchResponse {
         let q_trimmed = query.trim();
         if q_trimmed.is_empty() {
             return SearchResponse { total: 0, results: Vec::new(), all_articles: Vec::new() };
@@ -95,16 +96,113 @@ impl SearchEngine {
         });
         let user_explicit_u1 = parts.iter().any(|p| p == "y1" || p == "у1");
 
-        // 1. Фильтрация
+        // 1. Фильтрация кандидатов
         let mut candidates: Vec<(&Item, i32)> = Vec::new();
 
-        for it in &self.items {
-            let matched_all = parts.iter().all(|p| {
-                it.name_norm.contains(p) || (permit_article && it.article_norm.contains(p))
-            });
+        if !smart_mode {
+            for it in &self.items {
+                let matched_all = parts.iter().all(|p| {
+                    it.name_norm.contains(p) || (permit_article && it.article_norm.contains(p))
+                });
 
-            if matched_all {
-                candidates.push((it, 0));
+                if matched_all {
+                    candidates.push((it, 0));
+                }
+            }
+        } else {
+            // Smart Search: переключение раскладки (QWERTY <-> ЙЦУКЕН) + устойчивость к опечаткам
+            let q_swapped = swap_keyboard_layout(q_trimmed);
+            let q_swapped_aliased = apply_uz_aliases(&q_swapped);
+            let swapped_tokens: Vec<&str> = q_swapped_aliased
+                .split(|c: char| !c.is_alphanumeric() && c != '/')
+                .filter(|s| !s.is_empty())
+                .take(18)
+                .collect();
+            let swapped_parts: Vec<String> = swapped_tokens
+                .iter()
+                .map(|t| {
+                    let slice = if t.len() > 64 { &t[..64] } else { t };
+                    normalize_for_fuzzy_search(slice)
+                })
+                .filter(|p| !p.is_empty())
+                .collect();
+
+            struct SmartToken {
+                primary: String,
+                swapped: Option<String>,
+                is_sku_or_numeric: bool,
+            }
+
+            let smart_tokens: Vec<SmartToken> = parts
+                .iter()
+                .enumerate()
+                .map(|(i, p)| {
+                    let sw = if parts.len() == swapped_parts.len() {
+                        swapped_parts.get(i).cloned()
+                    } else {
+                        swapped_parts.iter().find(|s| *s != p).cloned()
+                    };
+                    let sw_final = sw.filter(|s| s != p && !s.is_empty());
+                    let is_sku_or_numeric = p.chars().all(|c| c.is_ascii_digit()) || p.chars().count() < 4;
+                    SmartToken {
+                        primary: p.clone(),
+                        swapped: sw_final,
+                        is_sku_or_numeric,
+                    }
+                })
+                .collect();
+
+            for it in &self.items {
+                let mut matched_all = true;
+                let mut smart_initial_score = 0;
+
+                for st in &smart_tokens {
+                    // 1. Точное совпадение с исходным токеном
+                    let in_name = it.name_norm.contains(&st.primary);
+                    let in_art = permit_article && it.article_norm.contains(&st.primary);
+                    if in_name || in_art {
+                        smart_initial_score += 1000;
+                        continue;
+                    }
+
+                    // 2. Точное совпадение с токеном из другой раскладки
+                    if let Some(ref sw) = st.swapped {
+                        let sw_in_name = it.name_norm.contains(sw);
+                        let sw_in_art = permit_article && it.article_norm.contains(sw);
+                        if sw_in_name || sw_in_art {
+                            smart_initial_score += 900;
+                            continue;
+                        }
+                    }
+
+                    // 3. Строгая защита: артикулы, числа и токены < 4 символов требуют строгого совпадения
+                    if st.is_sku_or_numeric {
+                        matched_all = false;
+                        break;
+                    }
+
+                    // 4. Нечеткий поиск (fuzzy matching с ограничением расстояния Дамерау-Левенштейна)
+                    let mut dist_opt = matches_in_item_delim(&st.primary, &it.name_delim);
+                    if dist_opt.is_none() {
+                        if let Some(ref sw) = st.swapped {
+                            dist_opt = matches_in_item_delim(sw, &it.name_delim);
+                        }
+                    }
+
+                    if let Some(dist) = dist_opt {
+                        if dist <= 2 {
+                            smart_initial_score += if dist == 1 { 250 } else { 150 };
+                            continue;
+                        }
+                    }
+
+                    matched_all = false;
+                    break;
+                }
+
+                if matched_all {
+                    candidates.push((it, smart_initial_score));
+                }
             }
         }
 
@@ -398,5 +496,83 @@ impl SearchEngine {
         if it.docs.trim().is_empty() {
             *score -= 400;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_item(name: &str, article: &str) -> Item {
+        let name_norm = normalize_for_fuzzy_search(name);
+        let article_norm = normalize_for_fuzzy_search(article);
+        let name_delim = crate::normalizer::canon_keep_delims(name);
+        let article_delim = crate::normalizer::canon_keep_delims(article);
+        Item {
+            name: name.to_string(),
+            article: article.to_string(),
+            price: "100.00".to_string(),
+            name_norm,
+            article_norm,
+            name_delim,
+            article_delim,
+            docs: "doc.pdf".to_string(),
+            features: "".to_string(),
+            quantity: 10,
+            amp: None,
+        }
+    }
+
+    #[test]
+    fn test_smart_search_layout_swap() {
+        let items = vec![
+            create_test_item("Выключатель автоматический ВА57-35 16А", "100001"),
+            create_test_item("Контактор КТ-6023 160А", "100002"),
+        ];
+        let engine = SearchEngine::new(items);
+
+        // Ввод в английской раскладке: "dsrk.xfntkm" -> "выключатель"
+        let res_exact = engine.search("dsrk.xfntkm", 10, false);
+        assert_eq!(res_exact.total, 0);
+
+        let res_smart = engine.search("dsrk.xfntkm", 10, true);
+        assert_eq!(res_smart.total, 1);
+        assert_eq!(res_smart.results[0].article, "100001");
+    }
+
+    #[test]
+    fn test_smart_search_typo_tolerance() {
+        let items = vec![
+            create_test_item("Выключатель автоматический ВА57-35 16А", "100001"),
+        ];
+        let engine = SearchEngine::new(items);
+
+        // Опечатка "автомотический" -> 1 ошибка (о вместо а)
+        let res_exact = engine.search("автомотический", 10, false);
+        assert_eq!(res_exact.total, 0);
+
+        let res_smart = engine.search("автомотический", 10, true);
+        assert_eq!(res_smart.total, 1);
+        assert_eq!(res_smart.results[0].article, "100001");
+    }
+
+    #[test]
+    fn test_sku_and_short_token_strictness() {
+        let items = vec![
+            create_test_item("Выключатель ВА 16А", "260791"),
+        ];
+        let engine = SearchEngine::new(items);
+
+        // Поиск по артикулу с опечаткой в 1 цифру НЕ должен находить товар
+        let res = engine.search("260792", 10, true);
+        assert_eq!(res.total, 0);
+
+        // Точный артикул находит
+        let res_exact = engine.search("260791", 10, true);
+        assert_eq!(res_exact.total, 1);
+
+        // Короткий токен с опечаткой (<4 символов) не должен матчиться нечетко
+        let res_short = engine.search("17А", 10, true);
+        assert_eq!(res_short.total, 0);
     }
 }

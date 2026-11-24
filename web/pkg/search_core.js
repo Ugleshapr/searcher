@@ -54,15 +54,16 @@ export function init_engine_from_brotli(compressed_bytes) {
 
 /**
  * @param {string} query
+ * @param {boolean | null} [smart_mode]
  * @returns {string}
  */
-export function search_articles_json(query) {
+export function search_articles_json(query, smart_mode) {
     let deferred2_0;
     let deferred2_1;
     try {
         const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.search_articles_json(ptr0, len0);
+        const ret = wasm.search_articles_json(ptr0, len0, isLikeNone(smart_mode) ? 0xFFFFFF : smart_mode ? 1 : 0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -74,16 +75,17 @@ export function search_articles_json(query) {
 /**
  * @param {string} query
  * @param {number} limit
+ * @param {boolean | null} [smart_mode]
  * @returns {string}
  */
-export function search_json(query, limit) {
+export function search_json(query, limit, smart_mode) {
     let deferred3_0;
     let deferred3_1;
     try {
         const val2 = +limit;
         const ptr0 = passStringToWasm0(query, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.search_json(ptr0, len0, val2);
+        const ret = wasm.search_json(ptr0, len0, val2, isLikeNone(smart_mode) ? 0xFFFFFF : smart_mode ? 1 : 0);
         deferred3_0 = ret[0];
         deferred3_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -125,6 +127,10 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
+}
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
 }
 
 function passArray8ToWasm0(arg, malloc) {

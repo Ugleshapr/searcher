@@ -1,5 +1,6 @@
 pub mod model;
 pub mod normalizer;
+pub mod fuzzy;
 pub mod engine;
 
 use engine::SearchEngine;
@@ -35,10 +36,10 @@ pub fn init_engine_from_brotli(compressed_bytes: &[u8]) -> Result<usize, String>
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub fn search_json(query: &str, limit: usize) -> String {
+pub fn search_json(query: &str, limit: usize, smart_mode: Option<bool>) -> String {
     let g = GLOBAL_ENGINE.lock().unwrap();
     if let Some(ref engine) = *g {
-        let resp = engine.search(query, limit);
+        let resp = engine.search(query, limit, smart_mode.unwrap_or(false));
         serde_json::to_string(&resp).unwrap_or_else(|_| "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string())
     } else {
         "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string()
@@ -66,10 +67,10 @@ pub fn get_all_items_json() -> String {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub fn search_articles_json(query: &str) -> String {
+pub fn search_articles_json(query: &str, smart_mode: Option<bool>) -> String {
     let g = GLOBAL_ENGINE.lock().unwrap();
     if let Some(ref engine) = *g {
-        let resp = engine.search(query, 0);
+        let resp = engine.search(query, 0, smart_mode.unwrap_or(false));
         serde_json::to_string(&resp.all_articles).unwrap_or_else(|_| "[]".to_string())
     } else {
         "[]".to_string()

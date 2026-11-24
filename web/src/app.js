@@ -167,7 +167,8 @@ class PriceListSearchApp {
 
     if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
-      const res = await this._callWorker('SEARCH', { query });
+      const smartMode = window.AppSettings?.smartSearch ?? window.AppSettings?.relaxedSearch ?? false;
+      const res = await this._callWorker('SEARCH', { query, smartMode });
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
       const articles = res.articles || res.allArticles || [];
       const dbMap = this.dataByArticle;
