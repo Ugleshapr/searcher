@@ -1,4 +1,4 @@
-import init, { init_engine_from_brotli, search_json, search_articles_json, get_total_count, get_all_items_json } from './pkg/search_core.js';
+import init, { init_engine_from_brotli, search_json, search_articles_json, get_total_count, get_all_items_json } from './pkg/search_core.js?v=2.0';
 
 let wasmInitialized = false;
 

@@ -32,8 +32,8 @@ class PriceListSearchApp {
     this._workerReqId = 0;
     this._workerCallbacks = new Map();
 
-    // Инициализируем Web Worker для Rust WASM поиска
-    this.wasmWorker = new Worker(new URL('../worker.js', import.meta.url), { type: 'module' });
+    // Инициализируем Web Worker для Rust WASM поиска с cache-busting
+    this.wasmWorker = new Worker(new URL(`../worker.js?v=${APP_VERSION || '2.0'}`, import.meta.url), { type: 'module' });
     this.wasmWorker.onmessage = (e) => this._onWorkerMessage(e.data);
 
     this.initializeEventListeners();
@@ -167,7 +167,11 @@ class PriceListSearchApp {
 
     if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
-      const smartMode = window.AppSettings?.smartSearch ?? window.AppSettings?.relaxedSearch ?? false;
+      const smartMode = Boolean(
+        window.AppSettings?.smartSearch ??
+        window.AppSettings?.relaxedSearch ??
+        document.getElementById('relaxedSearch')?.checked
+      );
       const res = await this._callWorker('SEARCH', { query, smartMode });
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
       const articles = res.articles || res.allArticles || [];

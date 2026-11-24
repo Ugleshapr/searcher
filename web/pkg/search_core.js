@@ -302,7 +302,7 @@ async function __wbg_init_once(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('search_core_bg.wasm', import.meta.url);
+        module_or_path = new URL('search_core_bg.wasm?v=2.0', import.meta.url);
     }
     const imports = __wbg_get_imports();
 
