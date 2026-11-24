@@ -20,17 +20,16 @@
   function isRzd() { return rzdMode; }
 
   async function toggleMode() {
-    if (!window.App) return;
+    const app = window.App;
+    if (!app) return;
     rzdMode = !rzdMode;
     document.body.classList.toggle('rzd-mode', rzdMode);
 
     // Закрыть/отключить фильтр, если он был включён
     try {
       if (document.body.classList.contains('is-filter-mode')) {
-        // кнопка фильтра существует в обычном режиме — закроем
         const btn = document.getElementById('filterToggle');
         if (btn && typeof btn.click === 'function') {
-          // если фильтр активен, в app.js на кнопку навешан toggle
           btn.click();
         }
       }
@@ -44,28 +43,26 @@
 
     if (rzdMode) {
       // Сохраняем “обычные” данные один раз
-      if (!cachedBaseData) cachedBaseData = Array.isArray(App.data) ? App.data.slice() : null;
+      if (!cachedBaseData) cachedBaseData = Array.isArray(app.data) ? app.data.slice() : null;
       await loadRzdCsv();
     } else {
       // Возврат к обычной базе
       if (cachedBaseData) {
-        App.data = cachedBaseData;
-        // вернём инфо-подсказку (счётчики/версия) исходной базы
-        App._updateInfoTooltip?.();
+        app.data = cachedBaseData;
+        app._updateInfoTooltip?.();
       } else {
-        // если по какой-то причине не успели сохранить — подстрахуемся штатной загрузкой
-        await App.loadDefaultFile?.();
+        await app.loadDefaultFile?.();
       }
     }
 
     // В обоих режимах — пересчитать результаты под текущий запрос
     try {
       if (qInput && queryBefore) {
-        await App.performSearch?.();
+        await app.performSearch?.();
       } else {
-        App.filteredData = [];
-        App._page = 1;
-        App.displayResults?.();
+        app.filteredData = [];
+        app._page = 1;
+        app.displayResults?.();
       }
     } catch (e) {
       console.error('RZD toggle re-render error:', e);
@@ -79,54 +76,31 @@
   }
 
   async function loadRzdCsv() {
-  try {
-    if (!window.App || !App.dataLoader) throw new Error('App.dataLoader недоступен');
+    try {
+      const app = window.App;
+      if (!app || !app.dataLoader) throw new Error('App.dataLoader недоступен');
 
-    // грузим как "static" → сначала IndexedDB, иначе fetch + кладём в кеш
-    const rows = await App.dataLoader.loadCSV('rzd.csv', { cachePolicy: 'static' });
+      // грузим как "static" → сначала IndexedDB, иначе fetch + кладём в кеш
+      const rows = await app.dataLoader.loadCSV('rzd.csv', { cachePolicy: 'static' });
 
-    if (!Array.isArray(rows) || !rows.length) throw new Error('Файл rzd.csv пустой');
+      if (!Array.isArray(rows) || !rows.length) throw new Error('Файл rzd.csv пустой');
 
-    const first = rows[0] || {};
-    const hasName = 'Наименование' in first || '\ufeffНаименование' in first;
-    const hasArt = 'Артикул' in first;
-    if (!hasName || !hasArt) throw new Error(`В rzd.csv отсутствуют колонки: Наименование, Артикул`);
+      const first = rows[0] || {};
+      const hasName = 'Наименование' in first || '\ufeffНаименование' in first;
+      const hasArt = 'Артикул' in first;
+      if (!hasName || !hasArt) throw new Error(`В rzd.csv отсутствуют колонки: Наименование, Артикул`);
 
-    // Приводим к формату, который ожидает app.js
-    App.data = rows.map(r => {
-      const rawName = String(r['Наименование'] ?? r['\ufeffНаименование'] ?? '').trim();
-      const rawArt = String(r['Артикул'] ?? '').trim();
-      return {
-        ...r,
-        'Наименование': rawName,
-        'Артикул': rawArt,
-        __name: App.normalizeForFuzzySearch(rawName),
-        __article: App.normalizeForFuzzySearch(rawArt),
-        __name_delim: App.canonKeepDelims(rawName),
-        __article_delim: App.canonKeepDelims(rawArt),
-
-        'Цена': r['Цена'] ?? '',
-        __price: r.__price ?? '—',
-        'Документы': r['Документы'] ?? '',
-        __docs: r.__docs ?? [],
-        'Характеристики': r['Характеристики'] ?? '',
-        __featHtml: r.__featHtml ?? null,
-        'Количество': r['Количество'] ?? '',
-        __qty: r.__qty ?? 0,
-        __qtyHint: r.__qtyHint ?? null
-      };
-    });
-
-    App._updateInfoTooltip?.();
-    document.body.classList.add('rzd-mode');
-  } catch (e) {
-    console.error('Ошибка загрузки rzd.csv:', e);
-    App.showError?.(`Не удалось загрузить rzd.csv\n${e.message}`);
-    rzdMode = false;
-    document.body.classList.remove('rzd-mode');
-    updateChipLabel();
+      app.data = rows;
+      app._updateInfoTooltip?.();
+      document.body.classList.add('rzd-mode');
+    } catch (e) {
+      console.error('Ошибка загрузки rzd.csv:', e);
+      window.App?.showError?.(`Не удалось загрузить rzd.csv\n${e.message}`);
+      rzdMode = false;
+      document.body.classList.remove('rzd-mode');
+      updateChipLabel();
+    }
   }
-}
 
 
   // Экспорт в глобальную область — на случай, если понадобится управление извне
