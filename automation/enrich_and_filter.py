@@ -104,7 +104,7 @@ def process_params(config: dict, base_csv: Path, spec_file: Path, val_file: Path
         name_col = matched_base.columns[0]
 
     filt_arts = matched_base[art_col].dropna().astype(str).str.replace(r"\s+", "", regex=True).map(clean_val)
-    filt_names = matched_base[name_col].fillna("").astype(str).str.strip()
+    filt_names = matched_base[name_col].map(clean_val)
     filt_meta = pd.DataFrame({"article_norm": filt_arts, "name": filt_names}).drop_duplicates("article_norm")
 
     # Чтение products_spec
