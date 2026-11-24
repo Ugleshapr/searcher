@@ -128,27 +128,12 @@ export class TableRenderer {
 
   _renderInfoBtn(item) {
     const artRaw = item['Артикул'] || '';
-    const hasFeat = !!item.__featHtml;
-
-    if (hasFeat) {
-      return `
-        <button type="button"
-                class="info-circle feat-info"
-                data-article="${escapeHTML(artRaw)}"
-                data-bs-toggle="popover"
-                data-bs-html="true"
-                data-bs-placement="top"
-                data-bs-content="${item.__featHtml}"
-                title="Характеристики">i</button>
-      `;
-    } else {
-      return `
-        <button type="button"
-                class="info-circle feat-info is-disabled"
-                data-article="${escapeHTML(artRaw)}"
-                title="Открыть страницу товара (двойной клик)">i</button>
-      `;
-    }
+    return `
+      <button type="button"
+              class="info-circle feat-info"
+              data-article="${escapeHTML(artRaw)}"
+              title="Характеристики товара">i</button>
+    `;
   }
 
   _renderDocs(docs, item) {

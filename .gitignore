@@ -8,5 +8,6 @@ target/
 __pycache__/
 *.pyc
 tests/results_*.json
+base.csv
 
 assets_source/

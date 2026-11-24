@@ -415,34 +415,51 @@ class PriceListSearchApp {
       }
     });
 
-    // Двойной клик по info кнопке — без изменений
-    tbody.addEventListener('dblclick', e => {
-      const btn = e.target.closest('.info-circle');
-      if (!btn) return;
+    // Вспомогательный метод открытия характеристик товара
+    const openSpecsModal = (targetEl) => {
+      const row = targetEl.closest('tr');
+      if (!row) return;
 
-      const row = btn.closest('tr');
-      let art = (btn.dataset.article || '').trim();
-      if (!art && row) {
+      const btn = targetEl.closest('.info-circle');
+      let art = (btn?.dataset.article || row.dataset.sku || '').trim();
+      if (!art) {
         const artCell = row.children[1];
         if (artCell) art = artCell.textContent.trim();
       }
 
       let rawName = '';
-      if (row) {
-        const nameCell = row.children[0];
-        if (nameCell) {
-          rawName = (
-            nameCell.getAttribute('data-name') ||
-            nameCell.textContent ||
-            ''
-          ).trim();
-        }
+      const nameCell = row.children[0];
+      if (nameCell) {
+        rawName = (
+          nameCell.getAttribute('data-name') ||
+          nameCell.textContent ||
+          ''
+        ).trim();
       }
 
       if (!art) return;
 
-      const url = `product/product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
-      window.open(url, '_blank', 'noopener');
+      if (window.ProductModal && typeof window.ProductModal.open === 'function') {
+        window.ProductModal.open({ art, name: rawName });
+      } else {
+        const url = `product/product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
+        window.open(url, '_blank', 'noopener');
+      }
+    };
+
+    // Клик по кнопке "i" открывает модальное окно характеристик
+    tbody.addEventListener('click', e => {
+      const btn = e.target.closest('.info-circle.feat-info');
+      if (!btn) return;
+      e.stopPropagation();
+      openSpecsModal(btn);
+    });
+
+    // Двойной клик по строке таблицы также открывает характеристики
+    tbody.addEventListener('dblclick', e => {
+      const row = e.target.closest('tr');
+      if (!row) return;
+      openSpecsModal(e.target);
     });
   }
 
