@@ -8,3 +8,5 @@ target/
 __pycache__/
 *.pyc
 tests/results_*.json
+
+assets_source/

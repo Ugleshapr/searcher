@@ -132,8 +132,24 @@ def run_search_packer():
     else:
         raise FileNotFoundError("base.bin.br не был создан!")
 
+def run_process_specs():
+    log("=== Шаг 5: Обработка и сжатие характеристик (process_specs.py) ===")
+    from process_specs import process_specs
+    base_csv = ROOT_DIR / "base.csv"
+    spec_csv = AUTOMATION_DIR / "products_spec.csv"
+    val_csv = AUTOMATION_DIR / "products_spec_values.csv"
+    out_dir = ROOT_DIR / "web" / "src" / "addons"
+
+    # Если файлов нет в AUTOMATION_DIR, используем существующие из addons
+    if not spec_csv.exists():
+        spec_csv = out_dir / "products_spec.csv"
+    if not val_csv.exists():
+        val_csv = out_dir / "products_spec_values.csv"
+
+    process_specs(base_csv, spec_csv, val_csv, out_dir)
+
 def cleanup_heavy_intermediates():
-    log("=== Шаг 5: Очистка тяжелых временных файлов ===")
+    log("=== Шаг 6: Очистка тяжелых временных файлов ===")
     cleanup_files = [
         "products_files.csv",
         "products_spec_values.csv",
@@ -156,6 +172,7 @@ def main():
         run_enrich_and_filter()
         run_make_base()
         run_search_packer()
+        run_process_specs()
     finally:
         cleanup_heavy_intermediates()
     log(f">>> ПАЙПЛАЙН УСПЕШНО ЗАВЕРШЕН ЗА {time.time() - total_t0:.1f} сек! <<<")

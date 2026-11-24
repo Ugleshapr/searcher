@@ -160,20 +160,151 @@ function normalizeFacetValue(raw, dict, specId) {
   }
 
 
+  // === Ультрабыстрый кэш спецификаций в IndexedDB ===
+  const SPECS_DB_NAME = 'keaz_specs_cache';
+  const SPECS_STORE = 'specs';
+  const KEY_SPEC_MAP = 'spec_map';
+  const KEY_SPEC_VALUES = 'spec_values';
+
+  function openSpecsIDB() {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined' || !window.indexedDB) return resolve(null);
+      const req = indexedDB.open(SPECS_DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(SPECS_STORE)) {
+          req.result.createObjectStore(SPECS_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    });
+  }
+
+  async function idbGet(key) {
+    try {
+      const db = await openSpecsIDB();
+      if (!db) return null;
+      return new Promise((resolve) => {
+        const tx = db.transaction(SPECS_STORE, 'readonly');
+        const req = tx.objectStore(SPECS_STORE).get(key);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function idbSet(key, val) {
+    try {
+      const db = await openSpecsIDB();
+      if (!db) return false;
+      return new Promise((resolve) => {
+        const tx = db.transaction(SPECS_STORE, 'readwrite');
+        const req = tx.objectStore(SPECS_STORE).put(val, key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => resolve(false);
+      });
+    } catch (_) {
+      return false;
+    }
+  }
+
   async function ensureSpecsLoaded() {
     if (_specMap) return;
+
+    // 1. Быстрый старт из IndexedDB
+    const cachedMap = await idbGet(KEY_SPEC_MAP);
+    if (cachedMap && typeof cachedMap === 'object') {
+      _specMap = new Map(Object.entries(cachedMap));
+      return;
+    }
+
+    // 2. Скачивание легковесного products_spec.json (~148 КБ)
+    try {
+      const resp = await fetch('src/addons/products_spec.json');
+      if (resp.ok) {
+        const json = await resp.json();
+        _specMap = new Map(Object.entries(json));
+        idbSet(KEY_SPEC_MAP, json);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Specs] products_spec.json fetch fallback:', e);
+    }
+
+    // 3. Fallback: парсинг CSV
     const specs = await parseCSV('src/addons/products_spec.csv', true);
     _specMap = new Map();
+    const plainObj = {};
     for (const s of specs) {
       const id = String(s['spec_id'] ?? s['specId'] ?? s['id']).trim();
       if (!id) continue;
-      _specMap.set(id, {
+      const item = {
         title: unquote(s['title']),
         value_type: String(s['value_type'] ?? '').trim(),
         group_id: Number(s['group_id'] ?? 0) || 0,
         group_name: unquote(s['group_name'] || '')
-      });
+      };
+      _specMap.set(id, item);
+      plainObj[id] = item;
     }
+    idbSet(KEY_SPEC_MAP, plainObj);
+  }
+
+  async function loadSpecValues() {
+    if (_valuesCache) return _valuesCache;
+
+    // 1. Мгновенная проверка IndexedDB (0-5 мс)
+    const cachedValues = await idbGet(KEY_SPEC_VALUES);
+    if (cachedValues && typeof cachedValues === 'object') {
+      _valuesCache = cachedValues;
+      return _valuesCache;
+    }
+
+    // 2. Загрузка ультрасжатого файла products_spec_values.json.gz (~720 КБ) через DecompressionStream
+    if (typeof window.DecompressionStream === 'function') {
+      try {
+        const resp = await fetch('src/addons/products_spec_values.json.gz');
+        if (resp.ok) {
+          const ds = new DecompressionStream('gzip');
+          const decompressed = resp.body.pipeThrough(ds);
+          const json = await new Response(decompressed).json();
+          _valuesCache = json;
+          idbSet(KEY_SPEC_VALUES, json);
+          return _valuesCache;
+        }
+      } catch (e) {
+        console.warn('[Specs] DecompressionStream load failed, trying uncompressed JSON:', e);
+      }
+    }
+
+    // 3. Загрузка uncompressed products_spec_values.json
+    try {
+      const resp = await fetch('src/addons/products_spec_values.json');
+      if (resp.ok) {
+        const json = await resp.json();
+        _valuesCache = json;
+        idbSet(KEY_SPEC_VALUES, json);
+        return _valuesCache;
+      }
+    } catch (e) {
+      console.warn('[Specs] products_spec_values.json failed, falling back to CSV:', e);
+    }
+
+    // 4. Резервный fallback на CSV
+    const rows = await parseCSV('src/addons/products_spec_values.csv', true);
+    const byArt = {};
+    for (const row of rows) {
+      const art = String(row['product_id'] ?? '').trim();
+      const sid = String(row['spec_id'] ?? '').trim();
+      if (!art || !sid) continue;
+      if (!byArt[art]) byArt[art] = [];
+      byArt[art].push([sid, unquote(row['value'])]);
+    }
+    _valuesCache = byArt;
+    idbSet(KEY_SPEC_VALUES, byArt);
+    return _valuesCache;
   }
 
   function liftTypeEquipmentGroup(grouped) {
@@ -269,10 +400,7 @@ function normalizeFacetValue(raw, dict, specId) {
   async function buildIndex(articles) {
     await ensureSpecsLoaded();
 
-    if (!_valuesCache) {
-      _valuesCache = await parseCSV('src/addons/products_spec_values.csv', true);
-    }
-    const values = _valuesCache;
+    const values = await loadSpecValues();
 
     const want = new Set(articles);
 
@@ -289,20 +417,36 @@ function normalizeFacetValue(raw, dict, specId) {
     }
 
     const perArt = new Map();
-    for (const row of values) {
-      const art = String(row['product_id'] ?? '').trim();
-      if (!want.has(art)) continue;
-      const sid = String(row['spec_id'] ?? '').trim();
-      if (!sid) continue;
-      const dict = _specMap.get(sid) || {};
-      const value = unquote(row['value']);
-      let arr = perArt.get(art);
-if (!arr) {
-  arr = [];
-  perArt.set(art, arr);
-}
-arr.push({ spec_id: sid, value, dict });
-
+    if (Array.isArray(values)) {
+      // Резервный режим (старый плоский массив CSV)
+      for (const row of values) {
+        const art = String(row['product_id'] ?? '').trim();
+        if (!want.has(art)) continue;
+        const sid = String(row['spec_id'] ?? '').trim();
+        if (!sid) continue;
+        const dict = _specMap.get(sid) || {};
+        const value = unquote(row['value']);
+        let arr = perArt.get(art);
+        if (!arr) {
+          arr = [];
+          perArt.set(art, arr);
+        }
+        arr.push({ spec_id: sid, value, dict });
+      }
+    } else if (values && typeof values === 'object') {
+      // Сверхбыстрый режим по словарю: O(want) вместо O(2 000 000)
+      for (const art of want) {
+        const specs = values[art];
+        if (!specs || !specs.length) continue;
+        const arr = [];
+        for (let i = 0; i < specs.length; i++) {
+          const sid = String(specs[i][0]);
+          const value = String(specs[i][1] ?? '');
+          const dict = _specMap.get(sid) || {};
+          arr.push({ spec_id: sid, value, dict });
+        }
+        perArt.set(art, arr);
+      }
     }
 
     const index = new Map();
