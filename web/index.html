@@ -9,7 +9,8 @@
       http-equiv="Content-Security-Policy"
       content="
     default-src 'self';
-    script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+    script-src 'self' 'wasm-unsafe-eval' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+    worker-src 'self' blob:;
     style-src  'self' https://cdn.jsdelivr.net 'unsafe-inline';
     font-src   'self' https://r2cdn.perplexity.ai;
     object-src 'none';
@@ -17,6 +18,8 @@
     frame-ancestors 'none';
     connect-src
       'self'
+      blob:
+      data:
       https://keaz.ru;
     upgrade-insecure-requests
   "

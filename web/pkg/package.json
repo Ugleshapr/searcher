@@ -1,0 +1,15 @@
+{
+  "name": "search-core",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "search_core_bg.wasm",
+    "search_core.js",
+    "search_core.d.ts"
+  ],
+  "main": "search_core.js",
+  "types": "search_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
