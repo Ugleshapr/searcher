@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Product Specs Modal (Nothing OS 5.0 Aesthetic - Light & Dark Themes)
+   Product Specs Modal (Nothing OS 5.0 Aesthetic - 2-Column Responsive Layout)
    ========================================================================== */
 
 /* --- Modal Overlay & Fixed Placement --- */
@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 1.25rem;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
@@ -25,23 +25,23 @@
 .pm-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.38);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 :root[data-theme="light"] .pm-backdrop,
 [data-color-scheme="light"] .pm-backdrop {
-  background: rgba(15, 23, 42, 0.38);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 :root[data-theme="dark"] .pm-backdrop,
 [data-color-scheme="dark"] .pm-backdrop {
-  background: rgba(0, 0, 0, 0.78);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* --- Centered Modal Window --- */
@@ -49,18 +49,18 @@
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 960px;
+  max-width: 1080px;
   max-height: 88vh;
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  color: #0f172a;
+  color: #111215;
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 20px;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-radius: 18px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  transform: scale(0.96) translateY(8px);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.97) translateY(6px);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
 }
 
@@ -68,24 +68,24 @@
   transform: scale(1) translateY(0);
 }
 
-/* Dark Theme Window */
+/* Dark Theme Window (Nothing OS 5.0 Obsidian) */
 :root[data-theme="dark"] .pm-window,
 [data-color-scheme="dark"] .pm-window {
   background: #111113;
-  color: #f1f5f9;
+  color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 /* --- Header Section --- */
 .pm-header {
-  padding: 1.25rem 1.5rem;
+  padding: 1.15rem 1.4rem;
   border-bottom: 1px solid #e2e8f0;
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.75rem;
 }
 
 :root[data-theme="dark"] .pm-header,
@@ -109,15 +109,15 @@
 .pm-title {
   font-size: 1.15rem;
   font-weight: 600;
-  line-height: 1.4;
-  margin: 0 0 0.4rem 0;
-  color: #0f172a;
+  line-height: 1.35;
+  margin: 0 0 0.35rem 0;
+  color: #111215;
   word-break: break-word;
 }
 
 :root[data-theme="dark"] .pm-title,
 [data-color-scheme="dark"] .pm-title {
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .pm-meta-bar {
@@ -132,8 +132,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.22rem 0.6rem;
-  font-size: 0.8rem;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 600;
   background: #f1f5f9;
@@ -153,22 +153,22 @@
 :root[data-theme="dark"] .pm-art-badge,
 [data-color-scheme="dark"] .pm-art-badge {
   background: rgba(255, 255, 255, 0.06);
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 :root[data-theme="dark"] .pm-art-badge:hover,
 [data-color-scheme="dark"] .pm-art-badge:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
+  color: #ffffff;
 }
 
-/* Status / Count Badge */
+/* Status / Count Badge (Hardware Sage Green) */
 .pm-status-badge {
   font-size: 0.75rem;
-  padding: 0.22rem 0.55rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
   background: rgba(88, 163, 102, 0.12);
   color: #2e7d32;
   border: 1px solid rgba(88, 163, 102, 0.3);
@@ -176,7 +176,7 @@
 
 :root[data-theme="dark"] .pm-status-badge,
 [data-color-scheme="dark"] .pm-status-badge {
-  background: rgba(88, 163, 102, 0.15);
+  background: rgba(88, 163, 102, 0.16);
   color: #58a366;
   border: 1px solid rgba(88, 163, 102, 0.35);
 }
@@ -213,7 +213,7 @@
 :root[data-theme="dark"] .pm-btn,
 [data-color-scheme="dark"] .pm-btn {
   background: rgba(255, 255, 255, 0.06);
-  color: #cbd5e1;
+  color: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
@@ -248,13 +248,13 @@
 
 :root[data-theme="dark"] .pm-btn-close,
 [data-color-scheme="dark"] .pm-btn-close {
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 :root[data-theme="dark"] .pm-btn-close:hover,
 [data-color-scheme="dark"] .pm-btn-close:hover {
   background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+  color: #ff6b6b;
 }
 
 /* --- Search Toolbar --- */
@@ -266,12 +266,12 @@
 
 .pm-search-input {
   width: 100%;
-  padding: 0.5rem 2rem 0.5rem 0.85rem;
+  padding: 0.48rem 2rem 0.48rem 0.85rem;
   font-size: 0.85rem;
   border-radius: 8px;
   border: 1px solid #cbd5e1;
   background: #f8fafc;
-  color: #0f172a;
+  color: #111215;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -285,7 +285,7 @@
 :root[data-theme="dark"] .pm-search-input,
 [data-color-scheme="dark"] .pm-search-input {
   background: rgba(0, 0, 0, 0.4);
-  color: #f8fafc;
+  color: #ffffff;
   border-color: rgba(255, 255, 255, 0.12);
 }
 
@@ -315,14 +315,11 @@
   display: block;
 }
 
-/* --- Body & Groups --- */
+/* --- Body & 2-Column Grid Layout --- */
 .pm-body {
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
+  padding: 1.25rem 1.4rem;
   background: #ffffff;
 }
 
@@ -333,7 +330,7 @@
 
 /* Scrollbar */
 .pm-body::-webkit-scrollbar {
-  width: 8px;
+  width: 7px;
 }
 
 .pm-body::-webkit-scrollbar-track {
@@ -350,8 +347,31 @@
   background: rgba(255, 255, 255, 0.15);
 }
 
+/* 2-Column Grid */
+.pm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .pm-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+}
+
+.pm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
 /* Group Cards */
 .pm-group {
+  flex-shrink: 0;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #ffffff;
@@ -367,21 +387,40 @@
 }
 
 .pm-group-title {
-  padding: 0.65rem 1rem;
-  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.95rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #475569;
+  letter-spacing: 0.06em;
+  color: #111215;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
 }
 
 :root[data-theme="dark"] .pm-group-title,
 [data-color-scheme="dark"] .pm-group-title {
-  color: #94a3b8;
+  color: #ffffff;
   background: rgba(255, 255, 255, 0.04);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pm-group-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  border-radius: 9999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+:root[data-theme="dark"] .pm-group-pill,
+[data-color-scheme="dark"] .pm-group-pill {
+  background: rgba(88, 163, 102, 0.18);
+  color: #58a366;
+  border: 1px solid rgba(88, 163, 102, 0.35);
 }
 
 /* Spec Tables */
@@ -414,31 +453,35 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Parameter Key (Secondary neutral text) */
 .pm-cell-key {
-  padding: 0.6rem 1rem;
-  width: 50%;
-  font-size: 0.85rem;
-  color: #64748b;
+  padding: 0.55rem 0.95rem;
+  width: 55%;
+  font-size: 0.83rem;
+  line-height: 1.35;
+  color: rgba(17, 18, 21, 0.65);
   vertical-align: top;
 }
 
 :root[data-theme="dark"] .pm-cell-key,
 [data-color-scheme="dark"] .pm-cell-key {
-  color: #94a3b8;
+  color: rgba(255, 255, 255, 0.62); /* Чистый нейтральный Nothing OS серый */
 }
 
+/* Parameter Value (Crisp primary text) */
 .pm-cell-val {
-  padding: 0.6rem 1rem;
-  width: 50%;
-  font-size: 0.85rem;
+  padding: 0.55rem 0.95rem;
+  width: 45%;
+  font-size: 0.83rem;
+  line-height: 1.35;
   font-weight: 500;
-  color: #0f172a;
+  color: #111215;
   vertical-align: top;
 }
 
 :root[data-theme="dark"] .pm-cell-val,
 [data-color-scheme="dark"] .pm-cell-val {
-  color: #f8fafc;
+  color: #ffffff; /* Безупречно читаемый белый */
 }
 
 /* Empty State */

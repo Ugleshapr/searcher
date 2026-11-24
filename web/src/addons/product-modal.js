@@ -16,7 +16,7 @@
 
   const unquote = s => String(s ?? '').replace(/^'+|'+$/g, '').trim();
 
-  // --- IndexedDB Cache Helpers (совместимы с filter-panel.js) ---
+  // --- IndexedDB Cache Helpers ---
   const SPECS_DB_NAME = 'keaz_specs_cache';
   const SPECS_STORE = 'specs';
   const KEY_SPEC_MAP = 'spec_map';
@@ -147,14 +147,14 @@
           </div>
         </div>
         <div class="pm-body" id="pmBody">
-          <!-- Группы характеристик -->
+          <!-- Группы характеристик в 2 ряда/колонки -->
         </div>
       </div>
     `;
 
     document.body.appendChild(_modalEl);
 
-    // Закрытие только по крестику
+    // Закрытие строго по крестику
     _modalEl.querySelector('#pmCloseBtn').addEventListener('click', close);
 
     // Копирование артикула
@@ -185,14 +185,14 @@
       searchInput.focus();
     });
 
-    // Копирование пары "Параметр 	 Значение" по клику на любую строку
+    // Копирование пары "Параметр \t Значение" по клику на любую строку
     _modalEl.querySelector('#pmBody').addEventListener('click', e => {
       const row = e.target.closest('.pm-row');
       if (!row) return;
       const k = row.dataset.key || '';
       const v = row.dataset.val || '';
       if (k || v) {
-        navigator.clipboard.writeText(`${k}	${v}`).then(() => showToast(`Скопировано: ${k}`));
+        navigator.clipboard.writeText(`${k}\t${v}`).then(() => showToast(`Скопировано: ${k}`));
       }
     });
 
@@ -226,6 +226,38 @@
     renderGroups(filtered, body);
   }
 
+  function createGroupCard(g) {
+    const gEl = document.createElement('div');
+    gEl.className = 'pm-group';
+    gEl.innerHTML = `
+      <div class="pm-group-title">
+        <span>${escapeHTML(g.group_name)}</span>
+        <span class="pm-group-pill">${g.items.length}</span>
+      </div>
+    `;
+
+    const table = document.createElement('table');
+    table.className = 'pm-table';
+    const tbody = document.createElement('tbody');
+
+    for (const it of g.items) {
+      const tr = document.createElement('tr');
+      tr.className = 'pm-row';
+      tr.dataset.key = it.title;
+      tr.dataset.val = it.value;
+      tr.title = 'Нажмите, чтобы скопировать';
+      tr.innerHTML = `
+        <td class="pm-cell-key">${escapeHTML(it.title)}</td>
+        <td class="pm-cell-val">${escapeHTML(it.value)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    gEl.appendChild(table);
+    return gEl;
+  }
+
   function renderGroups(groups, container) {
     container.innerHTML = '';
 
@@ -234,46 +266,48 @@
       return;
     }
 
+    const grid = document.createElement('div');
+    grid.className = 'pm-grid';
+
+    const colLeft = document.createElement('div');
+    colLeft.className = 'pm-col pm-col-left';
+
+    const colRight = document.createElement('div');
+    colRight.className = 'pm-col pm-col-right';
+
+    // Балансируем группы по высоте двух колонок
+    let countLeft = 0;
+    let countRight = 0;
+
     for (const g of groups) {
-      const gEl = document.createElement('div');
-      gEl.className = 'pm-group';
-      gEl.innerHTML = `<div class="pm-group-title">${escapeHTML(g.group_name)} (${g.items.length})</div>`;
-
-      const table = document.createElement('table');
-      table.className = 'pm-table';
-      const tbody = document.createElement('tbody');
-
-      for (const it of g.items) {
-        const tr = document.createElement('tr');
-        tr.className = 'pm-row';
-        tr.dataset.key = it.title;
-        tr.dataset.val = it.value;
-        tr.title = 'Нажмите, чтобы скопировать';
-        tr.innerHTML = `
-          <td class="pm-cell-key">${escapeHTML(it.title)}</td>
-          <td class="pm-cell-val">${escapeHTML(it.value)}</td>
-        `;
-        tbody.appendChild(tr);
+      const gEl = createGroupCard(g);
+      const weight = g.items.length + 3; // Число строк + шапка
+      if (countLeft <= countRight) {
+        colLeft.appendChild(gEl);
+        countLeft += weight;
+      } else {
+        colRight.appendChild(gEl);
+        countRight += weight;
       }
-
-      table.appendChild(tbody);
-      gEl.appendChild(table);
-      container.appendChild(gEl);
     }
+
+    grid.appendChild(colLeft);
+    grid.appendChild(colRight);
+    container.appendChild(grid);
   }
 
   function copyAllSpecs() {
     if (!_currentData || !_allGroups.length) return;
     const lines = [
-      `Наименование:	${_currentData.name || ''}`,
-      `Артикул:	${_currentData.art || ''}`,
+      `Наименование:\t${_currentData.name || ''}`,
+      `Артикул:\t${_currentData.art || ''}`,
       ''
     ];
 
     for (const g of _allGroups) {
       lines.push(`[${g.group_name}]`);
       for (const it of g.items) {
-        lines.push(`${it.title}	${it.value}`);
+        lines.push(`${it.title}\t${it.value}`);
       }
       lines.push('');
     }
