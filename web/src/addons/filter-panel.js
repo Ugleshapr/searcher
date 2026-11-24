@@ -9,6 +9,10 @@
 // Приводим значения фильтров к «каноническому» виду
 // Приводим значения фильтров к «каноническому» виду
 function normalizeFacetValue(raw, dict, specId) {
+  if (window.SpecNormalizer && typeof window.SpecNormalizer.normalizeValue === 'function') {
+    return window.SpecNormalizer.normalizeValue(raw, dict, specId);
+  }
+
   const original = String(raw ?? '').trim();
   if (!original) {
     return { key: '', display: '', sortNum: null };
@@ -476,39 +480,48 @@ function normalizeFacetValue(raw, dict, specId) {
     })();
 
     for (const art of want) {
-  const rows = perArt.get(art) || [];
-  for (const { spec_id, value, dict } of rows) {
-    // Нормализуем значение
-    const norm = normalizeFacetValue(value, dict, spec_id);
-    if (!norm.key) continue;
-    const key = norm.key;
+      const rows = perArt.get(art) || [];
+      const handledTargetSids = new Set();
+      for (const { spec_id, value, dict } of rows) {
+        const targetSid = window.SpecNormalizer ? window.SpecNormalizer.resolveSpecId(spec_id) : spec_id;
+        if (handledTargetSids.has(targetSid)) continue;
 
-    // Индекс: ключом становится нормализованное значение
-    let vmap = index.get(spec_id);
-    if (!vmap) index.set(spec_id, (vmap = new Map()));
-    let aset = vmap.get(key);
-    if (!aset) vmap.set(key, (aset = new Set()));
-    aset.add(art);
+        const targetDict = (window.SpecNormalizer && targetSid !== spec_id)
+          ? (_specMap.get(targetSid) || dict)
+          : dict;
 
-    // Группы/параметры: храним счётчик + мета (отображение, sortNum)
-    const gid = dict.group_id ?? 0;
-    const gname = dict.group_name || '';
-    let g = groups.get(gid);
-    if (!g) groups.set(gid, (g = { group_id: gid, group_name: gname, params: new Map() }));
-    let p = g.params.get(spec_id);
-    if (!p) g.params.set(spec_id, (p = { spec_id, title: dict.title || spec_id, values: new Map() }));
+        // Нормализуем значение
+        const norm = normalizeFacetValue(value, targetDict, targetSid);
+        if (!norm.key) continue;
+        handledTargetSids.add(targetSid);
+        const key = norm.key;
 
-    let meta = p.values.get(key);
-    if (!meta) {
-      meta = { count: 0, display: norm.display, sortNum: norm.sortNum };
+        // Индекс: ключом становится нормализованное значение
+        let vmap = index.get(targetSid);
+        if (!vmap) index.set(targetSid, (vmap = new Map()));
+        let aset = vmap.get(key);
+        if (!aset) vmap.set(key, (aset = new Set()));
+        aset.add(art);
+
+        // Группы/параметры: храним счётчик + мета (отображение, sortNum)
+        const gid = targetDict.group_id ?? 0;
+        const gname = targetDict.group_name || '';
+        let g = groups.get(gid);
+        if (!g) groups.set(gid, (g = { group_id: gid, group_name: gname, params: new Map() }));
+        let p = g.params.get(targetSid);
+        if (!p) g.params.set(targetSid, (p = { spec_id: targetSid, title: targetDict.title || targetSid, values: new Map() }));
+
+        let meta = p.values.get(key);
+        if (!meta) {
+          meta = { count: 0, display: norm.display, sortNum: norm.sortNum };
+        }
+        meta.count += 1;
+        // если вдруг первое значение было пустое — подхватываем следующий display
+        if (!meta.display && norm.display) meta.display = norm.display;
+        if (meta.sortNum == null && norm.sortNum != null) meta.sortNum = norm.sortNum;
+        p.values.set(key, meta);
+      }
     }
-    meta.count += 1;
-    // если вдруг первое значение было пустое — подхватываем следующий display
-    if (!meta.display && norm.display) meta.display = norm.display;
-    if (meta.sortNum == null && norm.sortNum != null) meta.sortNum = norm.sortNum;
-    p.values.set(key, meta);
-  }
-}
 
 
    let grouped = Array.from(groups.values())

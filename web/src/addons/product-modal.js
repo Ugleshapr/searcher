@@ -342,15 +342,24 @@
     // Достаем спеки товара
     const specsForArt = (_valuesCache && _valuesCache[_currentData.art]) || [];
     const rows = [];
+    const handledTargetSids = new Set();
 
     for (let i = 0; i < specsForArt.length; i++) {
-      const sid = String(specsForArt[i][0]);
-      const val = unquote(specsForArt[i][1]);
+      const rawSid = String(specsForArt[i][0]);
+      const sid = window.SpecNormalizer ? window.SpecNormalizer.resolveSpecId(rawSid) : rawSid;
+      if (handledTargetSids.has(sid)) continue;
+      handledTargetSids.add(sid);
+
+      const rawVal = specsForArt[i][1];
       const dict = (_specMap && _specMap.get(sid)) || {};
+      const norm = window.SpecNormalizer
+        ? window.SpecNormalizer.normalizeValue(rawVal, dict, sid)
+        : { display: unquote(rawVal) };
+
       rows.push({
         spec_id: sid,
         title: unquote(dict.title || sid),
-        value: val,
+        value: norm.display || unquote(rawVal),
         group_id: dict.group_id ?? 999999,
         group_name: unquote(dict.group_name || 'Основные параметры')
       });
