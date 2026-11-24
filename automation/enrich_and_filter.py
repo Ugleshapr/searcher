@@ -70,7 +70,10 @@ def process_params(config: dict, base_csv: Path, spec_file: Path, val_file: Path
     group_rules = cfg.get("group_rules", [])
 
     print(f"[*] Обогащение характеристик из {spec_file.name}...")
-    df_base = pd.read_csv(base_csv, sep=';', dtype=str, encoding='utf-8', engine='python')
+    try:
+        df_base = pd.read_csv(base_csv, sep=';', dtype=str, encoding='utf-8', engine='python', on_bad_lines='skip')
+    except TypeError:
+        df_base = pd.read_csv(base_csv, sep=';', dtype=str, encoding='utf-8', engine='python', error_bad_lines=False)
 
     kw_lower = [k.strip().lower() for k in keywords]
     strict_lower = strict_word.strip().lower()
