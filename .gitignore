@@ -1,6 +1,6 @@
 target/
 *.bin
-*.bin.br
+!base.bin.br
 *.log
 .DS_Store
 __pycache__/

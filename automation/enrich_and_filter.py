@@ -91,8 +91,18 @@ def process_params(config: dict, base_csv: Path, spec_file: Path, val_file: Path
         print("[!] Нет совпадений по ключевым словам в базе.")
         return False
 
-    art_col = matched_base.columns[1] if matched_base.shape[1] >= 2 else matched_base.columns[0]
-    name_col = matched_base.columns[0]
+    # Автоопределение колонок артикула и наименования
+    cols_lower = {str(c).lower(): c for c in df_base.columns}
+    if "product_id" in cols_lower and "title" in cols_lower:
+        art_col = cols_lower["product_id"]
+        name_col = cols_lower["title"]
+    elif "артикул" in cols_lower and "наименование" in cols_lower:
+        art_col = cols_lower["артикул"]
+        name_col = cols_lower["наименование"]
+    else:
+        art_col = matched_base.columns[1] if matched_base.shape[1] >= 2 else matched_base.columns[0]
+        name_col = matched_base.columns[0]
+
     filt_arts = matched_base[art_col].dropna().astype(str).str.replace(r"\s+", "", regex=True).map(clean_val)
     filt_names = matched_base[name_col].fillna("").astype(str).str.strip()
     filt_meta = pd.DataFrame({"article_norm": filt_arts, "name": filt_names}).drop_duplicates("article_norm")
@@ -152,15 +162,16 @@ def main():
     config = load_config()
     print("=== Запуск единого пайплайна обогащения и фильтрации ===")
 
-    # Пути
-    files_in = SCRIPT_DIR / "products_files.csv"
-    files_out = SCRIPT_DIR / "products_files_filtered.csv"
+    # Пути с поддержкой CLI аргументов и fallback
+    files_in = Path(sys.argv[1]) if len(sys.argv) > 1 else (SCRIPT_DIR / "products_files.csv")
+    files_out = Path(sys.argv[2]) if len(sys.argv) > 2 else (SCRIPT_DIR / "products_files_filtered.csv")
     process_files(config, files_in, files_out)
 
-    base_in = SCRIPT_DIR / "base.csv"
-    spec_in = SCRIPT_DIR / "products_spec.csv"
-    val_in = SCRIPT_DIR / "products_spec_values.csv"
-    enriched_out = SCRIPT_DIR / "enriched.csv"
+    default_base = SCRIPT_DIR / "products.csv" if (SCRIPT_DIR / "products.csv").exists() else (SCRIPT_DIR / "base.csv")
+    base_in = Path(sys.argv[3]) if len(sys.argv) > 3 else default_base
+    spec_in = Path(sys.argv[4]) if len(sys.argv) > 4 else (SCRIPT_DIR / "products_spec.csv")
+    val_in = Path(sys.argv[5]) if len(sys.argv) > 5 else (SCRIPT_DIR / "products_spec_values.csv")
+    enriched_out = Path(sys.argv[6]) if len(sys.argv) > 6 else (SCRIPT_DIR / "enriched.csv")
     process_params(config, base_in, spec_in, val_in, enriched_out)
 
     print("=== Подготовка данных завершена! ===")
