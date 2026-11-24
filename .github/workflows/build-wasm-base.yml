@@ -3,7 +3,7 @@ name: Build and Pack WASM Base
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "25 3 * * *"  # Ежедневно в 06:25 MSK (после утреннего обновления КЭАЗ в 05:07)
+    - cron: "35 3 * * *"  # Ежедневно в 06:35 MSK (03:35 UTC) — обновление базы WASM
 
 permissions:
   contents: write
