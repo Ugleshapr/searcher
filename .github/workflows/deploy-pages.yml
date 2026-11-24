@@ -22,12 +22,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       # 1) Выкачиваем актуальный main (он всегда будет корнем сайта)
       - name: Checkout main (Production Root)
@@ -80,6 +76,13 @@ jobs:
           path: workspace
           if-no-files-found: error
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       # 6) Публикуем на GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
