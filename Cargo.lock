@@ -208,6 +208,7 @@ dependencies = [
  "csv",
  "search-core",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

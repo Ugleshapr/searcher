@@ -139,10 +139,10 @@ impl SearchEngine {
                 }
 
                 // Position bonus
-                if let Some(pos) = hay.find(p) {
-                    let pos_val = pos as i32;
-                    if pos_val < 120 {
-                        *score += 120 - pos_val;
+                if let Some(byte_pos) = hay.find(p) {
+                    let char_pos = hay[..byte_pos].chars().count() as i32;
+                    if char_pos < 120 {
+                        *score += 120 - char_pos;
                     }
                 }
             }
@@ -215,9 +215,10 @@ impl SearchEngine {
                 let hay = if permit_article { &it.article_delim } else { &it.name_delim };
                 let mut best = usize::MAX;
                 for p in &parts {
-                    if let Some(idx) = hay.find(p) {
-                        if idx < best {
-                            best = idx;
+                    if let Some(byte_idx) = hay.find(p) {
+                        let char_idx = hay[..byte_idx].chars().count();
+                        if char_idx < best {
+                            best = char_idx;
                         }
                     }
                 }
@@ -230,7 +231,7 @@ impl SearchEngine {
                 return ap.cmp(&bp);
             }
 
-            a.name.len().cmp(&b.name.len())
+            a.name_norm.chars().count().cmp(&b.name_norm.chars().count())
         });
 
         // 4. Формирование результатов
@@ -269,26 +270,60 @@ impl SearchEngine {
         res
     }
 
-    fn word_regex_match(&self, nd: &str, tok: &str) -> bool {
-        if let Some(pos) = nd.find(tok) {
-            let before = if pos == 0 { ' ' } else { nd[..pos].chars().last().unwrap_or(' ') };
-            let end_idx = pos + tok.len();
-            let after = if end_idx >= nd.len() { ' ' } else { nd[end_idx..].chars().next().unwrap_or(' ') };
-            let b_ok = !before.is_alphanumeric();
-            let a_ok = !after.is_alphanumeric();
-            return b_ok && a_ok;
+    pub fn word_regex_match(&self, nd: &str, tok: &str) -> bool {
+        let mut start = 0;
+        while let Some(pos) = nd[start..].find(tok) {
+            let actual_pos = start + pos;
+            let before = if actual_pos == 0 {
+                ' '
+            } else {
+                nd[..actual_pos].chars().last().unwrap_or(' ')
+            };
+            let end_idx = actual_pos + tok.len();
+            let after = if end_idx >= nd.len() {
+                ' '
+            } else {
+                nd[end_idx..].chars().next().unwrap_or(' ')
+            };
+            let b_ok = !before.is_alphanumeric() && before != '_';
+            let a_ok = !after.is_alphanumeric() && after != '_';
+            if b_ok && a_ok {
+                return true;
+            }
+            if let Some(ch) = nd[actual_pos..].chars().next() {
+                start = actual_pos + ch.len_utf8();
+            } else {
+                break;
+            }
         }
         false
     }
 
-    fn num_token_match(&self, nd: &str, tok: &str) -> bool {
-        if let Some(pos) = nd.find(tok) {
-            let before = if pos == 0 { ' ' } else { nd[..pos].chars().last().unwrap_or(' ') };
-            let end_idx = pos + tok.len();
-            let after = if end_idx >= nd.len() { ' ' } else { nd[end_idx..].chars().next().unwrap_or(' ') };
+    pub fn num_token_match(&self, nd: &str, tok: &str) -> bool {
+        let mut start = 0;
+        while let Some(pos) = nd[start..].find(tok) {
+            let actual_pos = start + pos;
+            let before = if actual_pos == 0 {
+                ' '
+            } else {
+                nd[..actual_pos].chars().last().unwrap_or(' ')
+            };
+            let end_idx = actual_pos + tok.len();
+            let after = if end_idx >= nd.len() {
+                ' '
+            } else {
+                nd[end_idx..].chars().next().unwrap_or(' ')
+            };
             let b_ok = !before.is_ascii_digit();
             let a_ok = !after.is_ascii_digit();
-            return b_ok && a_ok;
+            if b_ok && a_ok {
+                return true;
+            }
+            if let Some(ch) = nd[actual_pos..].chars().next() {
+                start = actual_pos + ch.len_utf8();
+            } else {
+                break;
+            }
         }
         false
     }
@@ -316,8 +351,8 @@ impl SearchEngine {
         let raw_lower = it.name.to_lowercase();
         let nd_lower = &it.name_delim;
 
-        // "новый" -> +1200
-        if raw_lower.contains("новый") || nd_lower.contains("новый") {
+        // "новый" -> +1200 (только как отдельное слово!)
+        if self.word_regex_match(&raw_lower, "новый") || self.word_regex_match(nd_lower, "новый") {
             *score += 1200;
         }
 
