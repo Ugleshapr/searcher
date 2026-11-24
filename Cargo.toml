@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/search-core",
+    "crates/search-packer",
+]
+resolver = "2"
