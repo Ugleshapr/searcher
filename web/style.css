@@ -230,10 +230,12 @@ html {
   background-color: var(--color-background);
   -webkit-font-smoothing: antialiased;
   box-sizing: border-box;
+  min-height: 100%;
 }
 body {
   margin: 0;
   padding: 0;
+  min-height: 100vh;
 }
 *,
 *::before,
@@ -2430,10 +2432,18 @@ body.catalog-mode #copyPanel {
   --color-secondary-active: rgba(255, 255, 255, 0.2);
 }
 
+[data-theme="dark"],
+html[data-theme="dark"] {
+  background-color: var(--color-background);
+  min-height: 100%;
+}
+
 [data-theme="dark"] body {
+  min-height: 100vh;
   background-color: var(--color-background);
   background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px);
   background-size: 24px 24px;
+  background-attachment: fixed;
   color: var(--color-text);
 }
 
