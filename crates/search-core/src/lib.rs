@@ -38,10 +38,10 @@ pub fn init_engine_from_brotli(compressed_bytes: &[u8]) -> Result<usize, String>
 pub fn search_json(query: &str, limit: usize) -> String {
     let g = GLOBAL_ENGINE.lock().unwrap();
     if let Some(ref engine) = *g {
-        let results = engine.search(query, limit);
-        serde_json::to_string(&results).unwrap_or_else(|_| "[]".to_string())
+        let resp = engine.search(query, limit);
+        serde_json::to_string(&resp).unwrap_or_else(|_| "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string())
     } else {
-        "[]".to_string()
+        "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string()
     }
 }
 
@@ -61,6 +61,6 @@ pub fn get_all_items_json() -> String {
     if let Some(ref engine) = *g {
         serde_json::to_string(&engine.items).unwrap_or_else(|_| "[]".to_string())
     } else {
-        "[]".to_string()
+        "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string()
     }
 }

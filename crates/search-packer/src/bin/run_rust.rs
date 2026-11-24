@@ -53,7 +53,7 @@ fn main() {
         let elapsed = t0.elapsed().as_secs_f64() * 1000.0;
         total_time += elapsed;
 
-        let top5: Vec<QueryResultItem> = res.iter().take(5).map(|r| QueryResultItem {
+        let top5: Vec<QueryResultItem> = res.results.iter().take(5).map(|r| QueryResultItem {
             article: r.article.clone(),
             name: r.name.clone(),
             score: r.score,
@@ -62,7 +62,7 @@ fn main() {
         output.push(QueryResult {
             query: q.to_string(),
             time_ms: elapsed,
-            total_found: res.len(),
+            total_found: res.total,
             top: top5,
         });
     }

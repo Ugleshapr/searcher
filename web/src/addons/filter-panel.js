@@ -658,9 +658,15 @@ grouped = liftImportantParams(grouped);
     }
     acc = acc || new Set();
 
-    app.filteredData = app._preFilterData.filter(it =>
-      acc.has(String(it['Артикул'] || '').trim())
-    );
+    const dbMap = app.dataByArticle;
+    if (dbMap) {
+      app.filteredData = Array.from(acc).map(art => dbMap.get(art)).filter(Boolean);
+    } else {
+      app.filteredData = (app._preFilterData || []).filter(it =>
+        acc.has(String(it['Артикул'] || '').trim())
+      );
+    }
+    app.totalMatches = app.filteredData.length;
     app._page = 1;
     app.displayResults();
     updatePillsCounts();
@@ -905,9 +911,11 @@ grouped = liftImportantParams(grouped);
   const app = window.App;
   if (!app) return;
 
-  const arts = (app._preFilterData || app.filteredData || [])
-    .map(r => String(r['Артикул'] || '').trim())
-    .filter(Boolean);
+  const arts = (app.matchingArticles && app.matchingArticles.length > 0)
+    ? app.matchingArticles
+    : (app._preFilterData || app.filteredData || [])
+        .map(r => String(r['Артикул'] || '').trim())
+        .filter(Boolean);
 
   panelNow.style.display = 'block';
 

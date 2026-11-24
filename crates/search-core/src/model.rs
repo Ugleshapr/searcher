@@ -26,3 +26,10 @@ pub struct SearchResult {
     pub quantity: u32,
     pub score: i32,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchResponse {
+    pub total: usize,
+    pub results: Vec<SearchResult>,
+    pub all_articles: Vec<String>,
+}

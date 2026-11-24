@@ -5,7 +5,7 @@ export class TableRenderer {
     this.normalizer = normalizer;
   }
 
-  render(results, page, pageSize, highlightTokens = []) {
+  render(results, page, pageSize, highlightTokens = [], totalCount = null) {
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
     const banner = document.getElementById('stateBanner');
@@ -28,7 +28,8 @@ export class TableRenderer {
       .join('');
 
     resultsBody.innerHTML = rowsHtml;
-    resultsCount.textContent = `Показаны: ${slice.length} из ${total}`;
+    const displayTotal = (typeof totalCount === 'number' && totalCount > 0) ? totalCount : total;
+    resultsCount.textContent = `Показаны: ${slice.length} из ${displayTotal}`;
 
     this._initializeTooltips();
 

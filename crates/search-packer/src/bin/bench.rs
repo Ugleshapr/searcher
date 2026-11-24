@@ -31,8 +31,8 @@ fn main() {
         let t0 = Instant::now();
         let results = engine.search(q, 10);
         let elapsed = t0.elapsed();
-        println!("Запрос: {:<25} | Время: {:<8?} | Найдено: {}", q, elapsed, results.len());
-        if let Some(first) = results.first() {
+        println!("Запрос: {:<25} | Время: {:<8?} | Найдено: {}", q, elapsed, results.results.len());
+        if let Some(first) = results.results.first() {
             println!("   -> Топ-1: [{}] {} (score: {})", first.article, first.name, first.score);
         }
     }

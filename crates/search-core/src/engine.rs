@@ -1,4 +1,4 @@
-use crate::model::{Item, SearchResult};
+use crate::model::{Item, SearchResult, SearchResponse};
 use crate::normalizer::{apply_uz_aliases, normalize_for_fuzzy_search};
 use once_cell::sync::Lazy;
 use fancy_regex::Regex;
@@ -48,10 +48,10 @@ impl SearchEngine {
         Self { items }
     }
 
-    pub fn search(&self, query: &str, limit: usize) -> Vec<SearchResult> {
+    pub fn search(&self, query: &str, limit: usize) -> SearchResponse {
         let q_trimmed = query.trim();
         if q_trimmed.is_empty() {
-            return Vec::new();
+            return SearchResponse { total: 0, results: Vec::new(), all_articles: Vec::new() };
         }
 
         let q_aliased = apply_uz_aliases(q_trimmed);
@@ -73,7 +73,7 @@ impl SearchEngine {
             .collect();
 
         if parts.is_empty() {
-            return Vec::new();
+            return SearchResponse { total: 0, results: Vec::new(), all_articles: Vec::new() };
         }
 
         let has_letters = q_trimmed.chars().any(|c| c.is_alphabetic());
@@ -84,7 +84,10 @@ impl SearchEngine {
         // Проверка режима "список артикулов"
         let is_multi_art = parts.len() >= 2 && parts.iter().all(|p| p.len() == 6 && p.chars().all(|c| c.is_ascii_digit()));
         if is_multi_art {
-            return self.search_multiple_articles(&parts);
+            let results = self.search_multiple_articles(&parts);
+            let total = results.len();
+            let all_articles = results.iter().map(|r| r.article.clone()).collect();
+            return SearchResponse { total, results, all_articles };
         }
 
         let is_fuse_query = parts.iter().any(|p| {
@@ -235,8 +238,10 @@ impl SearchEngine {
         });
 
         // 4. Формирование результатов
-        let end_idx = if limit == 0 { candidates.len() } else { limit.min(candidates.len()) };
-        candidates[..end_idx]
+        let total = candidates.len();
+        let all_articles: Vec<String> = candidates.iter().map(|(it, _)| it.article.clone()).collect();
+        let end_idx = if limit == 0 { total } else { limit.min(total) };
+        let results = candidates[..end_idx]
             .iter()
             .map(|(it, sc)| SearchResult {
                 name: it.name.clone(),
@@ -247,7 +252,13 @@ impl SearchEngine {
                 quantity: it.quantity,
                 score: *sc,
             })
-            .collect()
+            .collect();
+
+        SearchResponse {
+            total,
+            results,
+            all_articles,
+        }
     }
 
     fn search_multiple_articles(&self, parts: &[String]) -> Vec<SearchResult> {

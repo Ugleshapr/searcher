@@ -55,8 +55,13 @@ class PriceListSearchApp {
       console.log(`[WASM] Движок инициализирован за ${data.loadTime} мс. Позиций: ${data.count}`);
       if (Array.isArray(data.allItems)) {
         this.data = data.allItems.map(it => this._preprocessItem(it));
+        this.dataByArticle = new Map();
+        for (const item of this.data) {
+          this.dataByArticle.set(item['Артикул'], item);
+        }
         if (window.App) {
           window.App.data = this.data;
+          window.App.dataByArticle = this.dataByArticle;
         }
         if (window.Accessories && typeof window.Accessories.resetIndex === 'function') {
           window.Accessories.resetIndex();
@@ -162,9 +167,15 @@ class PriceListSearchApp {
 
     if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
-      const res = await this._callWorker('SEARCH', { query, limit: 0 }); // 0 = полный поиск без ограничений
+      const res = await this._callWorker('SEARCH', { query, limit: 100 });
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
-      this.filteredData = (res.results || []).map(it => this._preprocessItem(it));
+      this.totalMatches = res.total || (res.results ? res.results.length : 0);
+      this.matchingArticles = res.allArticles || [];
+      if (window.App) {
+        window.App.totalMatches = this.totalMatches;
+        window.App.matchingArticles = this.matchingArticles;
+      }
+      this.filteredData = (res.results || []).map(it => (this.dataByArticle && this.dataByArticle.get(it.article)) || this._preprocessItem(it));
     } else {
       const relaxed =
         window.AppSettings && window.AppSettings.relaxedSearch === true;
@@ -271,7 +282,8 @@ class PriceListSearchApp {
       this.filteredData,
       this._page,
       this._pageSize,
-      highlightTokens
+      highlightTokens,
+      this.totalMatches
     );
 
     this._renderShowMore(hasMore);

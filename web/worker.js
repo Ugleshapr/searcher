@@ -29,16 +29,23 @@ self.onmessage = async (e) => {
       self.postMessage({ type: 'SEARCH_RES', results: [], id, error: 'WASM не инициализирован' });
       return;
     }
-    const { query, limit = 0 } = payload;
+    const { query, limit = 100 } = payload;
     const t0 = performance.now();
     try {
       const jsonStr = search_json(query, limit);
-      const results = JSON.parse(jsonStr);
+      const resp = JSON.parse(jsonStr);
       const searchTime = (performance.now() - t0).toFixed(2);
-      self.postMessage({ type: 'SEARCH_RES', results, searchTime, id });
+      self.postMessage({
+        type: 'SEARCH_RES',
+        results: resp.results || [],
+        total: resp.total || 0,
+        allArticles: resp.all_articles || [],
+        searchTime,
+        id
+      });
     } catch (err) {
       console.error('[WASM SEARCH ERROR]', err);
-      self.postMessage({ type: 'SEARCH_RES', results: [], id, error: err.message });
+      self.postMessage({ type: 'SEARCH_RES', results: [], total: 0, allArticles: [], id, error: err.message });
     }
   } else if (type === 'GET_ALL_ITEMS') {
     try {
