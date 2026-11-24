@@ -130,19 +130,19 @@
     loadStoredRelaxed(appSettings);
     loadStoredOpresh(appSettings);
 
-    const btn = $('settingsBtn');
-    const menu = $('settingsMenu');
-    if (!btn || !menu) return;
-
-    const themeSelect = $('themeSelect');
-    if (themeSelect) {
-      themeSelect.value = currentTheme;
-      themeSelect.addEventListener('change', () => {
-        const val = themeSelect.value;
-        applyTheme(val);
-        localStorage.setItem(THEME_KEY, val);
+    const themeToggleBtn = $('themeToggleBtn');
+    if (themeToggleBtn) {
+      themeToggleBtn.title = currentTheme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему';
+      themeToggleBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
+        themeToggleBtn.title = next === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему';
       });
     }
+
+    const btn = $('settingsBtn');
 
     const input = $('accentColorInput');
     const applyBtn = $('accentColorApply');
