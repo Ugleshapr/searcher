@@ -3,7 +3,7 @@ name: Build base.csv
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "0 5 * * *"  # ежедневно в 08:00 MSK
+    - cron: "25 3 * * *"  # ежедневно в 06:25 MSK (03:25 UTC) — до очередей и рабочего дня
 
 permissions:
   contents: write
