@@ -64,3 +64,14 @@ pub fn get_all_items_json() -> String {
         "{\"total\":0,\"results\":[],\"all_articles\":[]}".to_string()
     }
 }
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+pub fn search_articles_json(query: &str) -> String {
+    let g = GLOBAL_ENGINE.lock().unwrap();
+    if let Some(ref engine) = *g {
+        let resp = engine.search(query, 0);
+        serde_json::to_string(&resp.all_articles).unwrap_or_else(|_| "[]".to_string())
+    } else {
+        "[]".to_string()
+    }
+}

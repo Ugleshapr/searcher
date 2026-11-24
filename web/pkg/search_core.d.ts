@@ -9,6 +9,8 @@ export function init_engine_from_bincode(bytes: Uint8Array | number[]): number;
 
 export function init_engine_from_brotli(compressed_bytes: Uint8Array | number[]): number;
 
+export function search_articles_json(query: string): string;
+
 export function search_json(query: string, limit: number): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -19,6 +21,7 @@ export interface InitOutput {
     readonly get_total_count: () => number;
     readonly init_engine_from_bincode: (a: number, b: number) => [number, number, number];
     readonly init_engine_from_brotli: (a: number, b: number) => [number, number, number];
+    readonly search_articles_json: (a: number, b: number) => [number, number];
     readonly search_json: (a: number, b: number, c: number) => [number, number];
     readonly BrotliDecoderCreateInstance: (a: number, b: number, c: number) => number;
     readonly BrotliDecoderDecompress: (a: number, b: number, c: number, d: number) => number;

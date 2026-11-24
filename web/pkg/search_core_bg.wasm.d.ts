@@ -5,6 +5,7 @@ export const get_all_items_json: () => [number, number];
 export const get_total_count: () => number;
 export const init_engine_from_bincode: (a: number, b: number) => [number, number, number];
 export const init_engine_from_brotli: (a: number, b: number) => [number, number, number];
+export const search_articles_json: (a: number, b: number) => [number, number];
 export const search_json: (a: number, b: number, c: number) => [number, number];
 export const BrotliDecoderCreateInstance: (a: number, b: number, c: number) => number;
 export const BrotliDecoderDecompress: (a: number, b: number, c: number, d: number) => number;

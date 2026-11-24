@@ -167,15 +167,21 @@ class PriceListSearchApp {
 
     if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
-      const res = await this._callWorker('SEARCH', { query, limit: 100 });
+      const res = await this._callWorker('SEARCH', { query });
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
-      this.totalMatches = res.total || (res.results ? res.results.length : 0);
-      this.matchingArticles = res.allArticles || [];
+      const articles = res.articles || [];
+      const dbMap = this.dataByArticle;
+      if (dbMap) {
+        this.filteredData = articles.map(art => dbMap.get(art)).filter(Boolean);
+      } else {
+        this.filteredData = articles.map(art => ({ 'Артикул': art }));
+      }
+      this.totalMatches = this.filteredData.length;
+      this.matchingArticles = articles;
       if (window.App) {
         window.App.totalMatches = this.totalMatches;
         window.App.matchingArticles = this.matchingArticles;
       }
-      this.filteredData = (res.results || []).map(it => (this.dataByArticle && this.dataByArticle.get(it.article)) || this._preprocessItem(it));
     } else {
       const relaxed =
         window.AppSettings && window.AppSettings.relaxedSearch === true;
