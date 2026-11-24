@@ -143,6 +143,8 @@
     }
 
     const btn = $('settingsBtn');
+    const menu = $('settingsMenu');
+    if (!btn || !menu) return;
 
     const input = $('accentColorInput');
     const applyBtn = $('accentColorApply');

@@ -2704,3 +2704,118 @@ html[data-theme="dark"] .theme-icon--moon {
   border-color: var(--color-primary, #58A366) !important;
   box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb, 88, 163, 102), 0.25) !important;
 }
+
+
+/* ===================================================================
+   Dark Theme: COPY Switch & Filter Panel (Nothing OS Tactile UI)
+   =================================================================== */
+
+/* Тумблер COPY в тёмной теме */
+[data-theme="dark"] .copy-switch::before {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+[data-theme="dark"] #copyModeSwitch:checked + .copy-switch::before {
+  background: rgba(var(--color-primary-rgb, 88, 163, 102), 0.35) !important;
+  border-color: var(--color-primary, #58A366) !important;
+}
+
+[data-theme="dark"] .copy-switch .copy-knob {
+  background: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="dark"] #copyModeSwitch:checked + .copy-switch .copy-knob {
+  background: var(--color-primary, #58A366) !important;
+  box-shadow: 0 0 10px var(--color-primary, #58A366) !important;
+}
+
+/* Панель фильтров (#filterPanel) */
+[data-theme="dark"] #filterPanel {
+  background: rgba(20, 22, 26, 0.88) !important;
+  backdrop-filter: blur(24px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+  border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] #filterPanel .fp-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .fp-search input[type="search"],
+[data-theme="dark"] #filterPanel input[type="search"] {
+  background: rgba(14, 16, 20, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .fp-search input[type="search"]::placeholder {
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+[data-theme="dark"] #filterPanel .btn,
+[data-theme="dark"] .fp-mode-btn {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] #filterPanel .btn:hover,
+[data-theme="dark"] .fp-mode-btn:hover {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .fp-clear-btn {
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+[data-theme="dark"] .fp-group {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 10px;
+}
+
+[data-theme="dark"] .fp-group__title {
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+[data-theme="dark"] .fp-param__name {
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-size: 13px;
+}
+
+/* Кнопки-пилюли в фильтрах (Nothing OS tactile pills) */
+[data-theme="dark"] .fp-pill {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #f1f5f9 !important;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+[data-theme="dark"] .fp-pill:hover,
+[data-theme="dark"] .fp-pill:focus {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .fp-pill.is-active {
+  background: rgba(var(--color-primary-rgb, 88, 163, 102), 0.28) !important;
+  border-color: var(--color-primary, #58A366) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(var(--color-primary-rgb, 88, 163, 102), 0.4) !important;
+}
+
+[data-theme="dark"] .fp-pill.is-disabled {
+  opacity: 0.3 !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+}
