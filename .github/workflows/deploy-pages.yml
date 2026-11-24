@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - rust-wasm
   # Этот триггер гарантирует пересборку, если внешний скрипт обновил данные в корне
   repository_dispatch:
     types: [webhook_update]
@@ -32,26 +33,40 @@ jobs:
           ref: main
           path: workspace
 
-      # 2) Выкачиваем ветку dev для подпапки
+      # 2) Выкачиваем ветку dev для подпапки dev
       - name: Checkout dev (Development Branch)
         uses: actions/checkout@v4
         with:
           ref: dev
           path: dev-src
 
-      # 3) Собираем бутерброд: копируем dev в workspace/dev
+      # 3) Выкачиваем ветку rust-wasm для подпапки wasm
+      - name: Checkout rust-wasm (WebAssembly Branch)
+        uses: actions/checkout@v4
+        with:
+          ref: rust-wasm
+          path: wasm-src
+
+      # 4) Собираем бутерброд: копируем dev в workspace/dev
       - name: Prepare dev folder
         run: |
           mkdir -p workspace/dev
           rsync -a --delete dev-src/ workspace/dev/
 
-      # 4) Инжектим хэш KEAZ в оба конфига
+      # 5) Собираем бутерброд: копируем web-папку rust-wasm в workspace/wasm
+      - name: Prepare wasm folder
+        run: |
+          mkdir -p workspace/wasm
+          rsync -a --delete wasm-src/web/ workspace/wasm/
+
+      # 6) Инжектим хэш KEAZ в конфиги
       - name: Inject API Keys
         env:
           KEAZ_HASH: ${{ secrets.KEAZ_API_HASH }}
         run: |
           PROD_CONFIG="workspace/src/modules/utils/config.js"
           DEV_CONFIG="workspace/dev/src/modules/utils/config.js"
+          WASM_CONFIG="workspace/wasm/src/modules/utils/config.js"
 
           # Замена для продакшена
           if [ -f "$PROD_CONFIG" ]; then
@@ -67,6 +82,14 @@ jobs:
             echo "SUCCESS: Key injected into Dev config"
           else
             echo "WARNING: Dev config not found!"
+          fi
+
+          # Замена для wasm
+          if [ -f "$WASM_CONFIG" ]; then
+            sed -i "s|__API_KEY_PLACEHOLDER__|$KEAZ_HASH|g" "$WASM_CONFIG"
+            echo "SUCCESS: Key injected into WASM config"
+          else
+            echo "WARNING: WASM config not found!"
           fi
 
       # 5) Загружаем итоговый артефакт (содержит обновленный CSV, весь прод и папку /dev)
