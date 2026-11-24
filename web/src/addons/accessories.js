@@ -10,9 +10,24 @@
     _loadingPromise: null,
 
     async _ensureLoaded() {
+      const base = getBaseData();
+      if (!this._baseIndex || (base.length > 0 && this._baseIndex.size !== base.length)) {
+        const baseIndex = new Map();
+        for (const row of base) {
+          const sku = (row['Артикул'] || '').trim();
+          if (!sku) continue;
+          baseIndex.set(sku, row);
+        }
+        this._baseIndex = baseIndex;
+      }
+
       if (this._loadingPromise) return this._loadingPromise;
       this._loadingPromise = this._loadAll();
       return this._loadingPromise;
+    },
+
+    resetIndex() {
+      this._baseIndex = null;
     },
 
     async _loadAll() {

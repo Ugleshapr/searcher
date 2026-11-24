@@ -53,6 +53,15 @@ class PriceListSearchApp {
     if (type === 'INIT_OK') {
       this._wasmReady = true;
       console.log(`[WASM] Движок инициализирован за ${data.loadTime} мс. Позиций: ${data.count}`);
+      if (Array.isArray(data.allItems)) {
+        this.data = data.allItems.map(it => this._preprocessItem(it));
+        if (window.App) {
+          window.App.data = this.data;
+        }
+        if (window.Accessories && typeof window.Accessories.resetIndex === 'function') {
+          window.Accessories.resetIndex();
+        }
+      }
     }
     const cb = this._workerCallbacks.get(id);
     if (cb) {

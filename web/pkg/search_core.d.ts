@@ -1,6 +1,8 @@
 /* tslint:disable */
 /* eslint-disable */
 
+export function get_all_items_json(): string;
+
 export function get_total_count(): number;
 
 export function init_engine_from_bincode(bytes: Uint8Array | number[]): number;
@@ -13,6 +15,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly get_all_items_json: () => [number, number];
     readonly get_total_count: () => number;
     readonly init_engine_from_bincode: (a: number, b: number) => [number, number, number];
     readonly init_engine_from_brotli: (a: number, b: number) => [number, number, number];
@@ -38,8 +41,8 @@ export interface InitOutput {
     readonly BrotliDecoderTakeOutput: (a: number, b: number) => number;
     readonly BrotliDecoderVersion: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
-    readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_start: () => void;

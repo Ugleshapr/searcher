@@ -54,3 +54,13 @@ pub fn get_total_count() -> usize {
         0
     }
 }
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+pub fn get_all_items_json() -> String {
+    let g = GLOBAL_ENGINE.lock().unwrap();
+    if let Some(ref engine) = *g {
+        serde_json::to_string(&engine.items).unwrap_or_else(|_| "[]".to_string())
+    } else {
+        "[]".to_string()
+    }
+}
