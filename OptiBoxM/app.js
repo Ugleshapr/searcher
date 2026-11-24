@@ -19,6 +19,20 @@ async function init() {
   if (sEl) sEl.innerText = basicSideRailsQty;
   if (cEl) cEl.innerText = basicCrossRailsQty;
 
+  const chkOpresh = document.getElementById('chk-opresh');
+  if (chkOpresh) {
+    if (localStorage.getItem('plOpreshMode') === '1') {
+      chkOpresh.checked = true;
+    }
+    chkOpresh.addEventListener('change', () => {
+      if (chkOpresh.checked) {
+        localStorage.setItem('plOpreshMode', '1');
+      } else {
+        localStorage.removeItem('plOpreshMode');
+      }
+    });
+  }
+
   updateDimensions();
   render();
 }
