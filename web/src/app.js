@@ -169,12 +169,16 @@ class PriceListSearchApp {
       const currentReqId = ++this._searchReqId;
       const res = await this._callWorker('SEARCH', { query });
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
-      const articles = res.articles || [];
+      const articles = res.articles || res.allArticles || [];
       const dbMap = this.dataByArticle;
-      if (dbMap) {
+      if (dbMap && dbMap.size > 0) {
         this.filteredData = articles.map(art => dbMap.get(art)).filter(Boolean);
+      } else if (Array.isArray(this.data) && this.data.length > 0) {
+        const tempMap = new Map(this.data.map(it => [it['Артикул'], it]));
+        this.dataByArticle = tempMap;
+        this.filteredData = articles.map(art => tempMap.get(art)).filter(Boolean);
       } else {
-        this.filteredData = articles.map(art => ({ 'Артикул': art }));
+        this.filteredData = articles.map(art => ({ 'Артикул': art, 'Наименование': 'Загрузка...' }));
       }
       this.totalMatches = this.filteredData.length;
       this.matchingArticles = articles;
@@ -289,7 +293,7 @@ class PriceListSearchApp {
       this._page,
       this._pageSize,
       highlightTokens,
-      this.totalMatches
+      this.filteredData.length
     );
 
     this._renderShowMore(hasMore);

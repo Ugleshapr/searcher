@@ -26,26 +26,25 @@ self.onmessage = async (e) => {
     }
   } else if (type === 'SEARCH') {
     if (!wasmInitialized) {
-      self.postMessage({ type: 'SEARCH_RES', results: [], id, error: 'WASM не инициализирован' });
+      self.postMessage({ type: 'SEARCH_RES', articles: [], total: 0, id, error: 'WASM не инициализирован' });
       return;
     }
-    const { query, limit = 100 } = payload;
+    const { query } = payload;
     const t0 = performance.now();
     try {
-      const jsonStr = search_json(query, limit);
-      const resp = JSON.parse(jsonStr);
+      const jsonStr = search_articles_json(query);
+      const articles = JSON.parse(jsonStr);
       const searchTime = (performance.now() - t0).toFixed(2);
       self.postMessage({
         type: 'SEARCH_RES',
-        results: resp.results || [],
-        total: resp.total || 0,
-        allArticles: resp.all_articles || [],
+        articles: articles || [],
+        total: articles ? articles.length : 0,
         searchTime,
         id
       });
     } catch (err) {
       console.error('[WASM SEARCH ERROR]', err);
-      self.postMessage({ type: 'SEARCH_RES', results: [], total: 0, allArticles: [], id, error: err.message });
+      self.postMessage({ type: 'SEARCH_RES', articles: [], total: 0, id, error: err.message });
     }
   } else if (type === 'GET_ALL_ITEMS') {
     try {
