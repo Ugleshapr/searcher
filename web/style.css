@@ -2217,14 +2217,16 @@ body.rzd-mode .form-control:focus {
   align-items: center;
   justify-content: center;
   min-width: 60px;
+  max-width: 180px;
   width: auto;
   min-height: 24px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   background: var(--color-gray-200);
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.2;
   white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--color-text-secondary);
   text-align: center;
   border: 1px solid transparent;
@@ -2965,7 +2967,35 @@ html[data-theme="dark"] .theme-icon--moon {
 }
 
 [data-theme="dark"] .price-menu-placeholder {
-  color: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  max-width: 180px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .price-menu-placeholder.is-success {
+  background: rgba(88, 163, 102, 0.16) !important;
+  color: #8cd699 !important;
+  border-color: rgba(88, 163, 102, 0.4) !important;
+  box-shadow: 0 0 8px rgba(88, 163, 102, 0.25) !important;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .price-menu-placeholder.is-warning {
+  background: rgba(255, 208, 39, 0.14) !important;
+  color: #ffd027 !important;
+  border-color: rgba(255, 208, 39, 0.4) !important;
+  box-shadow: 0 0 8px rgba(255, 208, 39, 0.2) !important;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .price-menu-placeholder.is-error {
+  background: rgba(255, 84, 89, 0.14) !important;
+  color: #ff8589 !important;
+  border-color: rgba(255, 84, 89, 0.35) !important;
+  cursor: default;
 }
 
 [data-theme="dark"] .price-menu-btn,

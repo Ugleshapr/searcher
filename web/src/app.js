@@ -179,7 +179,32 @@ class PriceListSearchApp {
     this.displayResults();
   }
 
+  dismissAllPopups() {
+    // 1. Очищаем оторванные порталы dropdown (Документы, Аксессуары, Меню расчета цен)
+    document.querySelectorAll('.dropdown-menu[data-portal="1"]').forEach(m => m.remove());
+
+    // 2. Закрываем активные Bootstrap dropdown
+    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+    document.querySelectorAll('[data-bs-toggle="dropdown"][aria-expanded="true"]').forEach(b => {
+      b.setAttribute('aria-expanded', 'false');
+      b.classList.remove('show');
+    });
+
+    // 3. Закрываем и удаляем поповеры характеристик
+    document.querySelectorAll('.popover').forEach(p => p.remove());
+    if (window.bootstrap?.Popover) {
+      document.querySelectorAll('[data-bs-toggle="popover"]').forEach(btn => {
+        const inst = window.bootstrap.Popover.getInstance(btn);
+        if (inst) inst.hide();
+      });
+    }
+
+    // 4. Удаляем зависшие тултипы
+    document.querySelectorAll('.tooltip').forEach(t => t.remove());
+  }
+
   displayResults() {
+    this.dismissAllPopups();
     const resultsBody = document.getElementById('resultsBody');
     const resultsCount = document.getElementById('resultsCount');
     const rawQuery = (
@@ -434,6 +459,16 @@ class PriceListSearchApp {
     });
 
     document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const hasOpenPopup = document.querySelector(
+          '.dropdown-menu.show, .dropdown-menu[data-portal="1"], .popover'
+        );
+        if (hasOpenPopup) {
+          e.preventDefault();
+          this.dismissAllPopups();
+          return;
+        }
+      }
       if (e.key !== 'Escape') return;
       if (document.querySelector('.modal.show')) return;
       if (
@@ -467,6 +502,19 @@ class PriceListSearchApp {
 
       e.preventDefault();
       doClear();
+    });
+
+    // Автоматическое закрытие всех всплывашек при клике мимо («в молоко»)
+    document.addEventListener('pointerdown', e => {
+      const inPopup = e.target.closest(
+        '.dropdown-menu, .popover, .docs-modal, .price-menu'
+      );
+      const inTrigger = e.target.closest(
+        '.docs-btn, .price-tag, .feat-info, [data-bs-toggle="dropdown"], [data-bs-toggle="popover"]'
+      );
+      if (!inPopup && !inTrigger) {
+        this.dismissAllPopups();
+      }
     });
   }
 
@@ -633,53 +681,87 @@ class PriceListSearchApp {
               let copyText = '';
 
               if (Array.isArray(periods) && periods.length > 0) {
-                if (periods.length === 1) {
-                  const days = periods[0].days;
-                  const daysWord = pluralRu(days, [
-                    'раб. день',
-                    'раб. дня',
-                    'раб. дней',
-                  ]);
-                  placeholder.textContent = `${days} ${daysWord}`;
-                  placeholder.classList.add('is-success');
-                  copyText = placeholder.textContent;
-                } else {
-                  const maxDays = Math.max(...periods.map(p => p.days));
-                  const daysWord = pluralRu(maxDays, [
-                    'раб. день',
-                    'раб. дня',
-                    'раб. дней',
-                  ]);
-                  placeholder.textContent = `${maxDays} ${daysWord}`;
+                const parseDays = val => {
+                  if (typeof val === 'number') return val;
+                  if (typeof val === 'string') {
+                    const m = val.match(/\d+/);
+                    return m ? parseInt(m[0], 10) : null;
+                  }
+                  return null;
+                };
+
+                const firstDays = parseDays(periods[0].days);
+                const isTextNotice = typeof periods[0].days === 'string' && firstDays === null;
+
+                if (isTextNotice) {
+                  // Ответ с длинным текстом (например, "Обратитесь в управление обслуживания покупателей")
+                  const rawMsg = String(periods[0].days).trim();
+                  placeholder.textContent = 'Уточняйте';
                   placeholder.classList.add('is-warning');
-
-                  const lines = periods.map(p => {
-                    const qWord = pluralRu(p.quantity, [
-                      'штука',
-                      'штуки',
-                      'штук',
-                    ]);
-                    const dWord = pluralRu(p.days, [
-                      'раб. день',
-                      'раб. дня',
-                      'раб. дней',
-                    ]);
-                    return `${p.quantity} ${qWord} - ${p.days} ${dWord}`;
-                  });
-
-                  const copyTextFormatted = lines.join('\n');
-                  const tooltipHtml = lines.join('<br>');
-
-                  placeholder.setAttribute('title', tooltipHtml);
+                  placeholder.setAttribute('title', rawMsg);
                   if (window.bootstrap?.Tooltip) {
                     new window.bootstrap.Tooltip(placeholder, {
                       placement: 'top',
                       trigger: 'hover',
                       container: 'body',
-                      html: true,
                     });
                   }
-                  copyText = copyTextFormatted;
+                  copyText = rawMsg;
+                } else if (periods.length === 1 && firstDays !== null) {
+                  const daysWord = pluralRu(firstDays, [
+                    'раб. день',
+                    'раб. дня',
+                    'раб. дней',
+                  ]);
+                  placeholder.textContent = `${firstDays} ${daysWord}`;
+                  placeholder.classList.add('is-success');
+                  copyText = placeholder.textContent;
+                } else {
+                  const numericPeriods = periods
+                    .map(p => ({ quantity: p.quantity, days: parseDays(p.days), rawDays: p.days }))
+                    .filter(p => p.days !== null);
+
+                  if (numericPeriods.length > 0) {
+                    const maxDays = Math.max(...numericPeriods.map(p => p.days));
+                    const daysWord = pluralRu(maxDays, [
+                      'раб. день',
+                      'раб. дня',
+                      'раб. дней',
+                    ]);
+                    placeholder.textContent = `${maxDays} ${daysWord}`;
+                    placeholder.classList.add('is-warning');
+
+                    const lines = periods.map(p => {
+                      const d = parseDays(p.days);
+                      if (d !== null) {
+                        const qWord = pluralRu(p.quantity, ['штука', 'штуки', 'штук']);
+                        const dWord = pluralRu(d, ['раб. день', 'раб. дня', 'раб. дней']);
+                        return `${p.quantity} ${qWord} — ${d} ${dWord}`;
+                      } else {
+                        return `${p.quantity} шт — ${p.days}`;
+                      }
+                    });
+
+                    const copyTextFormatted = lines.join('\n');
+                    const tooltipHtml = lines.join('<br>');
+
+                    placeholder.setAttribute('title', tooltipHtml);
+                    if (window.bootstrap?.Tooltip) {
+                      new window.bootstrap.Tooltip(placeholder, {
+                        placement: 'top',
+                        trigger: 'hover',
+                        container: 'body',
+                        html: true,
+                      });
+                    }
+                    copyText = copyTextFormatted;
+                  } else {
+                    const rawMsg = String(periods[0].days || 'Уточняйте').trim();
+                    placeholder.textContent = 'Уточняйте';
+                    placeholder.classList.add('is-warning');
+                    placeholder.setAttribute('title', rawMsg);
+                    copyText = rawMsg;
+                  }
                 }
               } else {
                 placeholder.textContent = 'Нет срока';
