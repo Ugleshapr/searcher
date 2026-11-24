@@ -148,6 +148,23 @@ export class SearchEngine {
         if (pre.test(nd)) it.__score += 800;
       }
 
+      // Бонус за сохранение порядка токенов в запросе
+      const orderScore = this.rankRules?.bonuses?.tokenOrderPairScore ?? 0;
+      if (orderScore > 0 && parts.length >= 2) {
+        const hay = permitArticle ? ad : nd;
+        for (let i = 0; i < parts.length - 1; i++) {
+          const p1 = parts[i];
+          const p2 = parts[i + 1];
+          const pos1 = hay.indexOf(p1);
+          if (pos1 !== -1) {
+            const pos2 = hay.indexOf(p2, pos1 + p1.length);
+            if (pos2 !== -1) {
+              it.__score += orderScore;
+            }
+          }
+        }
+      }
+
       // Применение правил ранжирования
       this._applyRankRules(it, { nd, raw: String(it['Наименование'] || ''), docs: it.__docs });
             // Близость номинала (320A / 315A)

@@ -9,6 +9,9 @@ export const RANK_RULES = {
 
     // бонус за пару NА-N*10 (10А-100, 20А-200, 200А-2000, 630А-6300 и т.д.)
     ampIcuPairScore: 250,
+
+    // бонус за соседнюю пару токенов, идущих в правильном порядке
+    tokenOrderPairScore: 150,
     
     substrBonuses: [
       { tokens: ['340010'], score: +100 },
