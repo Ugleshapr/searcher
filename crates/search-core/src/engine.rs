@@ -235,7 +235,7 @@ impl SearchEngine {
         });
 
         // 4. Формирование результатов
-        let end_idx = limit.min(candidates.len());
+        let end_idx = if limit == 0 { candidates.len() } else { limit.min(candidates.len()) };
         candidates[..end_idx]
             .iter()
             .map(|(it, sc)| SearchResult {

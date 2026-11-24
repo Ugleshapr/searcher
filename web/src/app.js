@@ -162,7 +162,7 @@ class PriceListSearchApp {
 
     if (this._wasmReady) {
       const currentReqId = ++this._searchReqId;
-      const res = await this._callWorker('SEARCH', { query, limit: 100 });
+      const res = await this._callWorker('SEARCH', { query, limit: 0 }); // 0 = полный поиск без ограничений
       if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
       this.filteredData = (res.results || []).map(it => this._preprocessItem(it));
     } else {

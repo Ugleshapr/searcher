@@ -29,7 +29,7 @@ self.onmessage = async (e) => {
       self.postMessage({ type: 'SEARCH_RES', results: [], id, error: 'WASM не инициализирован' });
       return;
     }
-    const { query, limit = 50 } = payload;
+    const { query, limit = 0 } = payload;
     const t0 = performance.now();
     try {
       const jsonStr = search_json(query, limit);
