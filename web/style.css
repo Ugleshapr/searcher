@@ -2493,13 +2493,9 @@ body.catalog-mode #copyPanel {
   color: var(--color-text-secondary) !important;
 }
 
-[data-theme="dark"] .copy-knob {
-  background: #ffffff;
-}
-
 [data-theme="dark"] .copy-switch {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 /* Свежий аппаратный бейдж статуса базы */
