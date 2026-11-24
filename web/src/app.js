@@ -1,0 +1,977 @@
+import { Normalizer } from './modules/core/Normalizer.js';
+import { DataLoader } from './modules/core/DataLoader.js';
+import { SearchEngine } from './modules/core/SearchEngine.js';
+import { TableRenderer } from './modules/ui/TableRenderer.js';
+import { WhatsNew } from './modules/ui/WhatsNew.js';
+import { AvailabilityService } from './addons/AvailabilityService.js';
+import { debounce, pluralRu } from './modules/utils/helpers.js';
+import { DbLoader } from './modules/utils/db_loader.js';
+import {
+  RANK_RULES,
+  PAGE_SIZE,
+  APP_VERSION,
+} from './modules/utils/constants.js';
+
+class PriceListSearchApp {
+  constructor() {
+    // Инициализация модулей
+    this.normalizer = new Normalizer();
+    this.dataLoader = new DataLoader(this.normalizer);
+    this.searchEngine = new SearchEngine(this.normalizer, RANK_RULES);
+    this.tableRenderer = new TableRenderer(this.normalizer);
+    this.availabilityService = new AvailabilityService();
+
+    // Состояние
+    this.data = [];
+    this.filteredData = [];
+    this._page = 1;
+    this._pageSize = PAGE_SIZE;
+    this._preFilterData = []; // для фильтров
+    this._wasmReady = false;
+    this._searchReqId = 0;
+    this._workerReqId = 0;
+    this._workerCallbacks = new Map();
+
+    // Инициализируем Web Worker для Rust WASM поиска
+    this.wasmWorker = new Worker(new URL('../worker.js', import.meta.url), { type: 'module' });
+    this.wasmWorker.onmessage = (e) => this._onWorkerMessage(e.data);
+
+    this.initializeEventListeners();
+    this.loadDefaultFile();
+  }
+
+  _callWorker(type, payload = {}) {
+    return new Promise((resolve) => {
+      const id = ++this._workerReqId;
+      this._workerCallbacks.set(id, resolve);
+      this.wasmWorker.postMessage({ type, payload, id });
+    });
+  }
+
+  _onWorkerMessage(data) {
+    const { type, id } = data;
+    if (type === 'INIT_OK') {
+      this._wasmReady = true;
+      console.log(`[WASM] Движок инициализирован за ${data.loadTime} мс. Позиций: ${data.count}`);
+    }
+    const cb = this._workerCallbacks.get(id);
+    if (cb) {
+      this._workerCallbacks.delete(id);
+      cb(data);
+    }
+  }
+
+  _preprocessItem(item) {
+    return {
+      'Наименование': item.name,
+      'Артикул': item.article,
+      'Цена': item.price,
+      'Документы': item.docs,
+      'Характеристики': item.features,
+      'Количество': String(item.quantity || 0),
+      __name: item.name_norm || this.normalizer.normalizeForFuzzySearch(item.name || ''),
+      __article: item.article_norm || this.normalizer.normalizeForFuzzySearch(item.article || ''),
+      __name_delim: item.name_delim || this.normalizer.canonKeepDelims(item.name || ''),
+      __article_delim: item.article_delim || this.normalizer.canonKeepDelims(item.article || ''),
+      __price: this.dataLoader._formatPrice(item.price),
+      __docs: this.dataLoader._parseDocs(item.docs),
+      __featHtml: this.dataLoader._featuresToHtml(item.features),
+      __qty: item.quantity || 0,
+      __qtyHint: null
+    };
+  }
+
+  async loadDefaultFile() {
+    this._setGlobalLoader(true);
+    try {
+      this.dbLoader = new DbLoader(this.wasmWorker, (status) => {
+        this._handleDbStatus(status);
+      });
+      await this.dbLoader.start();
+
+      this._updateInfoTooltip();
+      this.showSearchSection();
+      this._fitResultsHeight();
+
+      // Проверка на reload
+      const nav =
+        performance.getEntriesByType &&
+        performance.getEntriesByType('navigation')[0];
+      const isReload = nav
+        ? nav.type === 'reload'
+        : performance.navigation && performance.navigation.type === 1;
+
+      if (isReload) {
+        const input = document.getElementById('searchInput');
+        if (input) input.value = '';
+        this.filteredData = [];
+        this._page = 1;
+        this.displayResults();
+      } else {
+        document.dispatchEvent(new CustomEvent('results:rendered'));
+      }
+    } catch (e) {
+      console.error('Инициализация базы не удалась:', e);
+      this.showError(`Не удалось инициализировать базу данных\n${e.message}`);
+    } finally {
+      this._setGlobalLoader(false);
+    }
+  }
+
+  _handleDbStatus(status) {
+    const badge = document.getElementById('baseDateText');
+    if (status.status === 'ready') {
+      if (badge && status.version) {
+        badge.textContent = `База: ${status.version.date}`;
+        badge.parentElement?.setAttribute('title', `Версия базы: ${status.version.version} (сборка ${status.version.date} ${status.version.time || ''})`);
+      }
+      this.showSearchSection();
+      this._setGlobalLoader(false);
+      // Если в поле ввода уже есть текст — повторим поиск по обновленной базе
+      const query = (document.getElementById('searchInput')?.value || '').trim();
+      if (query) this.performSearch();
+    } else if (status.status === 'updating') {
+      if (badge) {
+        badge.textContent = 'Обновление базы…';
+      }
+    }
+  }
+
+  async performSearch() {
+    if (document.body.classList.contains('is-filter-mode')) return;
+
+    const query = (document.getElementById('searchInput')?.value || '').trim();
+
+    if (!query) {
+      this.filteredData = [];
+      this._preFilterData = [];
+      this._page = 1;
+      this.displayResults();
+      this.exposeGlobalAPI();
+      return;
+    }
+
+    if (this._wasmReady) {
+      const currentReqId = ++this._searchReqId;
+      const res = await this._callWorker('SEARCH', { query, limit: 100 });
+      if (currentReqId !== this._searchReqId) return; // Устаревший запрос при быстром наборе
+      this.filteredData = (res.results || []).map(it => this._preprocessItem(it));
+    } else {
+      const relaxed =
+        window.AppSettings && window.AppSettings.relaxedSearch === true;
+      this.filteredData = this.searchEngine.search(this.data, query, { relaxed });
+    }
+
+    this._preFilterData = this.filteredData.slice();
+    this._page = 1;
+    if (window.Withdrawn) {
+      await window.Withdrawn.augment(this, query);
+    }
+    this.displayResults();
+  }
+
+  displayResults() {
+    const resultsBody = document.getElementById('resultsBody');
+    const resultsCount = document.getElementById('resultsCount');
+    const rawQuery = (
+      document.getElementById('searchInput')?.value || ''
+    ).trim();
+    const total = this.filteredData.length;
+
+    // ДОБАВЬ ЭТУ СЕКЦИЮ:
+    // Обновление кнопки фильтра
+    const filterBtn = document.getElementById('filterToggle');
+    if (filterBtn) {
+      filterBtn.disabled = total === 0;
+      filterBtn.title = total === 0 ? '' : 'Фильтровать результаты';
+    }
+
+    // Если результатов нет
+    if (total === 0) {
+      resultsBody.innerHTML = '';
+
+      // ДОБАВЬ ПОКАЗ БАННЕРА "Найдено: 0 результатов"
+      const banner = document.getElementById('stateBanner');
+      const titleEl = document.getElementById('stateBannerTitle');
+      const hintEl = document.getElementById('stateBannerHint');
+
+      const isEmptyQuery = rawQuery.length === 0;
+
+      if (banner && titleEl && hintEl) {
+        if (isEmptyQuery) {
+          banner.className = 'no-results no-results--empty text-center py-4';
+          titleEl.textContent = 'Введите текст для поиска';
+          hintEl.textContent = '';
+        } else {
+          banner.className = 'no-results text-center py-4';
+          titleEl.textContent = 'По вашему запросу ничего не найдено';
+          hintEl.textContent =
+            'Попробуйте изменить условия поиска или проверьте правописание';
+        }
+        banner.style.display = 'block';
+      }
+
+      resultsCount.textContent = 'Ничего не найдено';
+      this._renderShowMore(false);
+      this._fitResultsHeight();
+      this.exposeGlobalAPI();
+      return;
+    }
+
+    // СКРОЙ БАННЕР если есть результаты
+    const banner = document.getElementById('stateBanner');
+    if (banner) {
+      banner.style.display = 'none';
+    }
+    const query = (document.getElementById('searchInput')?.value || '').trim();
+    const qAliased = this.normalizer.applyUZAliases(query);
+
+    let highlightTokens = qAliased
+      .split(/[^a-zA-Zа-яА-ЯёЁ0-9/]+/)
+      .filter(Boolean)
+      .filter(tok => this.normalizer.normalizeForFuzzySearch(tok).length >= 2)
+      .slice(0, 18)
+      .map(tok => this.normalizer.buildHomoglyphRegexToken(tok.slice(0, 64)));
+
+    const hasMore = this.tableRenderer.render(
+      this.filteredData,
+      this._page,
+      this._pageSize,
+      highlightTokens
+    );
+
+    this._renderShowMore(hasMore);
+    this._fitResultsHeight();
+
+    document.dispatchEvent(new CustomEvent('results:rendered'));
+
+    if (!document.body.classList.contains('is-filter-mode')) {
+      this._preFilterData = this.filteredData.slice();
+    }
+    this.exposeGlobalAPI();
+  }
+
+  _renderShowMore(show) {
+    const footer = document.getElementById('resultsShowMore');
+    if (!footer) return;
+
+    if (document.body.classList.contains('is-filter-mode')) show = false;
+
+    if (!show) {
+      footer.innerHTML = '';
+      return;
+    }
+
+    footer.innerHTML = `<button class="btn btn--primary" id="showMoreBtn">Показать ещё ${this._pageSize}</button>`;
+    document.getElementById('showMoreBtn').onclick = () => {
+      this._page += 1;
+      setTimeout(() => this.displayResults(), 0);
+    };
+  }
+
+  initializeEventListeners() {
+    const input = document.getElementById('searchInput');
+    const debounced = debounce(() => {
+      // Запрещаем поиск при активном фильтре
+      if (document.body.classList.contains('is-filter-mode')) return;
+      this.performSearch();
+    }, 200);
+
+    if (input) {
+      input.addEventListener('input', debounced);
+      input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') e.preventDefault();
+      });
+    }
+
+    // Остальные обработчики (копирование, очистка, resize и т.д.)
+    this._setupTableEvents();
+    this._setupClearButton();
+    this._setupResizeHandlers();
+    this._setupDropdownHandlers();
+
+    // Обработка закрытия фильтра
+    document.addEventListener('filter:closed', () => {
+      const input = document.getElementById('searchInput');
+      if (input) {
+        input.removeAttribute('disabled');
+      }
+
+      // Восстановление результатов
+      if (this._preFilterData && this._preFilterData.length > 0) {
+        this.filteredData = this._preFilterData.slice();
+        this._page = 1;
+        this.displayResults();
+      }
+    });
+
+    // Обработка открытия фильтра
+    document.addEventListener('filter:opened', () => {
+      const input = document.getElementById('searchInput');
+      if (input) {
+        input.setAttribute('disabled', 'disabled');
+      }
+
+      // Сохранение текущих результатов
+      this._preFilterData = this.filteredData.slice();
+    });
+  }
+
+  _setupTableEvents() {
+    const tbody = document.getElementById('resultsBody');
+    if (!tbody) return;
+
+    // Клик по ячейке для копирования (ЛКМ)
+    tbody.addEventListener('click', async e => {
+      const cell = e.target.closest('td.copyable');
+      if (!cell) return;
+
+      // COPY-режим трогаем как раньше
+      if (window.CopyMode && window.CopyMode.isOn && window.CopyMode.isOn()) {
+        e.preventDefault();
+        window.CopyMode.toggleFromCell(cell);
+        return;
+      }
+
+      const rawName = (cell.getAttribute('data-name') || '').trim();
+      const article = (cell.getAttribute('data-sku') || '').trim();
+
+      if (!article) return;
+
+      let tsv = '';
+      if (window.AppSettings?.opreshMode === true) {
+        tsv = article;
+      } else {
+        if (!rawName) return;
+        const addLabel = window.AppSettings?.addArtLabel === true;
+        tsv = addLabel
+          ? `${rawName}\tартикул: ${article}`
+          : `${rawName}\t${article}`;
+      }
+
+      try {
+        await navigator.clipboard.writeText(tsv);
+        const prev = cell.getAttribute('title') || '';
+        cell.setAttribute('title', 'Скопировано');
+        setTimeout(() => cell.setAttribute('title', prev), 800);
+      } catch (err) {
+        console.warn('Clipboard error:', err);
+      }
+    });
+
+    // Двойной клик по info кнопке — без изменений
+    tbody.addEventListener('dblclick', e => {
+      const btn = e.target.closest('.info-circle');
+      if (!btn) return;
+
+      const row = btn.closest('tr');
+      let art = (btn.dataset.article || '').trim();
+      if (!art && row) {
+        const artCell = row.children[1];
+        if (artCell) art = artCell.textContent.trim();
+      }
+
+      let rawName = '';
+      if (row) {
+        const nameCell = row.children[0];
+        if (nameCell) {
+          rawName = (
+            nameCell.getAttribute('data-name') ||
+            nameCell.textContent ||
+            ''
+          ).trim();
+        }
+      }
+
+      if (!art) return;
+
+      const url = `product/product.html?art=${encodeURIComponent(art)}&name=${encodeURIComponent(rawName)}`;
+      window.open(url, '_blank', 'noopener');
+    });
+  }
+
+  _setupClearButton() {
+    const inputEl = document.getElementById('searchInput');
+    const clearBtn = document.getElementById('clearSearch');
+
+    const toggleClear = () => {
+      inputEl.parentElement.classList.toggle(
+        'has-value',
+        !!inputEl.value.trim()
+      );
+    };
+
+    inputEl.addEventListener('input', toggleClear);
+    toggleClear();
+
+    const doClear = () => {
+      if (!inputEl) return;
+      if (document.body.classList.contains('is-filter-mode')) return;
+      if (!inputEl.value) return;
+      inputEl.value = '';
+      toggleClear();
+      this._page = 1;
+      this.performSearch();
+      inputEl.focus();
+    };
+
+    clearBtn?.addEventListener('click', doClear);
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && inputEl.value) {
+        e.preventDefault();
+        doClear();
+      }
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      if (document.querySelector('.modal.show')) return;
+      if (
+        document.querySelector('.dropdown.show') ||
+        document.querySelector('.dropdown-menu[data-portal="1"]')
+      )
+        return;
+
+      const ae = document.activeElement;
+      const isOtherTextField =
+        ae &&
+        ae !== inputEl &&
+        ((ae.tagName === 'INPUT' &&
+          ![
+            'checkbox',
+            'radio',
+            'button',
+            'submit',
+            'reset',
+            'file',
+            'image',
+            'range',
+            'color',
+            'hidden',
+          ].includes(ae.type)) ||
+          ae.tagName === 'TEXTAREA' ||
+          ae.isContentEditable);
+
+      if (isOtherTextField) return;
+      if (document.body.classList.contains('is-filter-mode')) return;
+
+      e.preventDefault();
+      doClear();
+    });
+  }
+
+  _setupResizeHandlers() {
+    const fit = debounce(this._fitResultsHeight.bind(this), 50);
+    window.addEventListener('resize', fit, { passive: true });
+    window.addEventListener('orientationchange', fit);
+    this._fitResultsHeight();
+  }
+
+  _fitResultsHeight() {
+    const box = document.querySelector('#resultsSection .table-responsive');
+    if (!box) return;
+
+    const gap = 24;
+    const top = box.getBoundingClientRect().top;
+    let h = window.innerHeight - top - gap;
+    h = Math.max(320, Math.min(h, Math.floor(window.innerHeight * 0.92)));
+
+    box.style.maxHeight = h + 'px';
+    box.style.overflowY = 'auto';
+  }
+
+  _updateInfoTooltip() {
+    const host = document.getElementById('datasetInfo');
+    if (!host) return;
+
+    host.style.display = 'inline-flex';
+
+    if (!host.querySelector('#helpLink')) {
+      host.insertAdjacentHTML(
+        'beforeend',
+        `<button type="button" id="helpLink" class="info-circle" title="Открыть аккумулятор">?</button>`
+      );
+      const help = host.querySelector('#helpLink');
+      help?.addEventListener('click', () => {
+        window.open(
+          'https://forms.yandex.ru/u/691c525095add5da586b5053',
+          '_blank',
+          'noopener'
+        );
+      });
+    }
+
+    if (!host.querySelector('#dataInfo')) {
+      host.insertAdjacentHTML(
+        'beforeend',
+        `<button type="button" id="dataInfo" class="info-circle" data-bs-toggle="tooltip" data-bs-html="true" data-bs-placement="top" title="">i</button>`
+      );
+    }
+
+    const el = host.querySelector('#dataInfo');
+    const total = Array.isArray(this.data) ? this.data.length : 0;
+    const html = `Загружено записей: <b>${total.toLocaleString('ru-RU')}</b><br>Номер версии: <b>${APP_VERSION}</b>`;
+    el?.setAttribute('data-bs-title', html);
+    el?.setAttribute('title', '');
+
+    if (el && window.bootstrap?.Tooltip) {
+      const t = window.bootstrap.Tooltip.getInstance(el);
+      if (t) t.dispose();
+      new window.bootstrap.Tooltip(el, {
+        html: true,
+        sanitize: false,
+        placement: 'top',
+      });
+    }
+  }
+
+  _setupDropdownHandlers() {
+    // Обработчики для dropdown "Документы"
+    document.addEventListener('shown.bs.dropdown', e => {
+      const dd = e.target.closest('.dropdown');
+      if (!dd || !dd.closest('#resultsSection')) return;
+
+      const menu = dd.querySelector('.dropdown-menu');
+      const btn = dd.querySelector('[data-bs-toggle="dropdown"]');
+      if (!menu || !btn) return;
+
+      menu.dataset.portal = '1';
+      document.body.appendChild(menu);
+
+      // Возврат меню на место при закрытии для стабильности DOM
+      const cleanup = () => {
+        if (menu.dataset.portal === '1') {
+          dd.appendChild(menu);
+          delete menu.dataset.portal;
+          menu.style.position = '';
+          if (menu._reposition) {
+            window.removeEventListener('scroll', menu._reposition, true);
+            window.removeEventListener('resize', menu._reposition);
+          }
+        }
+        btn.removeEventListener('hidden.bs.dropdown', cleanup);
+      };
+      btn.addEventListener('hidden.bs.dropdown', cleanup);
+
+      menu.style.position = 'fixed';
+      menu.style.transform = 'none';
+      menu.removeAttribute('data-popper-placement');
+      menu.removeAttribute('data-bs-popper');
+
+      if (
+        menu.classList.contains('docs-menu') ||
+        (menu.classList.contains('price-menu') && !menu._stopPropagatonAttached)
+      ) {
+        menu.addEventListener('click', e => {
+          e.stopPropagation();
+        });
+        if (menu.classList.contains('price-menu')) {
+          menu._stopPropagatonAttached = true;
+        }
+      }
+
+      // Логика расчета сроков поставки (price-menu)
+      if (menu.classList.contains('price-menu') && !menu._logicAttached) {
+        menu._logicAttached = true;
+        const searchBtn = menu.querySelector('.price-menu-btn');
+        const input = menu.querySelector('.price-menu-input');
+        const placeholder = menu.querySelector('.price-menu-placeholder');
+        if (searchBtn && input && placeholder) {
+          // Предварительно захватываем артикул из строки таблицы
+          const row = dd.closest('tr');
+          const rawSku = row
+            ? row.dataset.sku || row.cells[1]?.textContent
+            : null;
+
+          searchBtn.addEventListener('click', async () => {
+            const qty = parseInt(input.value, 10) || 1;
+            let productId = (rawSku || '').toString().trim();
+
+            if (!productId) {
+              placeholder.textContent = 'Ошибка';
+              return;
+            }
+
+            // Форматирование артикула: только цифры, строго 6 знаков (дополнение нулями слева)
+            productId = productId.replace(/\D/g, '');
+            if (productId.length > 6) productId = productId.slice(0, 6);
+            productId = productId.padStart(6, '0');
+
+            placeholder.textContent = '';
+            placeholder.classList.add('is-loading');
+
+            try {
+              const periods =
+                await this.availabilityService.getAvailabilityPeriod(
+                  productId,
+                  qty
+                );
+
+              placeholder.classList.remove(
+                'is-success',
+                'is-warning',
+                'is-error',
+                'is-loading'
+              );
+              placeholder.removeAttribute('title');
+
+              const existingTooltip =
+                window.bootstrap?.Tooltip?.getInstance(placeholder);
+              if (existingTooltip) existingTooltip.dispose();
+
+              placeholder.onclick = null;
+              let copyText = '';
+
+              if (Array.isArray(periods) && periods.length > 0) {
+                if (periods.length === 1) {
+                  const days = periods[0].days;
+                  const daysWord = pluralRu(days, [
+                    'раб. день',
+                    'раб. дня',
+                    'раб. дней',
+                  ]);
+                  placeholder.textContent = `${days} ${daysWord}`;
+                  placeholder.classList.add('is-success');
+                  copyText = placeholder.textContent;
+                } else {
+                  const maxDays = Math.max(...periods.map(p => p.days));
+                  const daysWord = pluralRu(maxDays, [
+                    'раб. день',
+                    'раб. дня',
+                    'раб. дней',
+                  ]);
+                  placeholder.textContent = `${maxDays} ${daysWord}`;
+                  placeholder.classList.add('is-warning');
+
+                  const lines = periods.map(p => {
+                    const qWord = pluralRu(p.quantity, [
+                      'штука',
+                      'штуки',
+                      'штук',
+                    ]);
+                    const dWord = pluralRu(p.days, [
+                      'раб. день',
+                      'раб. дня',
+                      'раб. дней',
+                    ]);
+                    return `${p.quantity} ${qWord} - ${p.days} ${dWord}`;
+                  });
+
+                  const copyTextFormatted = lines.join('\n');
+                  const tooltipHtml = lines.join('<br>');
+
+                  placeholder.setAttribute('title', tooltipHtml);
+                  if (window.bootstrap?.Tooltip) {
+                    new window.bootstrap.Tooltip(placeholder, {
+                      placement: 'top',
+                      trigger: 'hover',
+                      container: 'body',
+                      html: true,
+                    });
+                  }
+                  copyText = copyTextFormatted;
+                }
+              } else {
+                placeholder.textContent = 'Нет срока';
+                placeholder.classList.add('is-error');
+              }
+
+              if (copyText) {
+                placeholder.onclick = e => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(copyText).then(
+                    () => console.log('Текст скопирован: ', copyText),
+                    err => console.error('Не удалось скопировать: ', err)
+                  );
+                };
+              }
+            } catch (error) {
+              console.error('Availability fetch error:', error);
+              placeholder.textContent = 'Ошибка';
+            } finally {
+              placeholder.classList.remove('is-loading');
+            }
+          });
+        }
+      }
+
+      const place = () => {
+        const bcr = btn.getBoundingClientRect();
+        const mw = menu.offsetWidth || 0;
+        const mh = menu.offsetHeight || 0;
+
+        let left = Math.round(bcr.right - mw);
+        let top = Math.round(bcr.bottom + 6);
+
+        const vw = document.documentElement.clientWidth;
+        const vh = document.documentElement.clientHeight;
+
+        if (left + mw > vw - 8) left = Math.max(8, vw - mw - 8);
+        if (left < 8) left = 8;
+
+        if (top + mh > vh - 8) {
+          const altTop = Math.round(bcr.top - mh - 6);
+          if (altTop >= 8) top = altTop;
+        }
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+        menu.style.zIndex = 3000;
+        menu.style.maxWidth = 'initial';
+      };
+
+      place(); // позиционируем один раз при открытии
+
+      // Для всех КРОМЕ .docs-menu оставляем динамическое позиционирование
+      if (!menu.classList.contains('docs-menu')) {
+        menu._reposition = place;
+
+        window.addEventListener('scroll', place, true);
+        window.addEventListener('resize', place);
+
+        const scroller = document.querySelector(
+          '#resultsSection .table-responsive'
+        );
+        if (scroller) {
+          const closeOnScroll = () => {
+            const btnEl = dd.querySelector('[data-bs-toggle="dropdown"]');
+            try {
+              const ddInst =
+                window.bootstrap?.Dropdown?.getOrCreateInstance(btnEl);
+              ddInst?.hide();
+            } catch {
+              menu.dispatchEvent(new Event('hide.bs.dropdown'));
+              menu.classList.remove('show');
+              dd.appendChild(menu);
+            }
+          };
+          scroller.addEventListener('scroll', closeOnScroll, { passive: true });
+          menu._closeOnScroll = closeOnScroll;
+        }
+      }
+
+      // Ленивая загрузка содержимого документов
+      if (menu.classList.contains('docs-menu') && !menu._enhanced) {
+        menu._enhanced = true;
+        const rawName = (menu.dataset.name || '').trim();
+        let docs = [];
+        try {
+          docs = JSON.parse(decodeURIComponent(menu.dataset.docs || '[]'));
+        } catch {
+          docs = [];
+        }
+
+        (async () => {
+          try {
+            if (window.Tips && typeof window.Tips.getForName === 'function') {
+              const tips = await window.Tips.getForName(rawName);
+              menu.innerHTML = window.Tips.renderIndex({ links: [], tips });
+              const headerTitle = menu.querySelector('.dm-header .dm-title');
+              if (headerTitle) headerTitle.remove();
+              menu.style.transform = 'none';
+              menu.style.inset = 'auto';
+              menu.removeAttribute('data-popper-placement');
+              place();
+              setTimeout(place, 0);
+
+              const linksSection = (() => {
+                if (!docs.length)
+                  return `<div class="dm-empty">Ссылок нет</div>`;
+                return `
+                <ul class="dm-links">
+                  ${docs
+                    .map(
+                      d => `
+                    <li>
+                      <a class="dm-link" href="${d.url}"
+                         target="_blank" rel="noopener">
+                        ${d.title || 'Документ'}
+                      </a>
+                    </li>`
+                    )
+                    .join('')}
+                </ul>`;
+              })();
+
+              const firstSection = menu.querySelector('.dm-section');
+              if (firstSection) {
+                firstSection.innerHTML = `
+                <div class="dm-section-title">Ссылки</div>
+                ${linksSection}
+              `;
+              }
+
+              const openDetail = tip => {
+                menu.innerHTML = window.Tips.renderDetail(tip);
+                menu.style.transform = 'none';
+                menu.style.inset = 'auto';
+                menu.removeAttribute('data-popper-placement');
+                place();
+                setTimeout(place, 0);
+
+                window.Tips.bindDetail(menu);
+
+                const back = menu.querySelector('.dm-back');
+                if (back) {
+                  back.addEventListener(
+                    'click',
+                    () => {
+                      menu.innerHTML = window.Tips.renderIndex({
+                        links: [],
+                        tips,
+                      });
+                      place();
+
+                      const firstSection = menu.querySelector('.dm-section');
+                      if (firstSection) {
+                        firstSection.innerHTML = `
+                      <div class="dm-section-title">Ссылки</div>
+                      ${linksSection}
+                    `;
+                      }
+
+                      const backBtn = menu.querySelector('.dm-back');
+                      if (backBtn) backBtn.hidden = true;
+                      window.Tips.bindIndex(menu, tips, {
+                        onOpenDetail: openDetail,
+                      });
+                    },
+                    { once: true }
+                  );
+                }
+
+                const backBtn = menu.querySelector('.dm-back');
+                if (backBtn) backBtn.hidden = false;
+              };
+
+              window.Tips.bindIndex(menu, tips, { onOpenDetail: openDetail });
+
+              const backInit = menu.querySelector('.dm-back');
+              if (backInit) backInit.hidden = true;
+              if (
+                window.Accessories &&
+                typeof window.Accessories.enhanceDocsMenu === 'function'
+              ) {
+                const art = (menu.dataset.art || '').trim();
+                window.Accessories.enhanceDocsMenu(menu, {
+                  art,
+                  docs,
+                  tips,
+                });
+              }
+            } else {
+              const linksHtml = docs.length
+                ? `<ul class="dm-links">${docs
+                    .map(
+                      d => `
+                  <li><a class="dm-link" href="${d.url}"
+                     target="_blank" rel="noopener">${d.title || 'Документ'}</a></li>
+                `
+                    )
+                    .join('')}</ul>`
+                : `<div class="dm-empty">Ссылок нет</div>`;
+
+              menu.innerHTML = `<div class="px-3 py-2">${linksHtml}</div>`;
+              if (
+                window.Accessories &&
+                typeof window.Accessories.enhanceDocsMenu === 'function'
+              ) {
+                const art = (menu.dataset.art || '').trim();
+                window.Accessories.enhanceDocsMenu(menu, {
+                  art,
+                  docs,
+                  tips: null,
+                });
+              }
+            }
+          } catch (err) {
+            console.warn('Docs/tips render error:', err);
+            menu.innerHTML = `<div class="px-3 py-2 text-danger">Не удалось загрузить материалы</div>`;
+          }
+
+          if (typeof menu._reposition === 'function') {
+            setTimeout(menu._reposition, 0);
+          }
+        })();
+      }
+    });
+
+    document.addEventListener('hide.bs.dropdown', e => {
+      const dd = e.target.closest('.dropdown');
+      const menu = document.querySelector('.dropdown-menu[data-portal="1"]');
+      if (!menu) return;
+
+      window.removeEventListener('scroll', menu._reposition, true);
+      window.removeEventListener('resize', menu._reposition);
+
+      const scroller = document.querySelector(
+        '#resultsSection .table-responsive'
+      );
+      if (scroller && menu._closeOnScroll) {
+        scroller.removeEventListener('scroll', menu._closeOnScroll);
+        menu._closeOnScroll = null;
+      }
+
+      menu.removeAttribute('style');
+      menu.removeAttribute('data-portal');
+      if (dd) dd.appendChild(menu);
+    });
+  }
+
+  _setGlobalLoader(isOn) {
+    const el = document.getElementById('globalLoader');
+    if (!el) return;
+    if (isOn) {
+      el.style.display = 'flex';
+      el.classList.remove('is-hidden');
+      el.setAttribute('aria-busy', 'true');
+    } else {
+      el.style.display = 'none';
+      el.classList.add('is-hidden');
+      el.setAttribute('aria-busy', 'false');
+    }
+  }
+
+  showSearchSection() {
+    document.getElementById('searchSection').style.display = 'block';
+    document.getElementById('resultsSection').style.display = 'block';
+  }
+
+  showError(message) {
+    const modal = new bootstrap.Modal(document.getElementById('errorModal'));
+    document.getElementById('errorMessage').textContent = message;
+    modal.show();
+  }
+
+  exposeGlobalAPI() {
+    window.App.normalizeForFuzzySearch =
+      this.normalizer.normalizeForFuzzySearch.bind(this.normalizer);
+    window.App.canonKeepDelims = this.normalizer.canonKeepDelims.bind(
+      this.normalizer
+    );
+    window.App._preFilterData = this._preFilterData;
+    window.App.filteredData = this.filteredData;
+    window.App.displayResults = this.displayResults.bind(this);
+    window.App._page = this._page;
+    window.App.data = this.data;
+
+    window.App.restoreFromFilter = () => {
+      if (this._preFilterData && this._preFilterData.length > 0) {
+        this.filteredData = this._preFilterData.slice();
+        this._page = 1;
+        this.displayResults();
+      }
+    };
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  window.App = new PriceListSearchApp();
+  window.App.exposeGlobalAPI();
+  const whatsNew = new WhatsNew(APP_VERSION);
+  whatsNew.checkVersionChange();
+  whatsNew.setupListeners();
+  window.App.whatsNew = whatsNew; // сохраняем для доступа
+  if (typeof setupFilterAddon === 'function') setupFilterAddon();
+});

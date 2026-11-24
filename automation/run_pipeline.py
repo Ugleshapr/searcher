@@ -106,6 +106,29 @@ def run_search_packer():
     if root_br.exists():
         size_kb = root_br.stat().st_size / 1024
         log(f"Бинарная упаковка успешна! Итоговый base.bin.br: {size_kb:.1f} КБ ({time.time() - t0:.1f} сек)")
+
+        # Копируем base.bin.br в папку web/ и создаем version.json для автообновления клиентов
+        web_dir = ROOT_DIR / "web"
+        web_dir.mkdir(parents=True, exist_ok=True)
+        web_br = web_dir / "base.bin.br"
+        shutil.copy2(root_br, web_br)
+
+        now = time.localtime()
+        ver_str = time.strftime("%Y-%m-%d-%H%M", now)
+        date_str = time.strftime("%d.%m.%Y", now)
+        time_str = time.strftime("%H:%M", now)
+
+        version_info = {
+            "version": ver_str,
+            "date": date_str,
+            "time": time_str,
+            "timestamp": int(time.time()),
+            "size": root_br.stat().st_size
+        }
+        import json
+        with open(web_dir / "version.json", "w", encoding="utf-8") as f:
+            json.dump(version_info, f, indent=2, ensure_ascii=False)
+        log(f"Создан web/version.json (версия: {ver_str}, дата: {date_str} {time_str})")
     else:
         raise FileNotFoundError("base.bin.br не был создан!")
 

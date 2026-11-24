@@ -1,6 +1,8 @@
 target/
 *.bin
+*.bin.gz
 !base.bin.br
+!web/base.bin.br
 *.log
 .DS_Store
 __pycache__/

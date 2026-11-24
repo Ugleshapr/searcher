@@ -27,6 +27,14 @@ pub fn init_engine_from_bincode(bytes: &[u8]) -> Result<usize, String> {
 }
 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+pub fn init_engine_from_brotli(compressed_bytes: &[u8]) -> Result<usize, String> {
+    let mut decompressed = Vec::new();
+    brotli_decompressor::BrotliDecompress(&mut &compressed_bytes[..], &mut decompressed)
+        .map_err(|e| format!("Brotli decompress error: {e}"))?;
+    init_engine_from_bincode(&decompressed)
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn search_json(query: &str, limit: usize) -> String {
     let g = GLOBAL_ENGINE.lock().unwrap();
     if let Some(ref engine) = *g {
