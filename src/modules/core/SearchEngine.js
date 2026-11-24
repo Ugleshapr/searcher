@@ -115,6 +115,9 @@ export class SearchEngine {
 
     // Ранжирование
     const qn = this.normalizer.normalizeForFuzzySearch(qAliased);
+    const isFuseQuery = parts.some(p => p === 'пkt' || p === 'pkt' || p === 'пt' || p === 'pt' || p === 'пkh' || p === 'pkn');
+    const userExplicitU1 = parts.some(p => p === 'y1' || p === 'у1');
+    const fuseU3Bonus = this.rankRules?.bonuses?.fuseU3Bonus ?? 0;
     
     for (const it of filtered) {
       it.__score = 0;
@@ -162,6 +165,14 @@ export class SearchEngine {
               it.__score += orderScore;
             }
           }
+        }
+      }
+
+      // Приоритет исполнения У3 для высоковольтных предохранителей (ПКТ / ПТ / ПКН)
+      if (fuseU3Bonus > 0 && isFuseQuery && !userExplicitU1) {
+        const isFuseItem = it.__name.includes('пkt') || it.__name.includes('pkt') || it.__name.includes('пt') || it.__name.includes('pt') || it.__name.includes('пkh');
+        if (isFuseItem && /(?:^|[^a-z0-9а-яё])(y3|у3)(?:$|[^a-z0-9а-яё])/i.test(nd)) {
+          it.__score += fuseU3Bonus;
         }
       }
 
