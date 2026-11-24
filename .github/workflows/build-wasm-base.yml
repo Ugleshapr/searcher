@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   build-and-pack:
@@ -56,3 +57,10 @@ jobs:
           git commit -m "auto: update base.bin.br and base.csv [skip ci]"
           git push
           echo "changed=true" >> $GITHUB_OUTPUT
+
+      # ПИНАЕМ ДЕПЛОЙ PAGES: Сработает, когда бинарник обновился
+      - name: Trigger Pages Deployment
+        if: steps.commit_step.outputs.changed == 'true'
+        run: gh workflow run "Deploy to GitHub Pages" --ref main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
