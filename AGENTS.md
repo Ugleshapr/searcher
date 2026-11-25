@@ -21,7 +21,7 @@ tests/                # queries.json + comparison harnesses
 - `rust-wasm` — WASM build + generated data (`/wasm/`).
 
 `.github/workflows/deploy-pages.yml` merges all three branches into one Pages artifact:
-`main` at root, `dev` at `/dev`, `rust-wasm/web` at `/wasm`.  `.github/workflows/build-wasm-base.yml` runs on `rust-wasm`, rebuilds the database, commits `base.bin.br`, `base.csv`, `web/base.bin.br`, `web/version.json`, `web/src/addons/products_spec*`, then triggers Pages deploy.
+`main` at root, `dev` at `/dev`, `rust-wasm/web` at `/wasm`.  `.github/workflows/build-wasm-base.yml` runs on `rust-wasm`, rebuilds the database, commits `base.bin.br`, `web/base.bin.br`, `web/version.json`, `web/src/addons/products_spec*`, then triggers Pages deploy. (`base.csv` is gitignored and not committed.)
 
 If you change the Rust `#[wasm_bindgen]` API, the updated glue must land on `rust-wasm` and the Pages deploy must run before users see it.
 
