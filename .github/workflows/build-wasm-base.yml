@@ -10,8 +10,52 @@ permissions:
   actions: write
 
 jobs:
-  build-and-pack:
+  # Проверяем, не отработал ли уже сегодня такой запуск.
+  # Это нужно, потому что внутренний cron GitHub может быть сильно задержан,
+  # и мы запускаем workflow ещё и из внешнего планировщика через workflow_dispatch.
+  check:
     runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - name: Check if a successful run already exists today
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "Today (UTC): $TODAY"
+
+          COUNT_WD=$(gh run list --repo ${{ github.repository }} \
+            --workflow "Build and Pack WASM Base" \
+            --branch main --event workflow_dispatch --status completed \
+            --limit 10 --json createdAt,conclusion \
+            --jq '[.[] | select(.createdAt >= "'"$TODAY"'T00:00:00Z" and .conclusion == "success")] | length' || echo 0)
+
+          COUNT_SC=$(gh run list --repo ${{ github.repository }} \
+            --workflow "Build and Pack WASM Base" \
+            --branch main --event schedule --status completed \
+            --limit 10 --json createdAt,conclusion \
+            --jq '[.[] | select(.createdAt >= "'"$TODAY"'T00:00:00Z" and .conclusion == "success")] | length' || echo 0)
+
+          TOTAL=$((COUNT_WD + COUNT_SC))
+          echo "Successful runs today: $TOTAL"
+
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "A successful run already exists today. Skipping."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+  build-and-pack:
+    needs: check
+    if: needs.check.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: wasm-base-daily
+      cancel-in-progress: false
     steps:
       - name: Checkout rust-wasm branch
         uses: actions/checkout@v4
