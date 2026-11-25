@@ -38,7 +38,7 @@ jobs:
 
       - name: Pre-build Rust Search Packer
         run: |
-          cargo build --release -p search-packer
+          cargo build --release -p search-packer --bin search-packer
 
       - name: Run Full Base Update Pipeline
         run: |
