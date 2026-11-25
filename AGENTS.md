@@ -25,6 +25,19 @@ tests/                # queries.json + comparison harnesses
 
 If you change the Rust `#[wasm_bindgen]` API, the updated glue must land on `rust-wasm` and the Pages deploy must run before users see it.
 
+## Scheduled build reliability
+
+`build-wasm-base.yml` has an internal `schedule: cron: "35 3 * * *"` (03:35 UTC = 06:35 MSK), but GitHub Actions scheduled workflows have been experiencing platform-wide multi-hour delivery delays. The workflow also accepts `workflow_dispatch` and has a daily idempotency check + concurrency guard, so it is safe to trigger from an external scheduler.
+
+Use `automation/trigger_wasm_build.py` with a fine-grained PAT that has `Actions: write`:
+
+```bash
+export GITHUB_TOKEN=ghp_...
+python automation/trigger_wasm_build.py
+```
+
+Schedule the script at 03:35 UTC (e.g. via cron-job.org, Cloudflare Workers Cron, or a server cron). The workflow itself will skip if a successful run already completed today.
+
 ## Build commands
 
 ```bash
